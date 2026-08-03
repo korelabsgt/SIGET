@@ -2,7 +2,7 @@
 
 import { useState, useActionState } from "react";
 import { signup } from "./actions";
-import { INITIAL_USER_PASSWORD } from "./schemas";
+import { INITIAL_USER_PASSWORD } from "./zod";
 
 export function useSignupLogic() {
   const [showPassword, setShowPassword] = useState(false);

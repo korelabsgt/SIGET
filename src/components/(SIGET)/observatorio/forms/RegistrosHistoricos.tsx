@@ -19,7 +19,7 @@ import {
   useSectores,
   useOrganizacionSectores,
 } from "./lib/hooks";
-import type { RegistroHistorico } from "./lib/actions";
+import type { RegistroHistorico } from "./lib/zod";
 
 const MONTH_FULL = [
   "",

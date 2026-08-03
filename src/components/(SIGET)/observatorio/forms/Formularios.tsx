@@ -8,11 +8,9 @@ import {
   useFormulario,
   SIN_ESPECIFICAR,
   indicadorOmiteNacPerfil,
-  type RegistroEntradaLocal,
 } from "./lib/hooks";
+import type { ObsIndicador, ObsOrganizacion, ObsPolitica, RegistroEntrada } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
-
-import { ObsOrganizacion, ObsPolitica } from "./lib/actions";
 import { useOrgLogoDisplayUrl } from "@/components/(uploads)/imgs/useOrgLogoDisplayUrl";
 import { ORG_LOGO_SURFACE_CLASS, ORG_LOGO_DARK_PLATE_CLASS } from "@/components/(uploads)/imgs/constants";
 import { cn } from "@/lib/utils";
@@ -236,8 +234,8 @@ function crossKey(nacionalidadId: string, perfilId: string) {
 }
 
 function filterRegistrosConNacPerfil(
-  regs: RegistroEntradaLocal[],
-  indicadores: import("./lib/actions").ObsIndicador[],
+  regs: RegistroEntrada[],
+  indicadores: ObsIndicador[],
 ) {
   return regs.filter((r) => {
     const ind = indicadores.find((i) => i.id === r.indicadorId);
@@ -245,7 +243,7 @@ function filterRegistrosConNacPerfil(
   });
 }
 
-function aggregateByNacPerfil(regs: RegistroEntradaLocal[], campoIds: string[]): CrosstabRow[] {
+function aggregateByNacPerfil(regs: RegistroEntrada[], campoIds: string[]): CrosstabRow[] {
   const map = new Map<string, CrosstabRow>();
   for (const r of regs) {
     const key = crossKey(r.nacionalidadId, r.perfilId);
@@ -274,8 +272,8 @@ const CHART_PALETTE = [
 const ALL_INDICADORES_ID = "__all_ind__";
 
 function getRegistroFilteredValue(
-  r: RegistroEntradaLocal,
-  indicadores: import("./lib/actions").ObsIndicador[],
+  r: RegistroEntrada,
+  indicadores: ObsIndicador[],
   selectedCatalogCampoIds: Set<string>
 ): number {
   if (selectedCatalogCampoIds.size === 0) return 0;
@@ -289,10 +287,10 @@ function getRegistroFilteredValue(
   return sum;
 }
 
-function buildNacPerfilTotals(regs: RegistroEntradaLocal[], getValue?: (r: RegistroEntradaLocal) => number) {
+function buildNacPerfilTotals(regs: RegistroEntrada[], getValue?: (r: RegistroEntrada) => number) {
   const valueOf =
     getValue ??
-    ((r: RegistroEntradaLocal) =>
+    ((r: RegistroEntrada) =>
       Object.values(r.valores).reduce((s, v) => s + parseInt(v || "0", 10), 0));
   const totals = new Map<string, number>();
   for (const r of regs) {
@@ -303,8 +301,8 @@ function buildNacPerfilTotals(regs: RegistroEntradaLocal[], getValue?: (r: Regis
 }
 
 function aggregateChartSlices(
-  regs: RegistroEntradaLocal[],
-  indicadores: import("./lib/actions").ObsIndicador[],
+  regs: RegistroEntrada[],
+  indicadores: ObsIndicador[],
   selectedCatalogCampoIds: Set<string>,
   dimension: "nacionalidad" | "perfil" | "indicador",
   getLabel: (id: string) => string
@@ -438,8 +436,8 @@ function ProgressBarChartCard({
 }
 
 function buildCampoDimensionCross(
-  registros: RegistroEntradaLocal[],
-  indicadores: import("./lib/actions").ObsIndicador[],
+  registros: RegistroEntrada[],
+  indicadores: ObsIndicador[],
   campos: { catalogId: string; nombre: string; orden: number }[],
   dimension: "nacionalidad" | "perfil" | "indicador"
 ) {
@@ -755,8 +753,8 @@ function GlobalCrossSection({
   getPerfilNombre,
   getIndicadorNombre,
 }: {
-  registros: RegistroEntradaLocal[];
-  indicadores: import("./lib/actions").ObsIndicador[];
+  registros: RegistroEntrada[];
+  indicadores: ObsIndicador[];
   globalCrossStats: { comboCount: number; mergedCount: number };
   getNacionalidadNombre: (id: string) => string;
   getPerfilNombre: (id: string) => string;
@@ -819,7 +817,7 @@ function GlobalCrossSection({
   const clearAllCampos = () => setSelectedCatalogCampoIds(new Set());
 
   const getValue = useMemo(
-    () => (r: RegistroEntradaLocal) => getRegistroFilteredValue(r, indicadores, selectedCatalogCampoIds),
+    () => (r: RegistroEntrada) => getRegistroFilteredValue(r, indicadores, selectedCatalogCampoIds),
     [indicadores, selectedCatalogCampoIds]
   );
 
@@ -1153,11 +1151,11 @@ function NacPerfilMatrix({
   title,
   getValue,
 }: {
-  registros: RegistroEntradaLocal[];
+  registros: RegistroEntrada[];
   getNacionalidadNombre: (id: string) => string;
   getPerfilNombre: (id: string) => string;
   title: string;
-  getValue?: (r: RegistroEntradaLocal) => number;
+  getValue?: (r: RegistroEntrada) => number;
 }) {
   const { nacIds, perfilIds, totals, maxCell, grandTotal } = useMemo(() => {
     const nacIds = [...new Set(registros.map((r) => r.nacionalidadId))];

@@ -2,74 +2,65 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { z } from "zod";
+import {
+  createOrganizacionInputSchema,
+  createPoliticaConIndicadoresInputSchema,
+  createPoliticaInputSchema,
+  createPredefinedFieldInputSchema,
+  createRegistroInputSchema,
+  createSectorInputSchema,
+  deleteRegistroInputSchema,
+  nombreInputSchema,
+  orgSectorIdsInputSchema,
+  unwrapRelation,
+  updateOrganizacionNombreInputSchema,
+  updatePredefinedFieldInputSchema,
+  type FormIndicador,
+  type ObsCampo,
+  type ObsIndicador,
+  type ObsNacionalidad,
+  type ObsOrganizacion,
+  type ObsPerfil,
+  type ObsPolitica,
+  type ObsPredefinedField,
+  type ObsSector,
+  type OrgSectorLinkRow,
+  type OrgSectorLinkWithSector,
+  type OrgWithSectors,
+  type ProfileCreatorRow,
+  type RegistroEntrada,
+  type RegistroHistorico,
+  type RegistroHistoricoQueryRow,
+  type RegistroHistoricoValor,
+} from "./zod";
 
-export interface ObsSector {
-  id: string;
-  nombre: string;
-}
+export type {
+  ConstructorInitialData,
+  FormIndicador,
+  FormValor,
+  ObsCampo,
+  ObsIndicador,
+  ObsIndicadorCampo,
+  ObsNacionalidad,
+  ObsOrganizacion,
+  ObsPerfil,
+  ObsPolitica,
+  ObsPredefinedField,
+  ObsSector,
+  OrgWithSectors,
+  RegistroEntrada,
+  RegistroHistorico,
+  RegistroHistoricoPolitica,
+  RegistroHistoricoValor,
+} from "./zod";
 
-export interface ObsOrganizacion {
-  id: string;
-  nombre: string;
-  logo?: string | null;
-}
-
-export interface ObsPolitica {
-  id: string;
-  sector_id: string;
-  codigo: string;
-  descripcion: string;
-  activo: boolean;
-  obs_sectores?: { nombre: string };
-}
-
-export interface ObsCampo {
-  id: string;
-  nombre: string;
-  activo: boolean;
-  orden?: number | null;
-}
-
-export interface ObsPredefinedField {
-  id: string;
-  nombre: string;
-  orden: number;
-}
-
-export interface ObsIndicadorCampo {
-  id: string;
-  indicador_id: string;
-  campo_id: string;
-  orden: string;
-  activo: boolean;
-  obs_campos?: ObsCampo;
-}
-
-export interface ObsIndicador {
-  id: string;
-  politica_id: string;
-  nombre: string;
-  activo: boolean;
-  obs_politicas?: ObsPolitica;
-  obs_indicador_campos?: ObsIndicadorCampo[];
-}
-
-export interface ObsNacionalidad {
-  id: string;
-  nombre: string;
-}
-
-export interface ObsPerfil {
-  id: string;
-  nombre: string;
-}
-
-export interface RegistroEntrada {
-  id: string;
-  indicadorId: string;
-  nacionalidadId: string;
-  perfilId: string;
-  valores: Record<string, string>; // indicador_campo_id → cantidad
+function parseInput<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos");
+  }
+  return parsed.data;
 }
 
 export async function getSectores() {
@@ -86,7 +77,10 @@ export async function getOrganizacionesBySector(sectorId: string) {
     .select("organizacion_id, obs_organizaciones(id, nombre, logo)")
     .eq("sector_id", sectorId);
   if (error) throw new Error(error.message);
-  return (data || []).map((row: any) => row.obs_organizaciones as ObsOrganizacion).filter(Boolean);
+
+  return ((data ?? []) as OrgSectorLinkRow[])
+    .map((row) => unwrapRelation(row.obs_organizaciones))
+    .filter((org): org is ObsOrganizacion => org != null);
 }
 
 export async function getSectorIdsByOrganizacion(organizacionId: string) {
@@ -96,12 +90,17 @@ export async function getSectorIdsByOrganizacion(organizacionId: string) {
     .select("sector_id")
     .eq("organizacion_id", organizacionId);
   if (error) throw new Error(error.message);
-  return (data || []).map((row) => row.sector_id as string);
+  return (data ?? []).map((row) => row.sector_id as string);
 }
 
 export async function getPoliticasBySector(sectorId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("obs_politicas").select("*").eq("sector_id", sectorId).eq("activo", true).order("codigo");
+  const { data, error } = await supabase
+    .from("obs_politicas")
+    .select("*")
+    .eq("sector_id", sectorId)
+    .eq("activo", true)
+    .order("codigo");
   if (error) throw new Error(error.message);
   return data as ObsPolitica[];
 }
@@ -124,42 +123,6 @@ export async function getAllRegistros() {
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
-}
-
-export interface RegistroHistoricoValor {
-  id: string;
-  cantidad: number;
-  campoNombre: string;
-  campoOrden: number;
-  indicadorNombre: string;
-  politicaId: string | null;
-  politicaCodigo: string;
-  politicaDescripcion: string;
-  sectorId: string | null;
-  sectorNombre: string;
-  nacionalidadNombre: string | null;
-  perfilNombre: string | null;
-}
-
-export interface RegistroHistoricoPolitica {
-  codigo: string;
-  descripcion: string;
-}
-
-export interface RegistroHistorico {
-  id: string;
-  mes: number;
-  anio: number;
-  createdAt: string;
-  createdById: string | null;
-  creadorNombre: string | null;
-  creadorEmail: string | null;
-  organizacionId: string | null;
-  organizacionNombre: string;
-  totalAtenciones: number;
-  totalValores: number;
-  politicas: RegistroHistoricoPolitica[];
-  valores: RegistroHistoricoValor[];
 }
 
 export async function getRegistrosHistoricos(
@@ -210,56 +173,43 @@ export async function getRegistrosHistoricos(
   if (error) throw new Error(error.message);
   if (!data) return [];
 
+  const rows = data as RegistroHistoricoQueryRow[];
+
   const creatorIds = [
-    ...new Set(
-      (data as any[])
-        .map((r) => r.created_by as string | null)
-        .filter(Boolean),
-    ),
+    ...new Set(rows.map((r) => r.created_by).filter(Boolean)),
   ] as string[];
 
   const [nacRes, perfRes, creatorsRes] = await Promise.all([
     supabase.from("obs_nacionalidades").select("id, nombre"),
     supabase.from("obs_perfiles").select("id, nombre"),
     creatorIds.length > 0
-      ? supabase
-          .from("profiles")
-          .select("id, nombre, email")
-          .in("id", creatorIds)
-      : Promise.resolve({ data: [] as { id: string; nombre: string | null; email: string | null }[], error: null }),
+      ? supabase.from("profiles").select("id, nombre, email").in("id", creatorIds)
+      : Promise.resolve({ data: [] as ProfileCreatorRow[], error: null }),
   ]);
 
   const nacMap = new Map<string, string>(
-    (nacRes.data || []).map((n: any) => [n.id, n.nombre]),
+    (nacRes.data ?? []).map((n) => [n.id, n.nombre]),
   );
   const perfMap = new Map<string, string>(
-    (perfRes.data || []).map((p: any) => [p.id, p.nombre]),
+    (perfRes.data ?? []).map((p) => [p.id, p.nombre]),
   );
-  const creatorMap = new Map<
-    string,
-    { nombre: string | null; email: string | null }
-  >(
-    (creatorsRes.data || []).map((p: any) => [
+  const creatorMap = new Map<string, { nombre: string | null; email: string | null }>(
+    (creatorsRes.data ?? []).map((p) => [
       p.id,
       { nombre: p.nombre ?? null, email: p.email ?? null },
     ]),
   );
 
-  const unwrap = <T,>(value: T | T[] | null | undefined): T | null => {
-    if (value == null) return null;
-    return Array.isArray(value) ? (value[0] ?? null) : value;
-  };
-
-  return (data as any[]).map((reg) => {
-    const org = unwrap<any>(reg.obs_organizaciones);
-    const rawValores = (reg.obs_registros_valores || []) as any[];
+  return rows.map((reg) => {
+    const org = unwrapRelation(reg.obs_organizaciones);
+    const rawValores = reg.obs_registros_valores ?? [];
 
     const valores: RegistroHistoricoValor[] = rawValores.map((v) => {
-      const ic = unwrap<any>(v.obs_indicador_campos);
-      const campo = unwrap<any>(ic?.obs_campos);
-      const ind = unwrap<any>(ic?.obs_indicadores);
-      const pol = unwrap<any>(ind?.obs_politicas);
-      const sec = unwrap<any>(pol?.obs_sectores);
+      const ic = unwrapRelation(v.obs_indicador_campos);
+      const campo = unwrapRelation(ic?.obs_campos ?? null);
+      const ind = unwrapRelation(ic?.obs_indicadores ?? null);
+      const pol = unwrapRelation(ind?.obs_politicas ?? null);
+      const sec = unwrapRelation(pol?.obs_sectores ?? null);
 
       return {
         id: v.id,
@@ -294,9 +244,7 @@ export async function getRegistrosHistoricos(
         a.codigo.localeCompare(b.codigo, "es", { numeric: true }),
       );
 
-    const creator = reg.created_by
-      ? creatorMap.get(reg.created_by)
-      : undefined;
+    const creator = reg.created_by ? creatorMap.get(reg.created_by) : undefined;
 
     return {
       id: reg.id,
@@ -317,6 +265,8 @@ export async function getRegistrosHistoricos(
 }
 
 export async function deleteRegistro(registroId: string) {
+  parseInput(deleteRegistroInputSchema, { registroId });
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -408,25 +358,24 @@ export async function getPredefinedFields(): Promise<ObsPredefinedField[]> {
     .sort(
       (a, b) =>
         a.orden - b.orden ||
-        a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+        a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
     );
 }
 
 export async function createPredefinedField(nombre: string, orden: number) {
-  const trimmed = nombre.trim();
-  if (!trimmed) throw new Error("El nombre no puede estar vacío.");
-
+  const input = parseInput(createPredefinedFieldInputSchema, { nombre, orden });
   const supabase = await createClient();
+
   let result = await supabase
     .from("obs_campos")
-    .insert({ nombre: trimmed, activo: true, orden })
+    .insert({ nombre: input.nombre, activo: true, orden: input.orden })
     .select("id, nombre, orden")
     .single();
 
   if (result.error) {
     result = await supabase
       .from("obs_campos")
-      .insert({ nombre: trimmed, activo: true })
+      .insert({ nombre: input.nombre, activo: true })
       .select("id, nombre")
       .single();
   }
@@ -436,27 +385,26 @@ export async function createPredefinedField(nombre: string, orden: number) {
   return {
     id: row.id,
     nombre: row.nombre,
-    orden: row.orden ?? orden,
+    orden: row.orden ?? input.orden,
   } satisfies ObsPredefinedField;
 }
 
 export async function updatePredefinedField(id: string, nombre: string, orden: number) {
-  const trimmed = nombre.trim();
-  if (!trimmed) throw new Error("El nombre no puede estar vacío.");
-
+  const input = parseInput(updatePredefinedFieldInputSchema, { id, nombre, orden });
   const supabase = await createClient();
+
   let result = await supabase
     .from("obs_campos")
-    .update({ nombre: trimmed, orden })
-    .eq("id", id)
+    .update({ nombre: input.nombre, orden: input.orden })
+    .eq("id", input.id)
     .select("id, nombre, orden")
     .single();
 
   if (result.error) {
     result = await supabase
       .from("obs_campos")
-      .update({ nombre: trimmed })
-      .eq("id", id)
+      .update({ nombre: input.nombre })
+      .eq("id", input.id)
       .select("id, nombre")
       .single();
   }
@@ -466,7 +414,7 @@ export async function updatePredefinedField(id: string, nombre: string, orden: n
   return {
     id: row.id,
     nombre: row.nombre,
-    orden: row.orden ?? orden,
+    orden: row.orden ?? input.orden,
   } satisfies ObsPredefinedField;
 }
 
@@ -480,14 +428,15 @@ export async function deletePredefinedField(id: string) {
 }
 
 export async function createPolitica(sectorId: string, codigo: string, descripcion: string) {
+  const input = parseInput(createPoliticaInputSchema, { sectorId, codigo, descripcion });
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_politicas")
     .insert({
-      sector_id: sectorId,
-      codigo: codigo.trim(),
-      descripcion: descripcion.trim(),
-      activo: true
+      sector_id: input.sectorId,
+      codigo: input.codigo,
+      descripcion: input.descripcion,
+      activo: true,
     })
     .select()
     .single();
@@ -495,66 +444,15 @@ export async function createPolitica(sectorId: string, codigo: string, descripci
   return data as ObsPolitica;
 }
 
-export interface FormValor {
-  id: string;
-  nombre: string;
-  persisted?: boolean;
-  indicadorCampoId?: string; // ID from obs_indicador_campos if persisted
-  campoId?: string; // Real obs_campos.id when referencing an existing catalog field
-}
-
-export interface FormIndicador {
-  id: string;
-  nombre: string;
-  valores: FormValor[];
-  persisted?: boolean;
-}
-
-export async function createPoliticaConIndicadores(
-  sectorId: string, 
-  codigo: string, 
-  descripcion: string, 
+async function persistPoliticaIndicadores(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  currentPoliticaId: string,
   gruposIndicadores: FormIndicador[],
-  politicaId?: string | null
 ) {
-  const supabase = await createClient();
-  
-  let currentPoliticaId = politicaId;
-
-  if (currentPoliticaId) {
-    // Actualizar política existente
-    const { error: polError } = await supabase
-      .from("obs_politicas")
-      .update({
-        sector_id: sectorId,
-        codigo: codigo.trim(),
-        descripcion: descripcion.trim()
-      })
-      .eq("id", currentPoliticaId);
-      
-    if (polError) throw new Error(polError.message);
-  } else {
-    // Crear nueva política
-    const { data: pol, error: polError } = await supabase
-      .from("obs_politicas")
-      .insert({
-        sector_id: sectorId,
-        codigo: codigo.trim(),
-        descripcion: descripcion.trim(),
-        activo: true
-      })
-      .select()
-      .single();
-      
-    if (polError) throw new Error(polError.message);
-    currentPoliticaId = pol.id;
-  }
-
   for (const grupo of gruposIndicadores) {
     let currentIndicadorId = grupo.id;
 
     if (grupo.persisted) {
-      // Actualizar nombre del indicador persistido
       const { error: indError } = await supabase
         .from("obs_indicadores")
         .update({ nombre: grupo.nombre.trim() })
@@ -562,13 +460,12 @@ export async function createPoliticaConIndicadores(
 
       if (indError) throw new Error(indError.message);
     } else {
-      // Insertar nuevo indicador
       const { data: ind, error: indError } = await supabase
         .from("obs_indicadores")
         .insert({
           politica_id: currentPoliticaId,
           nombre: grupo.nombre.trim(),
-          activo: true
+          activo: true,
         })
         .select()
         .single();
@@ -578,22 +475,18 @@ export async function createPoliticaConIndicadores(
     }
 
     if (grupo.persisted) {
-      // Desactivar todos los campos existentes de este indicador temporalmente
-      // Los que sigan existiendo en el form se volverán a activar en el loop
       const { error: deactivateError } = await supabase
         .from("obs_indicador_campos")
         .update({ activo: false })
         .eq("indicador_id", currentIndicadorId);
-        
+
       if (deactivateError) throw new Error(deactivateError.message);
     }
 
-    // Procesar campos (valores) via obs_campos + obs_indicador_campos
     for (let i = 0; i < grupo.valores.length; i++) {
       const valor = grupo.valores[i];
 
       if (valor.persisted) {
-        // Actualizar nombre del campo en obs_campos
         const { error: campoError } = await supabase
           .from("obs_campos")
           .update({ nombre: valor.nombre.trim() })
@@ -601,7 +494,6 @@ export async function createPoliticaConIndicadores(
 
         if (campoError) throw new Error(campoError.message);
 
-        // Actualizar orden y estado en obs_indicador_campos si existe
         if (valor.indicadorCampoId) {
           const { error: icError } = await supabase
             .from("obs_indicador_campos")
@@ -611,75 +503,141 @@ export async function createPoliticaConIndicadores(
           if (icError) throw new Error(icError.message);
         }
       } else if (valor.campoId) {
-        // Campo ya existe en obs_campos (del catálogo), solo crear la relación
         const { error: icError } = await supabase
           .from("obs_indicador_campos")
           .insert({
             indicador_id: currentIndicadorId,
             campo_id: valor.campoId,
             orden: String(i + 1),
-            activo: true
+            activo: true,
           });
 
         if (icError) throw new Error(icError.message);
       } else {
-        // Crear nuevo campo en obs_campos
         const { data: campo, error: campoError } = await supabase
           .from("obs_campos")
           .insert({
             nombre: valor.nombre.trim(),
-            activo: true
+            activo: true,
           })
           .select()
           .single();
 
         if (campoError) throw new Error(campoError.message);
 
-        // Crear relación en obs_indicador_campos
         const { error: icError } = await supabase
           .from("obs_indicador_campos")
           .insert({
             indicador_id: currentIndicadorId,
             campo_id: campo.id,
             orden: String(i + 1),
-            activo: true
+            activo: true,
           });
 
         if (icError) throw new Error(icError.message);
       }
     }
   }
-  
+}
+
+export async function createPoliticaConIndicadores(
+  sectorId: string,
+  codigo: string,
+  descripcion: string,
+  gruposIndicadores: FormIndicador[],
+  politicaId?: string | null,
+) {
+  const input = parseInput(createPoliticaConIndicadoresInputSchema, {
+    sectorId,
+    codigo,
+    descripcion,
+    gruposIndicadores,
+    politicaId,
+  });
+
+  const supabase = await createClient();
+  let currentPoliticaId = input.politicaId ?? null;
+
+  if (currentPoliticaId) {
+    const { error: polError } = await supabase
+      .from("obs_politicas")
+      .update({
+        sector_id: input.sectorId,
+        codigo: input.codigo,
+        descripcion: input.descripcion,
+      })
+      .eq("id", currentPoliticaId);
+
+    if (polError) throw new Error(polError.message);
+  } else {
+    const { data: pol, error: polError } = await supabase
+      .from("obs_politicas")
+      .insert({
+        sector_id: input.sectorId,
+        codigo: input.codigo,
+        descripcion: input.descripcion,
+        activo: true,
+      })
+      .select()
+      .single();
+
+    if (polError) throw new Error(polError.message);
+    currentPoliticaId = pol.id;
+  }
+
+  if (!currentPoliticaId) {
+    throw new Error("No se pudo determinar la política.");
+  }
+
+  await persistPoliticaIndicadores(supabase, currentPoliticaId, input.gruposIndicadores);
+
   return { id: currentPoliticaId };
 }
 
-export async function createRegistro(organizacionId: string, mes: number, anio: number, registros: RegistroEntrada[]) {
+export async function createRegistro(
+  organizacionId: string,
+  mes: number,
+  anio: number,
+  registros: RegistroEntrada[],
+) {
+  const input = parseInput(createRegistroInputSchema, {
+    organizacionId,
+    mes,
+    anio,
+    registros,
+  });
+
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
 
   const { data: registro, error: regError } = await supabase
     .from("obs_registros")
     .insert({
-      organizacion_id: organizacionId,
-      mes,
-      anio,
-      created_by: userId
+      organizacion_id: input.organizacionId,
+      mes: input.mes,
+      anio: input.anio,
+      created_by: userId,
     })
     .select()
     .single();
 
   if (regError) throw new Error(regError.message);
 
-  // Build valor rows from all entries
-  const valoresToInsert = registros.flatMap((entry) =>
+  const valoresToInsert = input.registros.flatMap((entry) =>
     Object.entries(entry.valores).map(([indicadorCampoId, cantidad]) => ({
       registro_id: registro.id,
       indicador_campo_id: indicadorCampoId,
       cantidad: parseInt(cantidad || "0", 10),
-      nacionalidad_id: entry.nacionalidadId && entry.nacionalidadId !== "__none__" ? entry.nacionalidadId : null,
-      perfil_id: entry.perfilId && entry.perfilId !== "__none__" ? entry.perfilId : null
-    }))
+      nacionalidad_id:
+        entry.nacionalidadId && entry.nacionalidadId !== "__none__"
+          ? entry.nacionalidadId
+          : null,
+      perfil_id:
+        entry.perfilId && entry.perfilId !== "__none__" ? entry.perfilId : null,
+    })),
   );
 
   if (valoresToInsert.length > 0) {
@@ -694,22 +652,16 @@ export async function createRegistro(organizacionId: string, mes: number, anio: 
 }
 
 export async function createSector(nombre: string) {
+  const input = parseInput(createSectorInputSchema, { nombre });
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_sectores")
-    .insert({ nombre: nombre.trim() })
+    .insert({ nombre: input.nombre })
     .select()
     .single();
-  
+
   if (error) throw new Error(error.message);
   return data as ObsSector;
-}
-
-export interface OrgWithSectors {
-  id: string;
-  nombre: string;
-  logo: string | null;
-  sectores: { id: string; nombre: string }[];
 }
 
 export async function getOrganizacionesLogos(): Promise<
@@ -731,30 +683,27 @@ export async function getOrganizacionesLogos(): Promise<
 
 export async function getAllOrganizaciones(): Promise<OrgWithSectors[]> {
   const supabase = await createClient();
-  // Traer todas las organizaciones
   const { data: orgs, error: orgError } = await supabase
     .from("obs_organizaciones")
     .select("id, nombre, logo")
     .order("nombre");
   if (orgError) throw new Error(orgError.message);
 
-  // Traer todos los vínculos con sectores
   const { data: links, error: linkError } = await supabase
     .from("obs_organizaciones_sectores")
     .select("organizacion_id, sector_id, obs_sectores(id, nombre)");
   if (linkError) throw new Error(linkError.message);
 
-  // Agrupar sectores por organización
   const sectorsByOrg = new Map<string, { id: string; nombre: string }[]>();
-  for (const link of links || []) {
+  for (const link of (links ?? []) as OrgSectorLinkWithSector[]) {
     const orgId = link.organizacion_id;
-    const sector = (link as any).obs_sectores as { id: string; nombre: string } | null;
+    const sector = unwrapRelation(link.obs_sectores);
     if (!sector) continue;
     if (!sectorsByOrg.has(orgId)) sectorsByOrg.set(orgId, []);
     sectorsByOrg.get(orgId)!.push(sector);
   }
 
-  return (orgs || []).map((org: any) => ({
+  return (orgs ?? []).map((org) => ({
     id: org.id,
     nombre: org.nombre,
     logo: org.logo ?? null,
@@ -772,14 +721,16 @@ export async function updateOrganizacionLogo(organizacionId: string, logo: strin
 }
 
 export async function updateOrganizacionNombre(organizacionId: string, nombre: string) {
-  const trimmed = nombre.trim();
-  if (!trimmed) throw new Error("El nombre no puede estar vacío.");
+  const input = parseInput(updateOrganizacionNombreInputSchema, {
+    organizacionId,
+    nombre,
+  });
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_organizaciones")
-    .update({ nombre: trimmed })
-    .eq("id", organizacionId)
+    .update({ nombre: input.nombre })
+    .eq("id", input.organizacionId)
     .select("id, nombre")
     .single();
   if (error) throw new Error(error.message);
@@ -787,10 +738,11 @@ export async function updateOrganizacionNombre(organizacionId: string, nombre: s
 }
 
 export async function createOrganizacion(nombre: string) {
+  const input = parseInput(createOrganizacionInputSchema, { nombre });
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_organizaciones")
-    .insert({ nombre: nombre.trim() })
+    .insert({ nombre: input.nombre })
     .select("id, nombre")
     .single();
   if (error) throw new Error(error.message);
@@ -798,20 +750,22 @@ export async function createOrganizacion(nombre: string) {
 }
 
 export async function unlinkOrganizacionFromSector(organizacionId: string, sectorId: string) {
+  const input = parseInput(orgSectorIdsInputSchema, { organizacionId, sectorId });
   const supabase = await createClient();
   const { error } = await supabase
     .from("obs_organizaciones_sectores")
     .delete()
-    .eq("organizacion_id", organizacionId)
-    .eq("sector_id", sectorId);
+    .eq("organizacion_id", input.organizacionId)
+    .eq("sector_id", input.sectorId);
   if (error) throw new Error(error.message);
 }
 
 export async function linkOrganizacionToSector(organizacionId: string, sectorId: string) {
+  const input = parseInput(orgSectorIdsInputSchema, { organizacionId, sectorId });
   const supabase = await createClient();
   const { error } = await supabase
     .from("obs_organizaciones_sectores")
-    .insert({ organizacion_id: organizacionId, sector_id: sectorId });
+    .insert({ organizacion_id: input.organizacionId, sector_id: input.sectorId });
   if (error) throw new Error(error.message);
 }
 
@@ -836,10 +790,11 @@ export async function getPerfiles() {
 }
 
 export async function createNacionalidad(nombre: string) {
+  const nombreParsed = parseInput(nombreInputSchema, nombre);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_nacionalidades")
-    .insert({ nombre: nombre.trim() })
+    .insert({ nombre: nombreParsed })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -847,10 +802,11 @@ export async function createNacionalidad(nombre: string) {
 }
 
 export async function createPerfil(nombre: string) {
+  const nombreParsed = parseInput(nombreInputSchema, nombre);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_perfiles")
-    .insert({ nombre: nombre.trim() })
+    .insert({ nombre: nombreParsed })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -858,10 +814,11 @@ export async function createPerfil(nombre: string) {
 }
 
 export async function updateNacionalidad(id: string, nombre: string) {
+  const nombreParsed = parseInput(nombreInputSchema, nombre);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_nacionalidades")
-    .update({ nombre: nombre.trim() })
+    .update({ nombre: nombreParsed })
     .eq("id", id)
     .select()
     .single();
@@ -870,10 +827,11 @@ export async function updateNacionalidad(id: string, nombre: string) {
 }
 
 export async function updatePerfil(id: string, nombre: string) {
+  const nombreParsed = parseInput(nombreInputSchema, nombre);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_perfiles")
-    .update({ nombre: nombre.trim() })
+    .update({ nombre: nombreParsed })
     .eq("id", id)
     .select()
     .single();
@@ -883,18 +841,12 @@ export async function updatePerfil(id: string, nombre: string) {
 
 export async function deleteNacionalidad(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("obs_nacionalidades")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("obs_nacionalidades").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 
 export async function deletePerfil(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("obs_perfiles")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("obs_perfiles").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }

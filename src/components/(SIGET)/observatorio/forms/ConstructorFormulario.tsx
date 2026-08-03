@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, ChevronUp, Save, Trash2, X, Loader2, Plus, ArrowUp, ArrowDown, Settings2 } from "lucide-react";
 import { useConstructorFormulario } from "./lib/hooks";
 
+import type { ConstructorInitialData } from "./lib/zod";
+
 interface ConstructorProps {
   onBack: () => void;
-  initialData?: any;
+  initialData?: ConstructorInitialData;
 }
 
 export default function ConstructorFormulario({ onBack, initialData }: ConstructorProps) {

@@ -30,7 +30,14 @@ import {
 } from "../lib/swal";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { createProyectoMemoria, updateProyectoMemoria, updateMemoriaImagenes } from "../lib/actions";
-import { proyectosMemoriaSchema } from "../lib/schemas";
+import { proyectosMemoriaSchema } from "../lib/zod";
+import type {
+  Beneficiarios,
+  ProyectoAvance,
+  ProyectoItem,
+  ProyectosMemoria,
+  ProyectosMemoriaInput,
+} from "../lib/zod";
 import {
   emptyProyectoAvance,
   emptyProyectoItem,
@@ -40,12 +47,7 @@ import {
   rellenoPruebaMemoriaLabores,
   formatoOrdinalCortoEs,
   MAX_IMAGENES_PROYECTO,
-  type Beneficiarios,
-  type ProyectoAvance,
-  type ProyectoItem,
-  type ProyectosMemoria,
-  type ProyectosMemoriaInput,
-} from "../lib/types";
+} from "../lib/helpers";
 import { useAutofillInformeUsuario } from "../lib/hooks";
 import { ProyectoImagenes } from "@/components/(base)/imgs";
 

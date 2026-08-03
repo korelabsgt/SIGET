@@ -17,14 +17,19 @@ import {
   getPerfiles,
   getRegistrosHistoricos,
   deleteRegistro,
-  ObsSector,
-  ObsPolitica,
-  ObsOrganizacion,
-  ObsIndicador,
-  ObsCampo,
-  FormIndicador,
-  FormValor
 } from "./actions";
+import {
+  type ConstructorInitialData,
+  type FormIndicador,
+  type FormValor,
+  type ObsCampo,
+  type ObsIndicador,
+  type ObsIndicadorCampo,
+  type ObsOrganizacion,
+  type ObsPolitica,
+  type ObsSector,
+  type RegistroEntrada,
+} from "./zod";
 import Swal from "sweetalert2";
 
 import { toast } from 'react-toastify';
@@ -106,7 +111,32 @@ export function usePerfiles() {
 
 // --- Form Constructor Hook ---
 
-export function useConstructorFormulario(onSuccess: () => void, initialData?: any) {
+function mapIndicadoresFromDb(existingInds: ObsIndicador[]): FormIndicador[] {
+  return existingInds.map((ind) => ({
+    id: ind.id,
+    nombre: ind.nombre,
+    valores: (ind.obs_indicador_campos || [])
+      .filter((ic: ObsIndicadorCampo) => ic.activo)
+      .sort(
+        (a: ObsIndicadorCampo, b: ObsIndicadorCampo) =>
+          parseInt(a.orden || "0", 10) - parseInt(b.orden || "0", 10),
+      )
+      .map(
+        (ic): FormValor => ({
+          id: ic.obs_campos?.id || ic.campo_id,
+          nombre: ic.obs_campos?.nombre || "",
+          persisted: true,
+          indicadorCampoId: ic.id,
+        }),
+      ),
+    persisted: true,
+  }));
+}
+
+export function useConstructorFormulario(
+  onSuccess: () => void,
+  initialData?: ConstructorInitialData,
+) {
   const [sectores, setSectores] = useState<ObsSector[]>([]);
   const [politicasExistentes, setPoliticasExistentes] = useState<ObsPolitica[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,20 +172,7 @@ export function useConstructorFormulario(onSuccess: () => void, initialData?: an
         if (initialData?.politica?.id) {
           const existingInds = await getIndicadoresByPolitica(initialData.politica.id);
           if (existingInds && existingInds.length > 0) {
-            setIndicadores(existingInds.map(ind => ({
-              id: ind.id,
-              nombre: ind.nombre,
-              valores: (ind.obs_indicador_campos || [])
-                .filter((ic: any) => ic.activo)
-                .sort((a: any, b: any) => parseInt(a.orden || "0") - parseInt(b.orden || "0"))
-                .map(ic => ({ 
-                  id: ic.obs_campos?.id || ic.campo_id, 
-                  nombre: ic.obs_campos?.nombre || "", 
-                  persisted: true,
-                  indicadorCampoId: ic.id
-                })),
-              persisted: true
-            })));
+            setIndicadores(mapIndicadoresFromDb(existingInds));
           } else {
             setIndicadores([{ id: crypto.randomUUID(), nombre: "", valores: [{ id: crypto.randomUUID(), nombre: "", persisted: false }], persisted: false }]);
           }
@@ -350,9 +367,9 @@ export function useConstructorFormulario(onSuccess: () => void, initialData?: an
       setSelectedPoliticaId(newPol.id);
       setIsSelectingPolitica(false);
       return newPol;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating politica:", err);
-      toast.error(`Error: ${err.message}`);
+      toast.error(`Error: ${err instanceof Error ? err.message : "No se pudo crear la política"}`);
     }
   };
 
@@ -383,28 +400,15 @@ export function useConstructorFormulario(onSuccess: () => void, initialData?: an
       if (selectedPoliticaId) {
         const existingInds = await getIndicadoresByPolitica(selectedPoliticaId);
         if (existingInds && existingInds.length > 0) {
-          setIndicadores(existingInds.map(ind => ({
-            id: ind.id,
-            nombre: ind.nombre,
-            valores: (ind.obs_indicador_campos || [])
-              .filter((ic: any) => ic.activo)
-              .sort((a: any, b: any) => parseInt(a.orden || "0") - parseInt(b.orden || "0"))
-              .map((ic: any) => ({ 
-                id: ic.obs_campos?.id || ic.campo_id, 
-                nombre: ic.obs_campos?.nombre || "", 
-                persisted: true,
-                indicadorCampoId: ic.id
-              })),
-            persisted: true
-          })));
+          setIndicadores(mapIndicadoresFromDb(existingInds));
         }
       } else {
         // Si es nuevo, cerramos el formulario para volver a la lista
         onSuccess();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al guardar plantilla:", err);
-      toast.error(err.message || "Ocurrió un error al guardar la plantilla.");
+      toast.error(err instanceof Error ? err.message : "Ocurrió un error al guardar la plantilla.");
     } finally {
       setSaving(false);
     }
@@ -449,14 +453,6 @@ export function useConstructorFormulario(onSuccess: () => void, initialData?: an
     camposData,
     handleAddSpecificCatalogCampo
   };
-}
-
-export interface RegistroEntradaLocal {
-  id: string;
-  indicadorId: string;
-  nacionalidadId: string;
-  perfilId: string;
-  valores: Record<string, string>; // indicador_campo_id → cantidad
 }
 
 export const SIN_ESPECIFICAR = "__none__";
@@ -512,8 +508,8 @@ export function useFormulario(
   const [organizaciones, setOrganizaciones] = useState<ObsOrganizacion[]>([]);
   const [politicas, setPoliticas] = useState<ObsPolitica[]>([]);
   const [indicadores, setIndicadores] = useState<ObsIndicador[]>([]);
-  const [nacionalidades, setNacionalidades] = useState<import("./actions").ObsNacionalidad[]>([]);
-  const [perfiles, setPerfiles] = useState<import("./actions").ObsPerfil[]>([]);
+  const [nacionalidades, setNacionalidades] = useState<import("./zod").ObsNacionalidad[]>([]);
+  const [perfiles, setPerfiles] = useState<import("./zod").ObsPerfil[]>([]);
   
   const [loadingSectores, setLoadingSectores] = useState(true);
   const [loadingOrgsPols, setLoadingOrgsPols] = useState(!!initialPolitica);
@@ -531,7 +527,7 @@ export function useFormulario(
   });
   
   // Multi-entry registros system
-  const [registros, setRegistros] = useState<RegistroEntradaLocal[]>([]);
+  const [registros, setRegistros] = useState<RegistroEntrada[]>([]);
   const [editingRegistroId, setEditingRegistroId] = useState<string | null>(null);
   const [currentEntry, setCurrentEntry] = useState<{
     indicadorId: string;
@@ -660,7 +656,7 @@ export function useFormulario(
     }
   };
 
-  const selectRegistroForEdit = (reg: RegistroEntradaLocal) => {
+  const selectRegistroForEdit = (reg: RegistroEntrada) => {
     if (editingRegistroId === reg.id) {
       resetCurrentEntry();
       return;
@@ -741,7 +737,7 @@ export function useFormulario(
       return true;
     }
 
-    const newEntry: RegistroEntradaLocal = {
+    const newEntry: RegistroEntrada = {
       id: crypto.randomUUID(),
       indicadorId: currentEntry.indicadorId,
       nacionalidadId,

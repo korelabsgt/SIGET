@@ -23,10 +23,12 @@ import {
   formatUltimaActualizacionParts,
   formatoOrdinalCortoEs,
   sumBeneficiariosProyectos,
-  type BeneficiariosGrupo,
-  type ProyectoItem,
-  type ProyectosMemoria,
-} from "./lib/types";
+} from "./lib/helpers";
+import type {
+  BeneficiariosGrupo,
+  ProyectoItem,
+  ProyectosMemoria,
+} from "./lib/zod";
 import {
   downloadProyectoMemoriaExcel,
   type MemoriaProyectoExcelContext,
@@ -119,6 +121,9 @@ function DonutChart({
   size = 184,
   detailTotal,
   animateFill = true,
+  activeIndex,
+  onSegmentEnter,
+  onSegmentLeave,
 }: {
   data: DonutDatum[];
   centerValue: number;
@@ -126,17 +131,34 @@ function DonutChart({
   size?: number;
   detailTotal?: number;
   animateFill?: boolean;
+  activeIndex?: number | null;
+  onSegmentEnter?: (index: number) => void;
+  onSegmentLeave?: () => void;
 }) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [internalActiveIndex, setInternalActiveIndex] = useState<number | null>(
+    null,
+  );
   const reduceMotion = useReducedMotion();
   const slices = data.filter((d) => d.value > 0);
   const sliceSum = slices.reduce((sum, item) => sum + item.value, 0);
   const totalForPct = detailTotal ?? sliceSum;
-  const active = activeIndex != null ? slices[activeIndex] : null;
+  const resolvedActiveIndex = activeIndex ?? internalActiveIndex;
+  const active =
+    resolvedActiveIndex != null ? slices[resolvedActiveIndex] : null;
   const activePct =
     active && totalForPct > 0
       ? Math.round((active.value / totalForPct) * 100)
       : 0;
+
+  const handleEnter = (index: number) => {
+    if (onSegmentEnter) onSegmentEnter(index);
+    else setInternalActiveIndex(index);
+  };
+
+  const handleLeave = () => {
+    if (onSegmentLeave) onSegmentLeave();
+    else setInternalActiveIndex(null);
+  };
 
   if (slices.length === 0) {
     return (
@@ -167,8 +189,8 @@ function DonutChart({
               animationDuration={reduceMotion ? 0 : donutFillDurationMs}
               animationBegin={reduceMotion ? 0 : donutFillBeginMs}
               animationEasing="ease-out"
-              onMouseEnter={(_, index) => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
+              onMouseEnter={(_, index) => handleEnter(index)}
+              onMouseLeave={handleLeave}
             >
               {slices.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -274,10 +296,14 @@ function DonutLeyenda({
   items,
   total,
   columns = 1,
+  activeIndex = null,
+  onItemSelect,
 }: {
   items: DonutDatum[];
   total: number;
   columns?: 1 | 2;
+  activeIndex?: number | null;
+  onItemSelect?: (index: number) => void;
 }) {
   const visibles = items.filter((i) => i.value > 0);
   if (visibles.length === 0) return null;
@@ -288,13 +314,20 @@ function DonutLeyenda({
         columns === 2 && "sm:grid sm:grid-cols-2 sm:gap-x-4 sm:gap-y-2.5",
       )}
     >
-      {visibles.map((item) => {
+      {visibles.map((item, index) => {
         const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
         const cantidad = formatCantidadLeyenda(item.value);
+        const isActive = activeIndex === index;
         return (
-          <div
+          <button
             key={item.name}
-            className="flex items-center gap-3 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-4 dark:bg-zinc-800/60"
+            type="button"
+            onClick={() => onItemSelect?.(index)}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-4 text-left transition-opacity dark:bg-zinc-800/60",
+              onItemSelect && "cursor-pointer hover:opacity-90",
+              isActive && "ring-2 ring-celeste-trifinio/40",
+            )}
           >
             <span
               title={cantidad.title}
@@ -316,7 +349,7 @@ function DonutLeyenda({
             >
               {pct}%
             </span>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -341,6 +374,20 @@ function DonutPanel({
   size?: number;
   animateFill?: boolean;
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [pinnedFromLegend, setPinnedFromLegend] = useState(false);
+  const visibles = data.filter((d) => d.value > 0);
+
+  const handleLegendSelect = (index: number) => {
+    if (activeIndex === index && pinnedFromLegend) {
+      setActiveIndex(null);
+      setPinnedFromLegend(false);
+      return;
+    }
+    setActiveIndex(index);
+    setPinnedFromLegend(true);
+  };
+
   return (
     <div className={beneficiarioSubPanel}>
       <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:gap-10">
@@ -355,10 +402,24 @@ function DonutPanel({
             size={size}
             detailTotal={total}
             animateFill={animateFill}
+            activeIndex={activeIndex}
+            onSegmentEnter={(index) => {
+              setPinnedFromLegend(false);
+              setActiveIndex(index);
+            }}
+            onSegmentLeave={() => {
+              if (!pinnedFromLegend) setActiveIndex(null);
+            }}
           />
         </div>
         <div className="w-full lg:flex-1">
-          <DonutLeyenda items={data} total={total} columns={legendColumns} />
+          <DonutLeyenda
+            items={visibles}
+            total={total}
+            columns={legendColumns}
+            activeIndex={activeIndex}
+            onItemSelect={handleLegendSelect}
+          />
         </div>
       </div>
     </div>

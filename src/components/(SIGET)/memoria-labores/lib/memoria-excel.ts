@@ -1,11 +1,11 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { TITULO_INFORME_MEMORIA } from "./schemas";
+import { TITULO_INFORME_MEMORIA } from "./zod";
 import {
   formatPeriodo,
   formatoOrdinalCortoEs,
-  type ProyectoItem,
-} from "./types";
+} from "./helpers";
+import type { ProyectoItem } from "./zod";
 
 export type MemoriaProyectoExcelContext = {
   nombre?: string | null;

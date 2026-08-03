@@ -1,17 +1,17 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import type { AutofillInformeUsuario, ProyectosMemoria } from "./types";
+import type { AutofillInformeUsuario, ProyectosMemoria } from "./zod";
 import {
   proyectosMemoriaSchema,
   type ProyectosMemoriaInput,
-} from "./schemas";
+} from "./zod";
 import {
   normalizeImagenesFromDb,
   normalizeProyectosFromDb,
   periodoFromProyectos,
   sumBeneficiariosProyectos,
-} from "./types";
+} from "./helpers";
 import {
   MEMORIA_IMAGENES_BUCKET,
   normalizeImagenStoragePath,

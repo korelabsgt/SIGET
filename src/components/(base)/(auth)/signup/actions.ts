@@ -2,7 +2,7 @@
 
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
-import { authSchema, INITIAL_USER_PASSWORD } from "./schemas";
+import { authSchema, INITIAL_USER_PASSWORD } from "./zod";
 import { canAssignRole } from "@/components/(base)/(users)/usuarios/lib/permissions";
 
 export async function getOrganizaciones() {

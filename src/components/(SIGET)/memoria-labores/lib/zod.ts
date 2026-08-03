@@ -87,3 +87,39 @@ export type ProyectoAvance = z.infer<typeof proyectoAvanceSchema>;
 export type ProyectoItem = z.infer<typeof proyectoItemSchema>;
 export type Beneficiarios = z.infer<typeof beneficiariosSchema>;
 export type BeneficiariosGrupo = z.infer<typeof beneficiariosGrupoSchema>;
+
+export const autofillInformeUsuarioSchema = z.object({
+  cargo: z.string(),
+  oficina: z.string(),
+  nombre: z.string(),
+});
+
+export const proyectosMemoriaRowSchema = z.object({
+  id: z.string().uuid(),
+  periodo: z.string(),
+  proyectos: z.array(proyectoItemSchema),
+  beneficiarios: beneficiariosSchema,
+  imagenes: z.array(z.array(z.string())),
+  created_by: z.string().uuid().nullable(),
+  updated_by: z.string().uuid().nullable(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+  nombre: z.string().nullable(),
+  cargo: z.string().nullable(),
+  oficina: z.string().nullable(),
+});
+
+export const filtroPeriodoMemoriaSchema = z.object({
+  anio: z.number().int(),
+  mes: z.number().int().min(1).max(12).nullable(),
+});
+
+export type AutofillInformeUsuario = z.infer<typeof autofillInformeUsuarioSchema>;
+export type ProyectosMemoria = z.infer<typeof proyectosMemoriaRowSchema>;
+export type FiltroPeriodoMemoria = z.infer<typeof filtroPeriodoMemoriaSchema>;
+
+export type FechaInformeParts = {
+  dia: string;
+  fecha: string;
+  hora: string;
+};

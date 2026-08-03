@@ -1,25 +1,17 @@
-import type {
-  Beneficiarios,
-  ProyectoAvance,
-  ProyectoItem,
-  ProyectosMemoriaInput,
-} from "./schemas";
 import {
   MEMORIA_MAX_IMAGENES,
   normalizeImagenStoragePath,
 } from "@/components/(base)/imgs/constants";
-
-export const MAX_IMAGENES_PROYECTO = MEMORIA_MAX_IMAGENES;
-
-export type {
+import type {
   Beneficiarios,
-  BeneficiariosGrupo,
+  FiltroPeriodoMemoria,
   ProyectoAvance,
   ProyectoItem,
+  ProyectosMemoria,
   ProyectosMemoriaInput,
-} from "./schemas";
+} from "./zod";
 
-export { TITULO_INFORME_MEMORIA, TITULO_MEMORIA } from "./schemas";
+export const MAX_IMAGENES_PROYECTO = MEMORIA_MAX_IMAGENES;
 
 const MESES = [
   "Enero",
@@ -36,26 +28,20 @@ const MESES = [
   "Diciembre",
 ];
 
-export interface ProyectosMemoria {
-  id: string;
-  periodo: string;
-  proyectos: ProyectoItem[];
-  beneficiarios: Beneficiarios;
-  imagenes: string[][];
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string | null;
-  nombre: string | null;
-  cargo: string | null;
-  oficina: string | null;
-}
-
-export interface AutofillInformeUsuario {
-  cargo: string;
-  oficina: string;
-  nombre: string;
-}
+export const MESES_CORTOS = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+] as const;
 
 export function emptyBeneficiarios(): Beneficiarios {
   return {
@@ -178,7 +164,6 @@ export function normalizeProyectosFromDb(
   });
 }
 
-/** Normaliza el jsonb `imagenes` a un arreglo alineado por índice con los proyectos. */
 export function normalizeImagenesFromDb(
   imagenes: unknown,
   proyectosLength: number,
@@ -221,15 +206,9 @@ export function formatPeriodo(value: string | null | undefined): string {
 
 const DIAS_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"] as const;
 
-export type FechaInformeParts = {
-  dia: string;
-  fecha: string;
-  hora: string;
-};
-
 export function formatReporteRealizadoParts(
   value: string | null | undefined,
-): FechaInformeParts | null {
+) {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
@@ -251,7 +230,11 @@ export function formatReporteRealizadoParts(
   return { dia, fecha, hora };
 }
 
-export function formatInformeFechaLinea(parts: FechaInformeParts): string {
+export function formatInformeFechaLinea(parts: {
+  dia: string;
+  fecha: string;
+  hora: string;
+}): string {
   return `${parts.dia} ${parts.fecha} a las ${parts.hora}`;
 }
 
@@ -265,7 +248,7 @@ export function formatReporteRealizadoText(
 
 export function formatUltimaActualizacionParts(
   value: string | null | undefined,
-): FechaInformeParts | null {
+) {
   return formatReporteRealizadoParts(value);
 }
 
@@ -323,29 +306,9 @@ export function sortMemoriasPorMesDir(
   });
 }
 
-export type FiltroPeriodoMemoria = {
-  anio: number;
-  mes: number | null;
-};
-
-export const MESES_CORTOS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-] as const;
-
 export function filtroPeriodoActual(): FiltroPeriodoMemoria {
   const d = new Date();
-  return { anio: d.getFullYear(), mes: d.getMonth() + 1 };
+  return { anio: d.getFullYear(), mes: null };
 }
 
 export function formatFiltroPeriodoLabel(filtro: FiltroPeriodoMemoria): string {

@@ -21,15 +21,14 @@ import {
   getProyectosMemoria,
 } from "./lib/actions";
 import { confirmQuitarMemoria } from "./lib/swal";
+import { TITULO_INFORME_MEMORIA } from "./lib/zod";
 import {
   formatMemoriaPeriodo,
   filtroPeriodoActual,
   memoriaCoincidePeriodo,
   sortMemoriasPorMesDir,
-  TITULO_INFORME_MEMORIA,
-  type FiltroPeriodoMemoria,
-  type ProyectosMemoria,
-} from "./lib/types";
+} from "./lib/helpers";
+import type { FiltroPeriodoMemoria, ProyectosMemoria } from "./lib/zod";
 import ProyectosMemoriaForm from "./form/ProyectosMemoriaForm";
 import { InformeMemoriaVista } from "./InformeMemoriaVista";
 import { MemoriaPeriodoFiltro } from "./MemoriaPeriodoFiltro";

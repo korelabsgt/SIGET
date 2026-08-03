@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSignupLogic } from "./hooks";
 import { AnimatePresence, motion } from "framer-motion";
-import { INITIAL_USER_PASSWORD } from "./schemas";
+import { INITIAL_USER_PASSWORD } from "./zod";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { useUser, useUserContext } from "@/components/(base)/providers/UserProvider";
 import {

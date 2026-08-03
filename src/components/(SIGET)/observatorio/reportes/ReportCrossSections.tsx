@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useState, useMemo, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ReportExcelButton } from "./ReportExcelButton";
 import {
@@ -285,10 +285,6 @@ function DonutChartCard({
   const chartInView = useInView(chartRef, { once: true, margin: "-20px" });
   const total = data.reduce((s, d) => s + d.value, 0);
   const isLg = size === "lg";
-
-  useEffect(() => {
-    setExpandedLegendIndex(null);
-  }, [chartKey]);
 
   if (data.length === 0) {
     return (
@@ -800,6 +796,7 @@ function OmiteNacPerfilCrossBlock({ rows }: { rows: ReportRow[] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <DonutChartCard
+          key={`omit-ind-${omitKey}`}
           title="Por Indicador"
           icon={PieChartIcon}
           iconClass="text-violet-500"
@@ -847,15 +844,23 @@ export function ReportGlobalCrossSection({
   rows: ReportRow[];
   embedded?: boolean;
 }) {
-  const [selectedCampoIds, setSelectedCampoIds] = useState<Set<string>>(new Set());
   const [isCamposOpen, setIsCamposOpen] = useState(false);
 
   const stats = useMemo(() => computeGlobalCrossStats(rows), [rows]);
   const availableCampos = useMemo(() => getAvailableCampos(rows), [rows]);
+  const availableCampoKey = useMemo(
+    () => availableCampos.map((c) => c.catalogId).sort().join("\0"),
+    [availableCampos]
+  );
+  const [campoScopeKey, setCampoScopeKey] = useState(availableCampoKey);
+  const [selectedCampoIds, setSelectedCampoIds] = useState<Set<string>>(
+    () => new Set(availableCampos.map((c) => c.catalogId))
+  );
 
-  useEffect(() => {
+  if (campoScopeKey !== availableCampoKey) {
+    setCampoScopeKey(availableCampoKey);
     setSelectedCampoIds(new Set(availableCampos.map((c) => c.catalogId)));
-  }, [availableCampos]);
+  }
 
   const filteredRows = useMemo(
     () => filterReportRows(rows, ALL_INDICADORES_ID, selectedCampoIds),
@@ -1023,12 +1028,12 @@ export function ReportGlobalCrossSection({
       <div className={`grid grid-cols-1 gap-4 ${hasNacPerfil ? "md:grid-cols-3" : hasOmiteNacPerfil ? "hidden" : "md:grid-cols-1"}`}>
         {hasNacPerfil && (
           <>
-            <DonutChartCard title="Por Nacionalidad" icon={Users} iconClass="text-amber-500" data={nacData} chartKey={`nac-${filterKey}`} />
-            <DonutChartCard title="Por Perfil" icon={Users} iconClass="text-blue-500" data={perfilData} chartKey={`perfil-${filterKey}`} />
+            <DonutChartCard key={`nac-${filterKey}`} title="Por Nacionalidad" icon={Users} iconClass="text-amber-500" data={nacData} chartKey={`nac-${filterKey}`} />
+            <DonutChartCard key={`perfil-${filterKey}`} title="Por Perfil" icon={Users} iconClass="text-blue-500" data={perfilData} chartKey={`perfil-${filterKey}`} />
           </>
         )}
         {hasNacPerfil && (
-          <DonutChartCard title="Por Indicador" icon={PieChartIcon} iconClass="text-blue-500" data={indicadorData} chartKey={`ind-${filterKey}`} legendAccordion />
+          <DonutChartCard key={`ind-${filterKey}`} title="Por Indicador" icon={PieChartIcon} iconClass="text-blue-500" data={indicadorData} chartKey={`ind-${filterKey}`} legendAccordion />
         )}
       </div>
 
@@ -1191,15 +1196,34 @@ function PoliticaPickerModal({
   selectedId: string | null;
   onApply: (id: string) => void;
 }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      {isOpen ? (
+        <PoliticaPickerModalBody
+          key={selectedId ?? "none"}
+          onClose={onClose}
+          politicas={politicas}
+          selectedId={selectedId}
+          onApply={onApply}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function PoliticaPickerModalBody({
+  onClose,
+  politicas,
+  selectedId,
+  onApply,
+}: {
+  onClose: () => void;
+  politicas: { id: string; codigo: string; descripcion: string }[];
+  selectedId: string | null;
+  onApply: (id: string) => void;
+}) {
   const [draft, setDraft] = useState<string | null>(selectedId);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      setDraft(selectedId);
-      setSearch("");
-    }
-  }, [isOpen, selectedId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1212,89 +1236,87 @@ function PoliticaPickerModal({
   }, [politicas, search]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Seleccionar política de migración</DialogTitle>
-          <DialogDescription>
-            Elija una política para ver el cruce de datos y el detalle por indicador.
-          </DialogDescription>
-        </DialogHeader>
+    <DialogContent className="sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>Seleccionar política de migración</DialogTitle>
+        <DialogDescription>
+          Elija una política para ver el cruce de datos y el detalle por indicador.
+        </DialogDescription>
+      </DialogHeader>
 
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar..."
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
-          />
-        </div>
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar..."
+          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500"
+        />
+      </div>
 
-        <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800">
-          {filtered.length === 0 ? (
-            <p className="px-4 py-6 text-center text-xs text-slate-400 font-semibold">
-              {search.trim() ? "Sin resultados" : "No hay políticas disponibles"}
-            </p>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((pol) => {
-                const checked = draft === pol.id;
-                return (
-                  <button
-                    key={pol.id}
-                    type="button"
-                    onClick={() => setDraft(pol.id)}
-                    className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer ${
+      <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-6 text-center text-xs text-slate-400 font-semibold">
+            {search.trim() ? "Sin resultados" : "No hay políticas disponibles"}
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filtered.map((pol) => {
+              const checked = draft === pol.id;
+              return (
+                <button
+                  key={pol.id}
+                  type="button"
+                  onClick={() => setDraft(pol.id)}
+                  className={`w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer ${
+                    checked
+                      ? "bg-slate-100 dark:bg-slate-800/50"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${
                       checked
-                        ? "bg-slate-100 dark:bg-slate-800/50"
-                        : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                        ? "bg-slate-600 dark:bg-slate-500 border-slate-600 dark:border-slate-500"
+                        : "border-slate-300 dark:border-slate-600"
                     }`}
                   >
-                    <span
-                      className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${
-                        checked
-                          ? "bg-slate-600 dark:bg-slate-500 border-slate-600 dark:border-slate-500"
-                          : "border-slate-300 dark:border-slate-600"
-                      }`}
-                    >
-                      {checked && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {checked && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-bold text-blue-600 dark:text-blue-400">
+                      {pol.codigo}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-bold text-blue-600 dark:text-blue-400">
-                        {pol.codigo}
-                      </span>
-                      <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
-                        {policyDescriptionStart(pol.descripcion, 120)}
-                      </span>
+                    <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                      {policyDescriptionStart(pol.descripcion, 120)}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            disabled={!draft}
-            onClick={() => draft && onApply(draft)}
-            className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Aplicar
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <div className="flex justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          disabled={!draft}
+          onClick={() => draft && onApply(draft)}
+          className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Aplicar
+        </button>
+      </div>
+    </DialogContent>
   );
 }
 
@@ -1355,24 +1377,22 @@ export function ReportPoliticaIndicadorSection({ rows }: { rows: ReportRow[] }) 
   const [selectedPoliticaId, setSelectedPoliticaId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (politicas.length === 0) {
-      setSelectedPoliticaId(null);
-      return;
+  const effectivePoliticaId = useMemo(() => {
+    if (politicas.length === 0) return null;
+    if (selectedPoliticaId && politicas.some((p) => p.id === selectedPoliticaId)) {
+      return selectedPoliticaId;
     }
-    if (!selectedPoliticaId || !politicas.some((p) => p.id === selectedPoliticaId)) {
-      setSelectedPoliticaId(politicas[0].id);
-    }
+    return politicas[0].id;
   }, [politicas, selectedPoliticaId]);
 
   const selectedPolitica = useMemo(
-    () => politicas.find((p) => p.id === selectedPoliticaId) ?? null,
-    [politicas, selectedPoliticaId]
+    () => politicas.find((p) => p.id === effectivePoliticaId) ?? null,
+    [politicas, effectivePoliticaId]
   );
 
   const polRows = useMemo(
-    () => (selectedPoliticaId ? rows.filter((r) => r.politicaId === selectedPoliticaId) : []),
-    [rows, selectedPoliticaId]
+    () => (effectivePoliticaId ? rows.filter((r) => r.politicaId === effectivePoliticaId) : []),
+    [rows, effectivePoliticaId]
   );
 
   const camposPolitica = useMemo(() => getAvailableCampos(polRows), [polRows]);
@@ -1482,7 +1502,7 @@ export function ReportPoliticaIndicadorSection({ rows }: { rows: ReportRow[] }) 
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         politicas={politicas}
-        selectedId={selectedPoliticaId}
+        selectedId={effectivePoliticaId}
         onApply={(id) => {
           setSelectedPoliticaId(id);
           setModalOpen(false);
@@ -1678,6 +1698,7 @@ export function ReportIndicadorDetailSection({ rows }: { rows: ReportRow[] }) {
                       </div>
                       {!omite && (
                         <DonutChartCard
+                          key={`ind-nac-${ind.id}`}
                           title="Por Nacionalidad"
                           icon={Users}
                           iconClass="text-amber-500"

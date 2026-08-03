@@ -8,8 +8,8 @@ import {
   MESES_CORTOS,
   avanzarFiltroPeriodo,
   formatFiltroPeriodoLabel,
-  type FiltroPeriodoMemoria,
-} from "./lib/types";
+} from "./lib/helpers";
+import type { FiltroPeriodoMemoria } from "./lib/zod";
 
 const segmentBtnClass =
   "flex items-center justify-center text-foreground transition-colors hover:bg-muted/60 cursor-pointer dark:hover:bg-zinc-800";

@@ -209,12 +209,13 @@ export default function Reportes({ onBack }: ReportesProps) {
 
   // ── Refs para captura (PDF / JPEG) ──
   const reportContentRef = useRef<HTMLDivElement>(null);
-  const [isMobileExport, setIsMobileExport] = useState(false);
+  const [isMobileExport, setIsMobileExport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
     const update = () => setIsMobileExport(mq.matches);
-    update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
@@ -299,12 +300,10 @@ export default function Reportes({ onBack }: ReportesProps) {
     return Array.from(yearSet).sort((a, b) => b - a);
   }, [allRows]);
 
-  // Auto-select most recent year when data loads
-  useEffect(() => {
-    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
-      setSelectedYear(availableYears[0]);
-    }
-  }, [availableYears]);
+  const effectiveYear = useMemo(() => {
+    if (availableYears.length === 0) return selectedYear;
+    return availableYears.includes(selectedYear) ? selectedYear : availableYears[0];
+  }, [availableYears, selectedYear]);
 
   // ── Apply all filters ──
   const filteredRows = useMemo(() => {
@@ -321,7 +320,7 @@ export default function Reportes({ onBack }: ReportesProps) {
     }
 
     if (dateMode === "Año") {
-      rows = rows.filter(r => r.anio === selectedYear);
+      rows = rows.filter(r => r.anio === effectiveYear);
     } else if (dateMode === "Mes" && singleMonth) {
       const [y, m] = singleMonth.split("-").map(Number);
       rows = rows.filter(r => r.anio === y && r.mes === m);
@@ -337,7 +336,7 @@ export default function Reportes({ onBack }: ReportesProps) {
     }
 
     return rows;
-  }, [allRows, selectedSectorIds, selectedOrgIds, selectedPoliticaIds, dateMode, selectedYear, singleMonth, startMonth, endMonth]);
+  }, [allRows, selectedSectorIds, selectedOrgIds, selectedPoliticaIds, dateMode, effectiveYear, singleMonth, startMonth, endMonth]);
 
   // Filas que aplican a nacionalidad/perfil (excluye Reuniones/Empresas/Actores).
   const nacPerfilRows = useMemo(() => rowsConNacPerfil(filteredRows), [filteredRows]);
@@ -578,7 +577,7 @@ export default function Reportes({ onBack }: ReportesProps) {
   );
 
   const dateFilterLabel = useMemo(() => {
-    if (dateMode === "Año") return `${selectedYear}`;
+    if (dateMode === "Año") return `${effectiveYear}`;
     if (dateMode === "Mes" && singleMonth) {
       const [y, m] = singleMonth.split("-").map(Number);
       return `${MONTH_FULL[m]} ${y}`;
@@ -589,10 +588,10 @@ export default function Reportes({ onBack }: ReportesProps) {
       return `${MONTH_NAMES[sm]} ${sy} – ${MONTH_NAMES[em]} ${ey}`;
     }
     return null;
-  }, [dateMode, selectedYear, singleMonth, startMonth, endMonth]);
+  }, [dateMode, effectiveYear, singleMonth, startMonth, endMonth]);
 
   const exportDateLabel = useMemo(() => {
-    if (dateMode === "Año") return `${selectedYear}`;
+    if (dateMode === "Año") return `${effectiveYear}`;
     if (dateMode === "Mes" && singleMonth) {
       const [y, m] = singleMonth.split("-").map(Number);
       return `${MONTH_FULL[m]} ${y}`;
@@ -603,7 +602,7 @@ export default function Reportes({ onBack }: ReportesProps) {
       return `${MONTH_FULL[sm]} ${sy} – ${MONTH_FULL[em]} ${ey}`;
     }
     return "Todo el periodo";
-  }, [dateMode, selectedYear, singleMonth, startMonth, endMonth]);
+  }, [dateMode, effectiveYear, singleMonth, startMonth, endMonth]);
 
   const modalConfig = useMemo(() => {
     if (openFilterModal === "politica") {
@@ -861,7 +860,7 @@ export default function Reportes({ onBack }: ReportesProps) {
               <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2">
                 <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
-                  value={selectedYear}
+                  value={effectiveYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                   className="pl-2 pr-6 py-1.5 rounded-xl border border-border bg-muted/40 dark:bg-background text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-muted-foreground/30 cursor-pointer appearance-none"
                 >
@@ -1726,17 +1725,53 @@ function FilterPickerModal({
   wide?: boolean;
   onApply: (ids: string[]) => void;
 }) {
+  const selectionKey = selectedIds.slice().sort().join("\0");
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      {isOpen ? (
+        <FilterPickerModalBody
+          key={selectionKey}
+          onClose={onClose}
+          title={title}
+          description={description}
+          items={items}
+          groups={groups}
+          emptyMessage={emptyMessage}
+          selectedIds={selectedIds}
+          wide={wide}
+          onApply={onApply}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function FilterPickerModalBody({
+  onClose,
+  title,
+  description,
+  items,
+  groups = [],
+  emptyMessage,
+  selectedIds,
+  wide,
+  onApply,
+}: {
+  onClose: () => void;
+  title: string;
+  description: string;
+  items: FilterPickerItem[];
+  groups?: FilterPickerGroup[];
+  emptyMessage?: string;
+  selectedIds: string[];
+  wide?: boolean;
+  onApply: (ids: string[]) => void;
+}) {
   const [draft, setDraft] = useState<string[]>(selectedIds);
   const [search, setSearch] = useState("");
 
   const isGrouped = groups.length > 0;
-
-  useEffect(() => {
-    if (isOpen) {
-      setDraft(selectedIds);
-      setSearch("");
-    }
-  }, [isOpen, selectedIds]);
 
   const allItems = useMemo(
     () => (isGrouped ? groups.flatMap((g) => g.items) : items),
@@ -1817,8 +1852,7 @@ function FilterPickerModal({
   const hasResults = isGrouped ? filteredGroups.length > 0 : filteredItems.length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={wide ? "sm:max-w-2xl" : "sm:max-w-lg"}>
+    <DialogContent className={wide ? "sm:max-w-2xl" : "sm:max-w-lg"}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -1904,6 +1938,5 @@ function FilterPickerModal({
           </button>
         </div>
       </DialogContent>
-    </Dialog>
   );
 }

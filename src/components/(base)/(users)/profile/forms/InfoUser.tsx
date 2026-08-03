@@ -20,7 +20,7 @@ import {
   Shield,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { profileObjectSchema } from "../lib/schemas";
+import { profileObjectSchema } from "../lib/zod";
 import {
   useUserCredentials,
   useCredentialsMutation,
