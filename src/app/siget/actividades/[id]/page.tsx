@@ -1,15 +1,10 @@
-import { Suspense } from "react";
-import { ActividadDetalle } from "@/components/actividades/ActividadDetalle";
+import { redirect } from "next/navigation";
 
-export default async function ActividadDetallePage({
+export default async function ActividadRedirectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <Suspense>
-      <ActividadDetalle actividadId={id} />
-    </Suspense>
-  );
+  redirect(`/siget/asistencia-actividades/${id}`);
 }

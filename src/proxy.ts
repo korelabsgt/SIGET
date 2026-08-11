@@ -153,18 +153,6 @@ export async function proxy(request: NextRequest) {
         }
       }
 
-      const canAccessActividades =
-        isSuperOrAdmin || realRole === "comunicacion";
-
-      if (
-        pathname.startsWith("/siget/actividades") &&
-        !canAccessActividades
-      ) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/sin-acceso";
-        return NextResponse.redirect(url);
-      }
-
       if (requireAuth && !isSuperOrAdmin) {
         const userAgent = request.headers.get("user-agent") || "Desconocido";
 

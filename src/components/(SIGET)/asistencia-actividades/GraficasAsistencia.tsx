@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  LabelList,
+} from "recharts";
 import { cn } from "@/lib/utils";
 import type { EdadGeneroBar, StatSegment } from "./lib/stats";
 
@@ -248,20 +259,18 @@ function DonutPanel({
 
   return (
     <div className={panelClass}>
-      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-            {title}
-          </p>
-          <DonutChart
-            data={donutData}
-            centerValue={total}
-            centerLabel="Total"
-            size={184}
-            detailTotal={total}
-          />
-        </div>
-        <div className="w-full sm:flex-1">
+      <div className="flex flex-col items-center gap-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+          {title}
+        </p>
+        <DonutChart
+          data={donutData}
+          centerValue={total}
+          centerLabel="Total"
+          size={184}
+          detailTotal={total}
+        />
+        <div className="w-full max-w-sm">
           <DonutLeyenda items={donutData} total={total} columns={legendColumns} />
         </div>
       </div>
@@ -269,18 +278,101 @@ function DonutPanel({
   );
 }
 
+function EdadGeneroBarrasHorizontales({ data }: { data: EdadGeneroBar[] }) {
+  const totalHombres = data.reduce((acc, d) => acc + d.masculino, 0);
+  const totalMujeres = data.reduce((acc, d) => acc + d.femenino, 0);
+  const filas = [
+    ...data,
+    {
+      rango: "Total",
+      masculino: totalHombres,
+      femenino: totalMujeres,
+    },
+  ];
+
+  return (
+    <div className="mt-6 space-y-4 border-t border-slate-200/80 pt-5 dark:border-zinc-800">
+      <div className="grid grid-cols-[minmax(2.5rem,1fr)_auto_minmax(2.5rem,1fr)] items-center gap-2 px-1 text-[10px] font-black uppercase tracking-widest">
+        <span className="text-left" style={{ color: COLOR_MASCULINO }}>
+          Hombres
+        </span>
+        <span className="text-center text-muted-foreground">Rango</span>
+        <span className="text-right" style={{ color: COLOR_FEMENINO }}>
+          Mujeres
+        </span>
+      </div>
+
+      {filas.map((fila) => {
+        const total = fila.masculino + fila.femenino;
+        const pctH = total > 0 ? (fila.masculino / total) * 100 : 0;
+        const pctM = total > 0 ? (fila.femenino / total) * 100 : 0;
+        const esTotal = fila.rango === "Total";
+
+        return (
+          <div key={fila.rango} className="space-y-1.5">
+            <div className="grid grid-cols-[minmax(2.5rem,1fr)_auto_minmax(2.5rem,1fr)] items-end gap-2 px-1">
+              <span
+                className={cn(
+                  "text-left tabular-nums font-black",
+                  esTotal ? "text-base" : "text-sm",
+                )}
+                style={{ color: COLOR_MASCULINO }}
+              >
+                {fila.masculino.toLocaleString("es-GT")}
+              </span>
+              <span
+                className={cn(
+                  "text-center font-bold uppercase tracking-wide text-foreground",
+                  esTotal ? "text-xs" : "text-[11px]",
+                )}
+              >
+                {fila.rango}
+              </span>
+              <span
+                className={cn(
+                  "text-right tabular-nums font-black",
+                  esTotal ? "text-base" : "text-sm",
+                )}
+                style={{ color: COLOR_FEMENINO }}
+              >
+                {fila.femenino.toLocaleString("es-GT")}
+              </span>
+            </div>
+            <div className="flex h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800">
+              <div
+                className="h-full transition-[width] duration-500"
+                style={{
+                  width: `${pctH}%`,
+                  backgroundColor: COLOR_MASCULINO,
+                }}
+              />
+              <div
+                className="h-full transition-[width] duration-500"
+                style={{
+                  width: `${pctM}%`,
+                  backgroundColor: COLOR_FEMENINO,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
   const reduceMotion = useReducedMotion();
-  const total = data.reduce((acc, d) => acc + d.masculino + d.femenino, 0);
-  const hasData = data.some((d) => d.masculino > 0 || d.femenino > 0);
+  const dataVisible = data.filter((d) => d.masculino > 0 || d.femenino > 0);
+  const hasData = dataVisible.length > 0;
 
   return (
     <div className={cn(panelClass, "flex h-full flex-col")}>
       <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-        Por edad y género
+        Segregación por edad y género
       </p>
       <p className="mb-4 text-center text-xs text-muted-foreground">
-        Jóvenes (18-29) · Adultos (30-59) · Tercera edad (60+)
+        Jóvenes (18-30) · Adultos (31-60) · Mayores (61+)
       </p>
 
       {!hasData ? (
@@ -289,11 +381,28 @@ export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
         </p>
       ) : (
         <>
-          <div className="min-h-[240px] flex-1 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="mb-3 flex flex-wrap justify-center gap-4">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold">
+              <span
+                className="size-2.5 rounded-full"
+                style={{ backgroundColor: COLOR_MASCULINO }}
+              />
+              Hombres
+            </span>
+            <span className="inline-flex items-center gap-2 text-sm font-semibold">
+              <span
+                className="size-2.5 rounded-full"
+                style={{ backgroundColor: COLOR_FEMENINO }}
+              />
+              Mujeres
+            </span>
+          </div>
+
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart
-                data={data}
-                margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                data={dataVisible}
+                margin={{ top: 22, right: 12, left: 0, bottom: 4 }}
                 barGap={6}
                 barCategoryGap="22%"
               >
@@ -304,9 +413,10 @@ export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
                 />
                 <XAxis
                   dataKey="rango"
-                  tick={{ fontSize: 12, fontWeight: 700 }}
+                  tick={{ fontSize: 11, fontWeight: 700 }}
                   axisLine={false}
                   tickLine={false}
+                  interval={0}
                 />
                 <YAxis
                   allowDecimals={false}
@@ -316,53 +426,43 @@ export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
                 />
                 <Bar
                   dataKey="masculino"
-                  name="Masculino"
+                  name="Hombres"
                   fill={COLOR_MASCULINO}
                   radius={[8, 8, 0, 0]}
                   maxBarSize={56}
                   isAnimationActive={!reduceMotion}
-                />
+                >
+                  <LabelList
+                    dataKey="masculino"
+                    position="top"
+                    className="fill-foreground text-[11px] font-bold"
+                    formatter={(value) =>
+                      typeof value === "number" && value > 0 ? String(value) : ""
+                    }
+                  />
+                </Bar>
                 <Bar
                   dataKey="femenino"
-                  name="Femenino"
+                  name="Mujeres"
                   fill={COLOR_FEMENINO}
                   radius={[8, 8, 0, 0]}
                   maxBarSize={56}
                   isAnimationActive={!reduceMotion}
-                />
+                >
+                  <LabelList
+                    dataKey="femenino"
+                    position="top"
+                    className="fill-foreground text-[11px] font-bold"
+                    formatter={(value) =>
+                      typeof value === "number" && value > 0 ? String(value) : ""
+                    }
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
-            {[
-              { label: "Masculino", color: COLOR_MASCULINO, key: "masculino" as const },
-              { label: "Femenino", color: COLOR_FEMENINO, key: "femenino" as const },
-            ].map((item) => {
-              const count = data.reduce((acc, d) => acc + d[item.key], 0);
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              return (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-3 rounded-full bg-slate-50 py-1.5 pl-1.5 pr-4 dark:bg-zinc-800/60"
-                >
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white"
-                    style={{ backgroundColor: item.color }}
-                  >
-                    {count}
-                  </span>
-                  <span className="text-sm font-semibold">{item.label}</span>
-                  <span
-                    className="text-sm font-black tabular-nums"
-                    style={{ color: item.color }}
-                  >
-                    {pct}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <EdadGeneroBarrasHorizontales data={dataVisible} />
         </>
       )}
     </div>

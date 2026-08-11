@@ -127,7 +127,7 @@ Tarjeta con icono, label uppercase pequeño, número grande (`AnimatedNumber` op
 
 ## Referencias
 
-- Dona canónica: `src/components/actividades/GraficasAsistencia.tsx`
+- Dona canónica: `src/components/(SIGET)/asistencia-actividades/GraficasAsistencia.tsx`
 - Dona + acordeón listado: `src/components/(SIGET)/memoria-labores/InformeMemoriaVista.tsx`
 - Listado con acordeón: `src/components/(SIGET)/memoria-labores/ProyectosMemoriaList.tsx`
 - Barras/reportes: `src/components/(SIGET)/observatorio/reportes/ReportCrossSections.tsx`

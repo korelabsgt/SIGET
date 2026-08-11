@@ -17,6 +17,26 @@ description: Aplica tema zinc (claro/oscuro) y estilos de botones SIGET — CTA,
 
 Prohibidos fondos negro/blanco fijos fuera de esta escala.
 
+## Menús y overlays flotantes
+
+`DropdownMenu` / menú de 3 puntos / popovers:
+
+- Fondo **opaco**: `bg-white dark:bg-zinc-900` (no confiar solo en `bg-popover`).
+- Ítems con el mismo fondo sólido; hover con tinte zinc/sky, nunca transparente.
+- `opacity-100` y `z-[200]` (o mayor) para quedar por encima de tablas, paginación y filas animadas.
+- Renderizar con Portal (el de shadcn ya lo hace); no anclar el menú dentro de un padre con `overflow-hidden` sin Portal.
+
+```tsx
+<DropdownMenuContent
+  align="end"
+  className="z-[200] min-w-[10rem] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
+>
+  <DropdownMenuItem className="cursor-pointer bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800">
+    Editar
+  </DropdownMenuItem>
+</DropdownMenuContent>
+```
+
 ## Reglas globales de botones
 
 - Siempre `cursor-pointer`; deshabilitado: `cursor-not-allowed disabled:opacity-50`.

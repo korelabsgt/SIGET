@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import { ActividadesPanel } from "@/components/actividades/ActividadesPanel";
+import { redirect } from "next/navigation";
 
-export default function ActividadesPage() {
-  return (
-    <Suspense>
-      <ActividadesPanel />
-    </Suspense>
-  );
+export default function ActividadesRedirectPage() {
+  redirect("/siget/asistencia-actividades");
 }

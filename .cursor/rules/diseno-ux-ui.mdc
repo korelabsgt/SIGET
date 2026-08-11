@@ -18,6 +18,7 @@ alwaysApply: true
 - SweetAlert solo **fuera** de `ModalShell`; dentro → `ModalConfirmDelete`.
 - Listas dinámicas: `AnimatePresence` + `motion` con `layout`.
 - Conexión: un solo `OfflineBanner` global; respetar `--banner-height`.
+- Menús flotantes (`DropdownMenu`, popovers, menús de 3 puntos): **fondo opaco sólido**. Prohibido dejar solo `bg-popover` si se ve transparente. Usar `bg-white dark:bg-zinc-900`, `opacity-100` y `z` alto (p. ej. `z-[200]`) para que no se transparente contenido detrás (paginación, filas, etc.).
 
 ## Skills UI (cargar según necesidad)
 

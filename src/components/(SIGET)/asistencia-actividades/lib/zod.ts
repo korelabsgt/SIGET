@@ -123,9 +123,12 @@ export type ActividadRecord = {
   departamento: string;
   municipio: string;
   activo: boolean;
+  created_by: string | null;
   created_at: string;
   updated_at: string | null;
   total_registros?: number;
+  creador_nombre: string | null;
+  creador_oficina: string | null;
 };
 
 export type ParticipanteRecord = {

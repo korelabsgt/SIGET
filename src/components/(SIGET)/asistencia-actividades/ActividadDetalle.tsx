@@ -43,7 +43,7 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
           Actividad no encontrada
         </p>
         <Link
-          href="/siget/actividades"
+          href="/siget/asistencia-actividades"
           className="mt-4 inline-flex cursor-pointer text-sm font-bold text-azul-trifinio hover:underline"
         >
           Volver al listado
@@ -55,7 +55,7 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
   return (
     <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <Link
-        href="/siget/actividades"
+        href="/siget/asistencia-actividades"
         className="mb-6 inline-flex cursor-pointer items-center gap-1 text-sm font-bold text-azul-trifinio hover:underline"
       >
         <ChevronLeft className="size-4" />
@@ -104,7 +104,7 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
         </button>
       </div>
 
-      <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(260px,340px)_1fr] lg:items-stretch">
+      <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(260px,320px)_1fr] xl:items-stretch">
         <div className="rounded-3xl border border-slate-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-card">
           <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
             Código QR de asistencia
@@ -118,11 +118,13 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
             Escanea para abrir el formulario público de registro.
           </p>
         </div>
-        <BarEdadGeneroPanel data={edadPorGenero} />
+        <div className="min-w-0">
+          <GraficasAsistencia porGenero={porGenero} porTrifinio={porTrifinio} />
+        </div>
       </div>
 
       <div className="mb-8 w-full">
-        <GraficasAsistencia porGenero={porGenero} porTrifinio={porTrifinio} />
+        <BarEdadGeneroPanel data={edadPorGenero} />
       </div>
 
       <div className="rounded-3xl border border-slate-200/70 bg-white p-5 dark:border-zinc-800 dark:bg-card sm:p-6">

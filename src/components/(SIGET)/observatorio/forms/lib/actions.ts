@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient } from "@/utils/supabase/server";
 import { z } from "zod";
 import {
   createOrganizacionInputSchema,
@@ -65,7 +65,10 @@ function parseInput<T>(schema: z.ZodType<T>, input: unknown): T {
 
 export async function getSectores() {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("obs_sectores").select("*").order("nombre");
+  const { data, error } = await supabase
+    .from("obs_sectores")
+    .select("*")
+    .order("nombre");
   if (error) throw new Error(error.message);
   return data as ObsSector[];
 }
@@ -183,7 +186,10 @@ export async function getRegistrosHistoricos(
     supabase.from("obs_nacionalidades").select("id, nombre"),
     supabase.from("obs_perfiles").select("id, nombre"),
     creatorIds.length > 0
-      ? supabase.from("profiles").select("id, nombre, email").in("id", creatorIds)
+      ? supabase
+          .from("profiles")
+          .select("id, nombre, email")
+          .in("id", creatorIds)
       : Promise.resolve({ data: [] as ProfileCreatorRow[], error: null }),
   ]);
 
@@ -193,7 +199,10 @@ export async function getRegistrosHistoricos(
   const perfMap = new Map<string, string>(
     (perfRes.data ?? []).map((p) => [p.id, p.nombre]),
   );
-  const creatorMap = new Map<string, { nombre: string | null; email: string | null }>(
+  const creatorMap = new Map<
+    string,
+    { nombre: string | null; email: string | null }
+  >(
     (creatorsRes.data ?? []).map((p) => [
       p.id,
       { nombre: p.nombre ?? null, email: p.email ?? null },
@@ -381,7 +390,11 @@ export async function createPredefinedField(nombre: string, orden: number) {
   }
 
   if (result.error) throw new Error(result.error.message);
-  const row = result.data as { id: string; nombre: string; orden?: number | null };
+  const row = result.data as {
+    id: string;
+    nombre: string;
+    orden?: number | null;
+  };
   return {
     id: row.id,
     nombre: row.nombre,
@@ -389,8 +402,16 @@ export async function createPredefinedField(nombre: string, orden: number) {
   } satisfies ObsPredefinedField;
 }
 
-export async function updatePredefinedField(id: string, nombre: string, orden: number) {
-  const input = parseInput(updatePredefinedFieldInputSchema, { id, nombre, orden });
+export async function updatePredefinedField(
+  id: string,
+  nombre: string,
+  orden: number,
+) {
+  const input = parseInput(updatePredefinedFieldInputSchema, {
+    id,
+    nombre,
+    orden,
+  });
   const supabase = await createClient();
 
   let result = await supabase
@@ -410,7 +431,11 @@ export async function updatePredefinedField(id: string, nombre: string, orden: n
   }
 
   if (result.error) throw new Error(result.error.message);
-  const row = result.data as { id: string; nombre: string; orden?: number | null };
+  const row = result.data as {
+    id: string;
+    nombre: string;
+    orden?: number | null;
+  };
   return {
     id: row.id,
     nombre: row.nombre,
@@ -427,8 +452,16 @@ export async function deletePredefinedField(id: string) {
   if (error) throw new Error(error.message);
 }
 
-export async function createPolitica(sectorId: string, codigo: string, descripcion: string) {
-  const input = parseInput(createPoliticaInputSchema, { sectorId, codigo, descripcion });
+export async function createPolitica(
+  sectorId: string,
+  codigo: string,
+  descripcion: string,
+) {
+  const input = parseInput(createPoliticaInputSchema, {
+    sectorId,
+    codigo,
+    descripcion,
+  });
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obs_politicas")
@@ -589,7 +622,11 @@ export async function createPoliticaConIndicadores(
     throw new Error("No se pudo determinar la política.");
   }
 
-  await persistPoliticaIndicadores(supabase, currentPoliticaId, input.gruposIndicadores);
+  await persistPoliticaIndicadores(
+    supabase,
+    currentPoliticaId,
+    input.gruposIndicadores,
+  );
 
   return { id: currentPoliticaId };
 }
@@ -711,7 +748,10 @@ export async function getAllOrganizaciones(): Promise<OrgWithSectors[]> {
   }));
 }
 
-export async function updateOrganizacionLogo(organizacionId: string, logo: string | null) {
+export async function updateOrganizacionLogo(
+  organizacionId: string,
+  logo: string | null,
+) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("obs_organizaciones")
@@ -720,7 +760,10 @@ export async function updateOrganizacionLogo(organizacionId: string, logo: strin
   if (error) throw new Error(error.message);
 }
 
-export async function updateOrganizacionNombre(organizacionId: string, nombre: string) {
+export async function updateOrganizacionNombre(
+  organizacionId: string,
+  nombre: string,
+) {
   const input = parseInput(updateOrganizacionNombreInputSchema, {
     organizacionId,
     nombre,
@@ -749,8 +792,14 @@ export async function createOrganizacion(nombre: string) {
   return data as ObsOrganizacion;
 }
 
-export async function unlinkOrganizacionFromSector(organizacionId: string, sectorId: string) {
-  const input = parseInput(orgSectorIdsInputSchema, { organizacionId, sectorId });
+export async function unlinkOrganizacionFromSector(
+  organizacionId: string,
+  sectorId: string,
+) {
+  const input = parseInput(orgSectorIdsInputSchema, {
+    organizacionId,
+    sectorId,
+  });
   const supabase = await createClient();
   const { error } = await supabase
     .from("obs_organizaciones_sectores")
@@ -760,12 +809,21 @@ export async function unlinkOrganizacionFromSector(organizacionId: string, secto
   if (error) throw new Error(error.message);
 }
 
-export async function linkOrganizacionToSector(organizacionId: string, sectorId: string) {
-  const input = parseInput(orgSectorIdsInputSchema, { organizacionId, sectorId });
+export async function linkOrganizacionToSector(
+  organizacionId: string,
+  sectorId: string,
+) {
+  const input = parseInput(orgSectorIdsInputSchema, {
+    organizacionId,
+    sectorId,
+  });
   const supabase = await createClient();
   const { error } = await supabase
     .from("obs_organizaciones_sectores")
-    .insert({ organizacion_id: input.organizacionId, sector_id: input.sectorId });
+    .insert({
+      organizacion_id: input.organizacionId,
+      sector_id: input.sectorId,
+    });
   if (error) throw new Error(error.message);
 }
 
@@ -841,7 +899,10 @@ export async function updatePerfil(id: string, nombre: string) {
 
 export async function deleteNacionalidad(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("obs_nacionalidades").delete().eq("id", id);
+  const { error } = await supabase
+    .from("obs_nacionalidades")
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 

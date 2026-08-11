@@ -84,9 +84,9 @@ export function statsEdadPorGenero(
   registros: RegistroAsistenciaRecord[],
 ): EdadGeneroBar[] {
   const rangos = [
-    { label: "Jóvenes", min: 18, max: 29 },
-    { label: "Adultos", min: 30, max: 59 },
-    { label: "Tercera edad", min: 60, max: 200 },
+    { label: "Jóvenes (18-30)", min: 18, max: 30 },
+    { label: "Adultos (31-60)", min: 31, max: 60 },
+    { label: "Mayores (61+)", min: 61, max: 200 },
   ];
 
   return rangos.map((rango) => {

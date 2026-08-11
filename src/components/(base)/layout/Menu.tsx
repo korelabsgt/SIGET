@@ -56,7 +56,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   perfil: User,
   admin: Settings,
   "memoria-labores": FileText,
-  actividades: CalendarCheck,
+  "asistencia-actividades": CalendarCheck,
 };
 
 type MenuAccordionOption = {
