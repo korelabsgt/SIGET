@@ -32,8 +32,8 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
   },
   {
     id: "asistencia-actividades",
-    title: "Registro de Asistencia",
-    subtitle: "de actividades",
+    title: "Registro de Asistencia-",
+    subtitle: "--de actividades",
     desc: "Actividades con código QR y estadísticas de asistencia.",
     animatedIcon: "unfvchvi",
     href: "/siget/asistencia-actividades",
