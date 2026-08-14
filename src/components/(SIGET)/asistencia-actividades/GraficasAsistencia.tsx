@@ -258,7 +258,7 @@ function DonutPanel({
   const total = donutData.reduce((acc, d) => acc + d.value, 0);
 
   return (
-    <div className={panelClass}>
+    <div className={cn(panelClass, "overflow-hidden")}>
       <div className="flex flex-col items-center gap-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
           {title}
@@ -367,7 +367,7 @@ export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
   const hasData = dataVisible.length > 0;
 
   return (
-    <div className={cn(panelClass, "flex h-full flex-col")}>
+    <div className={cn(panelClass, "flex h-full flex-col overflow-hidden")}>
       <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
         Segregación por edad y género
       </p>
@@ -398,8 +398,8 @@ export function BarEdadGeneroPanel({ data }: { data: EdadGeneroBar[] }) {
             </span>
           </div>
 
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height={280}>
+          <div className="h-[240px] w-full min-w-0 overflow-hidden sm:h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={dataVisible}
                 margin={{ top: 22, right: 12, left: 0, bottom: 4 }}
@@ -477,7 +477,7 @@ export function GraficasAsistencia({
   porTrifinio: StatSegment[];
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <DonutPanel title="Por género" data={porGenero} />
       <DonutPanel title="Trifinio" data={porTrifinio} />
     </div>

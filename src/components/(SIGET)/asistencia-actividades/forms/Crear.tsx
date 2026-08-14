@@ -12,6 +12,7 @@ import {
   ModalFooter,
   modalActionMessage,
 } from "@/components/ui/general-modal";
+import { CalendarDatePicker } from "@/components/ui/calendar-date-picker";
 import { useCrearActividad } from "../lib/hooks";
 import { actividadFormSchema } from "../lib/zod";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
@@ -98,11 +99,10 @@ export function CrearActividad({
         </div>
         <div className="space-y-2">
           <ModalLabel htmlFor="act-fecha">Fecha de la actividad</ModalLabel>
-          <ModalInput
+          <CalendarDatePicker
             id="act-fecha"
-            type="date"
             value={fechaRealizacion}
-            onChange={(e) => setFechaRealizacion(e.target.value)}
+            onChange={(val) => setFechaRealizacion(val)}
             required
           />
         </div>

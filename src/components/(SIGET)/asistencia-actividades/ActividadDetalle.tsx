@@ -53,7 +53,7 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
   }
 
   return (
-    <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
+    <div className="w-full overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8">
       <Link
         href="/siget/asistencia-actividades"
         className="mb-6 inline-flex cursor-pointer items-center gap-1 text-sm font-bold text-azul-trifinio hover:underline"
@@ -104,8 +104,8 @@ export function ActividadDetalle({ actividadId }: { actividadId: string }) {
         </button>
       </div>
 
-      <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(260px,320px)_1fr] xl:items-stretch">
-        <div className="rounded-3xl border border-slate-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-card">
+      <div className="mb-8 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,320px)_1fr] xl:items-stretch">
+        <div className="min-w-0 rounded-3xl border border-slate-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-card">
           <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
             Código QR de asistencia
           </p>

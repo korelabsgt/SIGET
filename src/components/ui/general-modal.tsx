@@ -92,7 +92,7 @@ export function ModalFooter({
   return (
     <div
       className={cn(
-        "mt-5 -mx-4 md:-mx-6 -mb-4 md:-mb-6 flex w-full gap-3 bg-zinc-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-zinc-800 md:px-6 md:pb-6",
+        "mt-5 -mx-4 md:-mx-6 -mb-4 md:-mb-6 flex w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] gap-3 rounded-b-[calc(1.5rem-3px)] bg-zinc-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-zinc-800 md:px-6 md:pb-6",
         multiAction
           ? "[&>*]:flex [&>*]:min-w-0 [&>*]:flex-1 [&>*]:justify-center"
           : "justify-center",

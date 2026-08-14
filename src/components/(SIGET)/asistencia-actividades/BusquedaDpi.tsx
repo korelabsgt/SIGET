@@ -31,9 +31,10 @@ export function BusquedaDpi({
   }, [value]);
 
   const digitos = value.replace(/\D/g, "");
-  const { data: sugerencias = [], isFetching } = useDpisSugerencias(consulta);
+  const dpiCompleto = digitos.length === 13;
+  const { data: sugerencias = [], isFetching } = useDpisSugerencias(dpiCompleto ? consulta : "");
   const mostrarLista =
-    abierto && digitos.length >= 3 && (isFetching || sugerencias.length > 0);
+    abierto && dpiCompleto && (isFetching || sugerencias.length > 0);
 
   return (
     <div className="relative">
