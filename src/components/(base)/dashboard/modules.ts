@@ -21,40 +21,17 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     href: "/siget/observatorio",
     allowedRoles: ["super", "admin", "observatorio"],
   },
+
   {
-    id: "memoria-labores",
-    title: "Memoria de",
-    subtitle: "Labores",
-    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    animatedIcon: "wvhscmei",
-    href: "/siget/memoria-labores",
-    allowedRoles: ["super", "admin", "comunicacion"],
+    id: "gestion-territorial",
+    title: "Gestión",
+    subtitle: "Territorial",
+    desc: "Módulo de Gestión Territorial.",
+    animatedIcon: "giblkgwf",
+    href: "/siget/gestion-territorial",
+    allowedRoles: ["super", "admin"],
   },
-  {
-    id: "asistencia-actividades",
-    title: "Registro de Asistencia-",
-    subtitle: "--de actividades",
-    desc: "Actividades con código QR y estadísticas de asistencia.",
-    animatedIcon: "unfvchvi",
-    href: "/siget/asistencia-actividades",
-  },
-  {
-    id: "perfil",
-    title: "Gestión de",
-    subtitle: "Mi Perfil",
-    desc: "Actualización de credenciales y datos personales del usuario.",
-    animatedIcon: "btgcyfug",
-    href: "/siget/perfil",
-  },
-  {
-    id: "admin",
-    title: "Ajustes",
-    subtitle: "Admin",
-    desc: "Panel de administración del sistema SIGET.",
-    animatedIcon: "plusmrxr",
-    href: "/siget/admin",
-    requiresAdmin: true,
-  },
+
 ];
 
 export const OBSERVATORIO_MENU_OPTIONS = [
@@ -64,6 +41,44 @@ export const OBSERVATORIO_MENU_OPTIONS = [
     desc: "Visualización de datos y estadísticas regionales del SIGET.",
     href: "/siget/observatorio",
     animatedIcon: "qqvpjphn",
+  },
+] as const;
+
+export const GESTION_TERRITORIAL_MENU_OPTIONS = [
+  {
+    id: "memoria-labores",
+    title: "Memoria de Labores",
+    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    href: "/siget/gestion-territorial/memoria-labores",
+    animatedIcon: "wvhscmei",
+  },
+  {
+    id: "asistencia-actividades",
+    title: "Registro de Asistencia",
+    desc: "Actividades con código QR y estadísticas de asistencia.",
+    href: "/siget/gestion-territorial/asistencia-actividades",
+    animatedIcon: "unfvchvi",
+  },
+  {
+    id: "flota",
+    title: "Flota",
+    desc: "Control y asignación de la flota vehicular de la institución.",
+    href: "/siget/gestion-territorial/gestion-vehiculos/flota",
+    animatedIcon: "cdxxgczv",
+  },
+  {
+    id: "solicitudes",
+    title: "Solicitudes",
+    desc: "Reservas de vehículos para misiones.",
+    href: "/siget/gestion-territorial/gestion-vehiculos/solicitudes",
+    animatedIcon: "abwrkdvl",
+  },
+  {
+    id: "bitacoras",
+    title: "Bitácoras",
+    desc: "Registro digital de viajes y métricas operativas.",
+    href: "/siget/gestion-territorial/gestion-vehiculos/bitacoras",
+    animatedIcon: "wyqtxzlg", // Or any other suitable icon if known, using a placeholder for now
   },
 ] as const;
 

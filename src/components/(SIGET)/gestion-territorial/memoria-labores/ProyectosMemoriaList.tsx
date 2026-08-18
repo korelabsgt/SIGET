@@ -32,6 +32,7 @@ import type { FiltroPeriodoMemoria, ProyectosMemoria } from "./lib/zod";
 import ProyectosMemoriaForm from "./form/ProyectosMemoriaForm";
 import { InformeMemoriaVista } from "./InformeMemoriaVista";
 import { MemoriaPeriodoFiltro } from "./MemoriaPeriodoFiltro";
+import { SubmodulosNav } from "../SubmodulosNav";
 
 type View =
   | { mode: "list" }
@@ -297,6 +298,8 @@ export default function ProyectosMemoriaList() {
           Nuevo informe
         </button>
       </div>
+
+      <SubmodulosNav />
 
       <button
         type="button"

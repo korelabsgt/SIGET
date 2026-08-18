@@ -31,6 +31,7 @@ import { PushNotificationToggle } from "@/components/ui/PushNotificationToggle";
 import {
   ADMIN_MENU_OPTIONS,
   OBSERVATORIO_MENU_OPTIONS,
+  GESTION_TERRITORIAL_MENU_OPTIONS,
   getPerfilMenuOptions,
   getVisibleAdminOptions,
   getVisibleDashboardModules,
@@ -447,7 +448,7 @@ function MenuModuleLink({
   );
 }
 
-type MenuAccordionId = "observatorio" | "perfil" | "admin";
+type MenuAccordionId = "observatorio" | "perfil" | "admin" | "gestion-territorial";
 
 export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
   const pathname = usePathname();
@@ -474,13 +475,15 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
 
   const visibleModules = user ? getVisibleDashboardModules(effectiveRole) : [];
   const mainModules = visibleModules.filter(
-    (mod) => mod.id !== "admin" && mod.id !== "observatorio" && mod.id !== "perfil",
+    (mod) => mod.id !== "admin" && mod.id !== "observatorio" && mod.id !== "perfil" && mod.id !== "gestion-territorial",
   );
   const adminModule = visibleModules.find((mod) => mod.id === "admin");
   const observatorioModule = visibleModules.find((mod) => mod.id === "observatorio");
+  const gestionTerritorialModule = visibleModules.find((mod) => mod.id === "gestion-territorial");
   const perfilModule = visibleModules.find((mod) => mod.id === "perfil");
   const isAdminRoute = pathname.startsWith("/siget/admin");
   const isObservatorioRoute = pathname.startsWith("/siget/observatorio");
+  const isGestionTerritorialRoute = pathname.startsWith("/siget/gestion-territorial");
   const passkeysEnabled = appSettings?.enable_passkeys ?? false;
   const perfilMenuOptions = getPerfilMenuOptions(passkeysEnabled);
   const manualUsuarioPath = appSettings?.manual_usuario_url ?? null;
@@ -497,6 +500,10 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
   useEffect(() => {
     if (isObservatorioRoute) setOpenAccordionId("observatorio");
   }, [isObservatorioRoute]);
+
+  useEffect(() => {
+    if (isGestionTerritorialRoute) setOpenAccordionId("gestion-territorial");
+  }, [isGestionTerritorialRoute]);
 
   useEffect(() => {
     if (!passkeysEnabled && isPasskeysOpen) setIsPasskeysOpen(false);
@@ -614,7 +621,7 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
                   />
                 </MenuSection>
 
-                {(observatorioModule || mainModules.length > 0) && (
+                {(observatorioModule || gestionTerritorialModule || mainModules.length > 0) && (
                     <MenuSection label="Módulos SIGET" variant="modules">
                       {observatorioModule && (
                         <MenuAccordion
@@ -630,6 +637,22 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
                           onNavigate={() => setIsOpen(false)}
                           variant="modules"
                           icon={Globe}
+                        />
+                      )}
+                      {gestionTerritorialModule && (
+                        <MenuAccordion
+                          id="menu-gestion-territorial"
+                          title={gestionTerritorialModule.title}
+                          subtitle={gestionTerritorialModule.subtitle}
+                          desc={gestionTerritorialModule.desc}
+                          options={GESTION_TERRITORIAL_MENU_OPTIONS}
+                          pathname={pathname}
+                          open={openAccordionId === "gestion-territorial"}
+                          onToggle={() => toggleAccordion("gestion-territorial")}
+                          isRouteActive={isGestionTerritorialRoute}
+                          onNavigate={() => setIsOpen(false)}
+                          variant="modules"
+                          icon={Building2}
                         />
                       )}
                       {mainModules.map((mod) => (

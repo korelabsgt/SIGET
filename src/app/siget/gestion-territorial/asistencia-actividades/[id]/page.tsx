@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { ActividadDetalle } from "@/components/(SIGET)/asistencia-actividades/ActividadDetalle";
+import { ActividadDetalle } from "@/components/(SIGET)/gestion-territorial/asistencia-actividades/ActividadDetalle";
 
 export default async function ActividadDetallePage({
   params,

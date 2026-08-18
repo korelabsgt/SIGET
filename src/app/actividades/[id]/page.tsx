@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { RegistroPublico } from "@/components/(SIGET)/asistencia-actividades/RegistroPublico";
-import { getActividadPublica } from "@/components/(SIGET)/asistencia-actividades/lib/actions";
+import { RegistroPublico } from "@/components/(SIGET)/gestion-territorial/asistencia-actividades/RegistroPublico";
+import { getActividadPublica } from "@/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/actions";
 
 export default async function RegistroPublicoPage({
   params,
