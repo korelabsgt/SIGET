@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
-import { SubmodulosNav } from "../SubmodulosNav";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import {
   DropdownMenu,
@@ -287,8 +286,6 @@ export default function AsistenciaActividadesList() {
           Crea actividades, genera un código QR y consulta los registros.
         </p>
       </div>
-
-      <SubmodulosNav />
 
       {canVerOtros && (
         <div className="mb-4 flex flex-wrap gap-2">
