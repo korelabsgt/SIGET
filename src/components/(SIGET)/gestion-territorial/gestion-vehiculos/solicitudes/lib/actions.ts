@@ -140,3 +140,23 @@ export async function cambiarEstadoSolicitud(
     return { success: false, error: err.message || "Error desconocido" };
   }
 }
+
+export async function searchProfiles(query: string) {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nombre, email")
+      .ilike("nombre", `%${query}%`)
+      .limit(10);
+      
+    if (error) {
+      console.error("Error searchProfiles:", error);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.error("Excepción en searchProfiles:", err);
+    return [];
+  }
+}

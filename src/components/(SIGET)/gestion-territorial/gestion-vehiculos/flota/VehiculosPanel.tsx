@@ -11,7 +11,9 @@ import { VehiculosCards } from "./VehiculosCards";
 import { VehiculoFormModal } from "./VehiculoFormModal";
 import { SubmodulosNav } from "../../SubmodulosNav";
 import { getVehiculos, deleteVehiculo } from "./lib/actions";
+import { getFleetSummary } from "./lib/alerts";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TODOS = "__todos__";
@@ -114,6 +116,32 @@ export function VehiculosPanel() {
       </div>
 
       <SubmodulosNav />
+
+      {/* ALERT BANNER */}
+      {(() => {
+        const { documentosEnAlerta, mantenimientoEnAlerta } = getFleetSummary(vehiculosFiltrados);
+        if (documentosEnAlerta === 0 && mantenimientoEnAlerta === 0) return null;
+        return (
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 px-3 sm:px-0">
+            {documentosEnAlerta > 0 && (
+              <div className="flex-1 flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-600 dark:text-red-400">
+                <ShieldAlert className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-semibold">
+                  <strong className="text-lg">{documentosEnAlerta}</strong> unidades con documentos vencidos o próximos a vencer.
+                </p>
+              </div>
+            )}
+            {mantenimientoEnAlerta > 0 && (
+              <div className="flex-1 flex items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-orange-600 dark:text-orange-400">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <p className="text-sm font-semibold">
+                  <strong className="text-lg">{mantenimientoEnAlerta}</strong> unidades requieren mantenimiento preventivo inminente.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* TOOLBAR */}
       <div className="mb-6 rounded-2xl border border-border bg-card/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-3 sm:px-4">

@@ -1,5 +1,5 @@
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
@@ -38,11 +39,12 @@ export function VehiculoFormModal({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<VehiculoInput>({
-    resolver: zodResolver(vehiculoInputSchema),
+    resolver: zodResolver(vehiculoInputSchema) as any,
     defaultValues: {
       placa: "",
       marca: "",
@@ -112,7 +114,7 @@ export function VehiculoFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
@@ -201,10 +203,15 @@ export function VehiculoFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vencimiento_seguro">Vencimiento Seguro</Label>
-              <Input
-                id="vencimiento_seguro"
-                type="date"
-                {...register("vencimiento_seguro")}
+              <Controller
+                control={control}
+                name="vencimiento_seguro"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
               />
               {errors.vencimiento_seguro && (
                 <p className="text-xs text-red-500">
@@ -214,10 +221,15 @@ export function VehiculoFormModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="vencimiento_circulacion">Vencimiento Circulación</Label>
-              <Input
-                id="vencimiento_circulacion"
-                type="date"
-                {...register("vencimiento_circulacion")}
+              <Controller
+                control={control}
+                name="vencimiento_circulacion"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
               />
               {errors.vencimiento_circulacion && (
                 <p className="text-xs text-red-500">

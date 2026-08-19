@@ -1,6 +1,6 @@
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
-import { PenSquare, Trash2, MoreVertical } from "lucide-react";
+import { PenSquare, Trash2, MoreVertical, FileText, Wrench } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -9,6 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { getDocumentAlertStatus, getMantenimientoAlertStatus } from "./lib/alerts";
 
 export function VehiculosList({
   vehiculos,
@@ -58,6 +65,7 @@ export function VehiculosList({
               <th className="px-6 py-4">ESTADO</th>
               <th className="px-6 py-4">AÑO / COLOR</th>
               <th className="px-6 py-4">VENCIMIENTOS</th>
+              <th className="px-6 py-4 text-center">ALERTAS</th>
               <th className="px-6 py-4 text-center">ACCIONES</th>
             </tr>
           </thead>
@@ -104,6 +112,49 @@ export function VehiculosList({
                   </div>
                 </td>
                 <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm",
+                            getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "VERDE" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                            getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "AMARILLO" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                            "bg-red-500/10 text-red-500 border-red-500/20"
+                          )}>
+                            <FileText className="h-4 w-4" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "VERDE" ? "Documentación al día" :
+                           getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "AMARILLO" ? "Documentos próximos a vencer" :
+                           "Documentos vencidos o faltantes"}
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm",
+                            getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "VERDE" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                            getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "AMARILLO" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                            "bg-red-500/10 text-red-500 border-red-500/20"
+                          )}>
+                            <Wrench className="h-4 w-4" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "VERDE" ? 
+                            `Faltan ${getMantenimientoAlertStatus(vehiculo.kilometraje_actual).kmFaltantes.toLocaleString()} km para el próximo servicio` :
+                           getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "AMARILLO" ? 
+                            `Próximo servicio en ${getMantenimientoAlertStatus(vehiculo.kilometraje_actual).kmFaltantes.toLocaleString()} km` :
+                            "Mantenimiento preventivo requerido / vencido"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800">
                       <MoreVertical className="h-4 w-4" />
@@ -130,7 +181,7 @@ export function VehiculosList({
             ))}
             {vehiculos.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                   No se encontraron vehículos.
                 </td>
               </tr>

@@ -31,6 +31,23 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     href: "/siget/gestion-territorial",
     allowedRoles: ["super", "admin"],
   },
+  {
+    id: "perfil",
+    title: "Mi Perfil",
+    subtitle: "y Ajustes",
+    desc: "Opciones de cuenta y seguridad.",
+    animatedIcon: "btgcyfug",
+    href: "/siget/perfil",
+  },
+  {
+    id: "admin",
+    title: "Ajustes",
+    subtitle: "Administrador",
+    desc: "Panel de administración del sistema SIGET.",
+    animatedIcon: "gzqipvbr",
+    href: "/siget/admin",
+    requiresAdmin: true,
+  },
 
 ];
 
@@ -79,6 +96,13 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     desc: "Registro digital de viajes y métricas operativas.",
     href: "/siget/gestion-territorial/gestion-vehiculos/bitacoras",
     animatedIcon: "wyqtxzlg", // Or any other suitable icon if known, using a placeholder for now
+  },
+  {
+    id: "mantenimiento",
+    title: "Mantenimiento",
+    desc: "Gestión de averías y mantenimiento preventivo.",
+    href: "/siget/gestion-territorial/gestion-vehiculos/mantenimiento",
+    animatedIcon: "zchvbdce", // placeholder
   },
 ] as const;
 

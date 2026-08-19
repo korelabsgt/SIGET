@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileText, QrCode, Car, CalendarRange, BookOpen } from "lucide-react";
+import { FileText, QrCode, Car, CalendarRange, BookOpen, Wrench } from "lucide-react";
 import { GESTION_TERRITORIAL_MENU_OPTIONS } from "@/components/(base)/dashboard/modules";
 
 export function SubmodulosNav() {
@@ -21,6 +21,8 @@ export function SubmodulosNav() {
         return <CalendarRange className="w-4 h-4" />;
       case "bitacoras":
         return <BookOpen className="w-4 h-4" />;
+      case "mantenimiento":
+        return <Wrench className="w-4 h-4" />;
       default:
         return null;
     }
@@ -29,7 +31,7 @@ export function SubmodulosNav() {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-6 px-3 sm:px-0 overflow-x-auto pb-2">
       {GESTION_TERRITORIAL_MENU_OPTIONS.filter(
-        (opt) => opt.id === "flota" || opt.id === "solicitudes" || opt.id === "bitacoras"
+        (opt) => opt.id === "flota" || opt.id === "solicitudes" || opt.id === "bitacoras" || opt.id === "mantenimiento"
       ).map((opt) => {
         const isActive = pathname.startsWith(opt.href);
         return (

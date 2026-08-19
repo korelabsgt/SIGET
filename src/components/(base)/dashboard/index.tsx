@@ -63,7 +63,9 @@ export function Dashboard() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const visibleModules = getVisibleDashboardModules(effectiveRole);
+  const visibleModules = getVisibleDashboardModules(effectiveRole).filter(
+    (mod) => mod.id !== "admin" && mod.id !== "perfil"
+  );
 
   const handleCardClick = (id: string, href: string) => {
     if (isMobile) {

@@ -10,6 +10,7 @@ import { SubmodulosNav } from "../../SubmodulosNav";
 import { BitacorasList } from "./BitacorasList";
 import { BitacoraStatsCards } from "./BitacoraStatsCards";
 import { BitacoraFormModal } from "./BitacoraFormModal";
+import { ExportarReporteModal } from "./ExportarReporteModal";
 import { getBitacoras, getMetricasBitacoras, createBitacora } from "./lib/actions";
 import { type BitacoraRow, type BitacoraInput } from "./lib/zod";
 import { toast } from "react-toastify";
@@ -20,6 +21,7 @@ export function BitacorasPanel() {
   const [bitacoras, setBitacoras] = useState<BitacoraRow[]>([]);
   const [metricas, setMetricas] = useState({ total_km: 0, total_combustible: 0, total_misiones: 0 });
   const [modalOpen, setModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -73,12 +75,21 @@ export function BitacorasPanel() {
             </h1>
           </div>
         </div>
-        <Button 
-          onClick={() => setModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Registrar Viaje
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setExportModalOpen(true)}
+            className="text-green-700 hover:text-green-800 hover:bg-green-50 border-green-200 font-semibold rounded-xl shadow-sm transition-all"
+          >
+            Exportar Reporte
+          </Button>
+          <Button 
+            onClick={() => setModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Registrar Viaje
+          </Button>
+        </div>
       </div>
 
       <SubmodulosNav />
@@ -100,6 +111,10 @@ export function BitacorasPanel() {
         open={modalOpen} 
         onOpenChange={setModalOpen}
         onSubmit={handleCreate}
+      />
+      <ExportarReporteModal 
+        open={exportModalOpen} 
+        onOpenChange={setExportModalOpen} 
       />
     </div>
   );

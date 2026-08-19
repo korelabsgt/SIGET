@@ -1,5 +1,5 @@
 import { useEffect, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
@@ -12,6 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasajerosSelect } from "./PasajerosSelect";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +34,7 @@ export function SolicitudFormModal({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -81,7 +84,7 @@ export function SolicitudFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nueva Solicitud de Vehículo</DialogTitle>
         </DialogHeader>
@@ -90,14 +93,32 @@ export function SolicitudFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Fecha y Hora de Inicio</Label>
-              <Input type="datetime-local" {...register("fecha_inicio")} />
+              <Controller
+                control={control}
+                name="fecha_inicio"
+                render={({ field }) => (
+                  <DateTimePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
+              />
               {errors.fecha_inicio && (
                 <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
               )}
             </div>
             <div className="space-y-2">
               <Label>Fecha y Hora de Retorno Estimado</Label>
-              <Input type="datetime-local" {...register("fecha_fin_estimada")} />
+              <Controller
+                control={control}
+                name="fecha_fin_estimada"
+                render={({ field }) => (
+                  <DateTimePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
+              />
               {errors.fecha_fin_estimada && (
                 <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
               )}
@@ -131,7 +152,16 @@ export function SolicitudFormModal({
 
           <div className="space-y-2">
             <Label>Pasajeros / Acompañantes (Opcional)</Label>
-            <Input placeholder="Ej. Juan Pérez, María López" {...register("pasajeros")} />
+            <Controller
+              control={control}
+              name="pasajeros"
+              render={({ field }) => (
+                <PasajerosSelect
+                  value={field.value || ""}
+                  onChange={(val) => field.onChange(val)}
+                />
+              )}
+            />
           </div>
 
           <DialogFooter className="pt-4">

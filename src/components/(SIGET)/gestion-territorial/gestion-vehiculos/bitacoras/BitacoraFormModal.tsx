@@ -166,7 +166,7 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-w-4xl max-h-[95vh] overflow-y-auto">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-4xl max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-black">
             <Route className="h-6 w-6 text-indigo-500" />
@@ -193,12 +193,12 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
                 name="solicitud_id"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <Select onValueChange={(val) => field.onChange(val === "none" ? "" : val)} value={field.value || "none"}>
                     <SelectTrigger className="bg-white dark:bg-zinc-900">
                       <SelectValue placeholder="Seleccionar misión activa (Opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Ninguna (Registro manual)</SelectItem>
+                      <SelectItem value="none">Ninguna (Registro manual)</SelectItem>
                       {misiones.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           Misión a {m.destino} (In: {m.ter_vehiculos?.kilometraje_actual} km)
@@ -219,13 +219,14 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
                   name="vehiculo_id"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={!!selectedMisionId}>
+                  <Select onValueChange={field.onChange} value={field.value || "none"} disabled={!!selectedMisionId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar..." />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none" className="hidden">Seleccionar...</SelectItem>
                         {vehiculos.map((v) => (
-                          <SelectItem key={v.id} value={v.id || ""}>
+                          <SelectItem key={v.id} value={v.id || "fallback"}>
                             {v.placa} - {v.marca} {v.modelo}
                           </SelectItem>
                         ))}
@@ -244,13 +245,14 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
                   name="conductor_id"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={!!selectedMisionId}>
+                    <Select onValueChange={field.onChange} value={field.value || "none"} disabled={!!selectedMisionId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar..." />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none" className="hidden">Seleccionar...</SelectItem>
                         {conductores.map((c) => (
-                          <SelectItem key={c.id} value={c.id || ""}>
+                          <SelectItem key={c.id} value={c.id || "fallback"}>
                             {c.full_name}
                           </SelectItem>
                         ))}
