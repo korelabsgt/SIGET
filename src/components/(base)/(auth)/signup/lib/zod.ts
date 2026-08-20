@@ -19,12 +19,7 @@ export const authSchema = z.object({
     message: "La clave inicial debe ser Acceso.",
   }),
 
-  rol: z.enum(
-    ["user", "admin", "super", "observatorio", "admin-observatorio", "comunicacion"],
-    {
-      message: "Rol inválido",
-    },
-  ),
+  rol: z.string().min(1, "El rol es obligatorio").trim(),
 
   organizacion_id: z
     .string()

@@ -29,3 +29,45 @@ export const SolventarFallaSchema = z.object({
 });
 
 export type SolventarFallaFormData = z.infer<typeof SolventarFallaSchema>;
+
+export const vehiculoFallaOptionSchema = z.object({
+  id: z.string(),
+  placa: z.string(),
+  marca: z.string(),
+  modelo: z.string(),
+  estado: z.string().optional(),
+});
+
+export type VehiculoFallaOption = z.infer<typeof vehiculoFallaOptionSchema>;
+
+export const mecanicoOptionSchema = z.object({
+  id: z.string(),
+  nombre: z.string().nullable(),
+});
+
+export type MecanicoOption = z.infer<typeof mecanicoOptionSchema>;
+
+export const fallaRowSchema = z.object({
+  id: z.string(),
+  vehiculo_id: z.string(),
+  reportado_por: z.string(),
+  mecanico_id: z.string().nullable(),
+  severidad: z.enum(["BAJA", "MEDIA", "ALTA"]),
+  descripcion: z.string(),
+  evidencia_url: z.string().nullable(),
+  diagnostico: z.string().nullable(),
+  reparacion_detalle: z.string().nullable(),
+  taller_externo: z.string().nullable(),
+  estado: z.enum(["PENDIENTE", "EN_REPARACION", "SOLVENTADA"]),
+  created_at: z.string(),
+  solventado_at: z.string().nullable(),
+  vehiculo: z.object({
+    placa: z.string(),
+    marca: z.string(),
+    modelo: z.string(),
+  }),
+  reportador: z.object({ nombre: z.string() }),
+  mecanico: z.object({ nombre: z.string() }).nullable(),
+});
+
+export type FallaRow = z.infer<typeof fallaRowSchema>;

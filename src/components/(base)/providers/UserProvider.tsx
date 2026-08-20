@@ -41,10 +41,13 @@ export function UserProvider({
 
   // ----- Refresco de sesión para obtener user_metadata actualizado -----
   const refreshUser = useCallback(async () => {
-    // refreshSession() fuerza obtener un JWT nuevo del servidor con user_metadata actualizado
-    const { data, error } = await supabase.auth.refreshSession();
-    if (!error && data.user) {
-      setUser(data.user);
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data.user) {
+        setUser(data.user);
+      }
+    } catch {
+      // Red offline o Supabase inaccesible
     }
   }, [supabase]);
 

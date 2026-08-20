@@ -1,0 +1,323 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
+import { Loader2 } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+import {
+  vehiculoInputSchema,
+  ESTADOS_VEHICULO,
+  type VehiculoInput,
+  type VehiculoRow,
+} from "../lib/zod";
+import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
+import { ImagenVehiculoDropzone, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
+
+export function VerEditar({
+  open,
+  onOpenChange,
+  initialData,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialData?: VehiculoRow | null;
+  onSaved: () => void;
+}) {
+  const crear = useCrearVehiculo();
+  const editar = useEditarVehiculo();
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imagenRemovida, setImagenRemovida] = useState(false);
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<VehiculoInput>({
+    resolver: zodResolver(vehiculoInputSchema) as never,
+    defaultValues: {
+      placa: "",
+      marca: "",
+      modelo: "",
+      color: "",
+      anio: new Date().getFullYear(),
+      kilometraje_actual: 0,
+      estado: "LIBRE",
+      vencimiento_seguro: "",
+      vencimiento_circulacion: "",
+      imagen_url: null,
+    },
+  });
+
+  const clearImagen = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setImagenRemovida(true);
+  };
+
+  const handleFileSelect = (selectedFile: File) => {
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
+    setImagenRemovida(false);
+  };
+
+  useEffect(() => {
+    if (open) {
+      setFile(null);
+      setImagenRemovida(false);
+      if (initialData) {
+        setPreviewUrl(initialData.imagen_url ?? null);
+        reset({
+          placa: initialData.placa,
+          marca: initialData.marca,
+          modelo: initialData.modelo,
+          color: initialData.color,
+          anio: initialData.anio,
+          kilometraje_actual: initialData.kilometraje_actual,
+          estado: initialData.estado,
+          vencimiento_seguro: initialData.vencimiento_seguro
+            ? new Date(initialData.vencimiento_seguro).toISOString().split("T")[0]
+            : "",
+          vencimiento_circulacion: initialData.vencimiento_circulacion
+            ? new Date(initialData.vencimiento_circulacion).toISOString().split("T")[0]
+            : "",
+          imagen_url: initialData.imagen_url ?? null,
+        });
+      } else {
+        setPreviewUrl(null);
+        reset({
+          placa: "",
+          marca: "",
+          modelo: "",
+          color: "",
+          anio: new Date().getFullYear(),
+          kilometraje_actual: 0,
+          estado: "LIBRE",
+          vencimiento_seguro: "",
+          vencimiento_circulacion: "",
+          imagen_url: null,
+        });
+      }
+    }
+  }, [open, initialData, reset]);
+
+  const onSubmit = async (data: VehiculoInput) => {
+    setUploading(true);
+    try {
+      let imagenUrl: string | null = initialData?.imagen_url ?? null;
+
+      if (imagenRemovida && !file) {
+        imagenUrl = null;
+      }
+
+      if (file) {
+        imagenUrl = await uploadImagenVehiculo(file, data.placa);
+      }
+
+      const payload: VehiculoInput = {
+        ...data,
+        imagen_url: imagenUrl,
+      };
+
+      if (initialData?.id) {
+        await editar.mutateAsync({ id: initialData.id, input: payload });
+        toast.success("Vehículo actualizado correctamente");
+      } else {
+        await crear.mutateAsync(payload);
+        toast.success("Vehículo registrado correctamente");
+      }
+      onSaved();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al guardar el vehículo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isWorking = crear.isPending || editar.isPending || isSubmitting || uploading;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="placa">Placa</Label>
+              <Input
+                id="placa"
+                placeholder="Ej. P123ABC"
+                className="uppercase"
+                {...register("placa")}
+              />
+              {errors.placa && (
+                <p className="text-xs text-red-500">{errors.placa.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="estado">Estado</Label>
+              <select
+                id="estado"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                {...register("estado")}
+              >
+                {ESTADOS_VEHICULO.map((estado) => (
+                  <option key={estado} value={estado}>
+                    {estado.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
+              {errors.estado && (
+                <p className="text-xs text-red-500">{errors.estado.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="marca">Marca</Label>
+              <Input id="marca" placeholder="Ej. Toyota" {...register("marca")} />
+              {errors.marca && (
+                <p className="text-xs text-red-500">{errors.marca.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelo">Modelo</Label>
+              <Input id="modelo" placeholder="Ej. Hilux" {...register("modelo")} />
+              {errors.modelo && (
+                <p className="text-xs text-red-500">{errors.modelo.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="color">Color</Label>
+              <Input id="color" placeholder="Ej. Blanco" {...register("color")} />
+              {errors.color && (
+                <p className="text-xs text-red-500">{errors.color.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="anio">Año</Label>
+              <Input id="anio" type="number" {...register("anio")} />
+              {errors.anio && (
+                <p className="text-xs text-red-500">{errors.anio.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="kilometraje">Kilometraje</Label>
+              <Input
+                id="kilometraje"
+                type="number"
+                {...register("kilometraje_actual")}
+              />
+              {errors.kilometraje_actual && (
+                <p className="text-xs text-red-500">
+                  {errors.kilometraje_actual.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vencimiento_seguro">Vencimiento Seguro</Label>
+              <Controller
+                control={control}
+                name="vencimiento_seguro"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
+              />
+              {errors.vencimiento_seguro && (
+                <p className="text-xs text-red-500">
+                  {errors.vencimiento_seguro.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vencimiento_circulacion">Vencimiento Circulación</Label>
+              <Controller
+                control={control}
+                name="vencimiento_circulacion"
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value ? new Date(field.value) : undefined}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
+                  />
+                )}
+              />
+              {errors.vencimiento_circulacion && (
+                <p className="text-xs text-red-500">
+                  {errors.vencimiento_circulacion.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <ImagenVehiculoDropzone
+            previewUrl={previewUrl}
+            onFileSelect={handleFileSelect}
+            onClear={clearImagen}
+            disabled={isWorking}
+          />
+
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isWorking}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isWorking} className="bg-azul-trifinio text-white hover:bg-azul-trifinio/90">
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Subiendo imagen...
+                </>
+              ) : isWorking ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  {initialData ? "Guardando..." : "Registrando..."}
+                </>
+              ) : initialData ? (
+                "Guardar Cambios"
+              ) : (
+                "Registrar"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

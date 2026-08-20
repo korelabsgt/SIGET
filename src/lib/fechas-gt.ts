@@ -76,6 +76,34 @@ export function formatFechaHoraGt(
   }).format(date);
 }
 
+export function formatFechaCortaGt(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date);
+}
+
+export function formatHoraGt(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
 export function mesCalendarioToTimestamptz(mes: string): string {
   const normalizado = normalizarMesCalendario(mes);
   if (!normalizado) throw new Error("INVALID_MONTH");

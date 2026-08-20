@@ -17,7 +17,7 @@ import Swal from "sweetalert2";
 import { useQueryClient } from "@tanstack/react-query";
 import { updateProfile } from "../lib/actions";
 import { useProfile } from "../lib/hooks";
-import { getOrganizaciones } from "@/components/(base)/(auth)/signup/actions";
+import { getOrganizaciones } from "@/components/(base)/(auth)/signup/lib/actions";
 import { cn } from "@/lib/utils";
 import { Building2, Shield } from "lucide-react";
 import { InfoUser, type InfoUserRef } from "./InfoUser";

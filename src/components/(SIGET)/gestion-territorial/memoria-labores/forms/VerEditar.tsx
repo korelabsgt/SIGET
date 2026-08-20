@@ -51,7 +51,7 @@ import {
 import { useAutofillInformeUsuario } from "../lib/hooks";
 import { ProyectoImagenes } from "@/components/(base)/imgs";
 
-interface ProyectosMemoriaFormProps {
+interface VerEditarProps {
   initial?: ProyectosMemoria | null;
   onBack?: () => void;
   onSaved: () => void;
@@ -483,7 +483,7 @@ function SectionAddButton({
   );
 }
 
-export default function ProyectosMemoriaForm({
+export default function VerEditar({
   initial = null,
   onBack,
   onSaved,
@@ -491,7 +491,7 @@ export default function ProyectosMemoriaForm({
   onCreatePublic,
   onReview,
   restoreDraft = null,
-}: ProyectosMemoriaFormProps) {
+}: VerEditarProps) {
   const [form, setForm] = useState<ProyectosMemoriaInput>(() => {
     if (restoreDraft) return restoreDraft;
     if (!initial) return emptyProyectoMemoria();

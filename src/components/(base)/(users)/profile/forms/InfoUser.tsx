@@ -36,8 +36,8 @@ import {
   canManageUsers,
   getManageableRoles,
   isUserVisibleToActor,
-  ROLE_LABELS,
 } from "@/components/(base)/(users)/usuarios/lib/permissions";
+import { SelectorRol } from "@/components/(base)/(users)/usuarios/forms/SelectorRol";
 import { cn } from "@/lib/utils";
 import { generateStrongPassword } from "@/utils/general/password-generator";
 import { AuroraText } from "@/components/ui/aurora-text";
@@ -229,16 +229,6 @@ export const InfoUser = forwardRef<InfoUserRef, InfoUserProps>(
     }, [profile?.rol]);
 
     useEffect(() => {
-      if (
-        roleOptions.length > 0 &&
-        selectedRole &&
-        !roleOptions.includes(selectedRole)
-      ) {
-        setSelectedRole(profile?.rol || roleOptions[0]);
-      }
-    }, [roleOptions, profile?.rol, selectedRole]);
-
-    useEffect(() => {
       if (credentials) {
         setFormData({
           username: credentials.username || "",
@@ -274,9 +264,9 @@ export const InfoUser = forwardRef<InfoUserRef, InfoUserProps>(
         });
     };
 
-    const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleRoleChange = (role: string) => {
       if (!canEdit || !canChangeRole) return;
-      setSelectedRole(e.target.value);
+      setSelectedRole(role);
       setHasChanges(true);
     };
 
@@ -427,24 +417,16 @@ export const InfoUser = forwardRef<InfoUserRef, InfoUserProps>(
               <label className="text-sm font-semibold text-foreground/70 mb-1.5 block">
                 Rol
               </label>
-              <select
+              <SelectorRol
                 value={selectedRole}
                 onChange={handleRoleChange}
-                disabled={!canChangeRole || !canEdit}
-                className="flex h-10 w-full rounded-lg border border-input bg-background/50 px-3 text-sm outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-              >
-                {canChangeRole ? (
-                  roleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_LABELS[role] || role}
-                    </option>
-                  ))
-                ) : (
-                  <option value={selectedRole}>
-                    {ROLE_LABELS[selectedRole] || selectedRole || "Usuario"}
-                  </option>
-                )}
-              </select>
+                roleOptions={roleOptions}
+                allowCustom={effectiveRole === "super"}
+                readOnly={!canChangeRole}
+                disabled={!canEdit || !canChangeRole}
+                preferredRole={profile?.rol}
+                resetKey={userId}
+              />
             </div>
             {canManageStatus && (
               <div className="min-w-0">

@@ -1,258 +1,108 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Plus, Search, LayoutGrid, List as ListIcon, Loader2 } from "lucide-react";
-import { toast } from "react-toastify";
-import Swal from "sweetalert2";
-
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { VehiculosList } from "./VehiculosList";
 import { VehiculosCards } from "./VehiculosCards";
-import { VehiculoFormModal } from "./VehiculoFormModal";
-import { SubmodulosNav } from "../../SubmodulosNav";
-import { getVehiculos, deleteVehiculo } from "./lib/actions";
-import { getFleetSummary } from "./lib/alerts";
-import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
-import { AlertTriangle, ShieldAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { VehiculoDetalleView } from "./VehiculoDetalleView";
+import { type VehiculoRow } from "./lib/zod";
 
-const TODOS = "__todos__";
-
-export function VehiculosPanel() {
-  const router = useRouter();
-  const [vehiculos, setVehiculos] = useState<VehiculoRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState(TODOS);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingVehiculo, setEditingVehiculo] = useState<VehiculoRow | null>(null);
-
-  const loadData = () => {
-    setLoading(true);
-    getVehiculos()
-      .then((data) => {
-        setVehiculos(data);
-        setError(null);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Error al cargar"))
-      .finally(() => setLoading(false));
-  };
+export function VehiculosPanel({
+  vehiculos,
+  viewMode,
+  onEdit,
+  onDelete,
+  onDetailViewChange,
+}: {
+  vehiculos: VehiculoRow[];
+  viewMode: "list" | "cards";
+  onEdit: (vehiculo: VehiculoRow) => void;
+  onDelete: (vehiculo: VehiculoRow) => Promise<boolean>;
+  onDetailViewChange?: (active: boolean) => void;
+}) {
+  const prefersReducedMotion = useReducedMotion();
+  const [selectedVehiculo, setSelectedVehiculo] = useState<VehiculoRow | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!selectedVehiculo?.id) return;
+    const updated = vehiculos.find((v) => v.id === selectedVehiculo.id);
+    if (updated) {
+      setSelectedVehiculo(updated);
+    } else {
+      setSelectedVehiculo(null);
+    }
+  }, [vehiculos, selectedVehiculo?.id]);
 
-  const vehiculosFiltrados = useMemo(() => {
-    return vehiculos.filter((v) => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch =
-        v.placa.toLowerCase().includes(q) ||
-        v.marca.toLowerCase().includes(q) ||
-        v.modelo.toLowerCase().includes(q);
-      const matchEstado = estadoFilter === TODOS || v.estado === estadoFilter;
-      return matchSearch && matchEstado;
-    });
-  }, [vehiculos, searchQuery, estadoFilter]);
+  useEffect(() => {
+    onDetailViewChange?.(selectedVehiculo !== null);
+  }, [selectedVehiculo, onDetailViewChange]);
 
-  const handleEdit = (v: VehiculoRow) => {
-    setEditingVehiculo(v);
-    setIsModalOpen(true);
+  const handleDetail = (vehiculo: VehiculoRow) => {
+    setSelectedVehiculo(vehiculo);
   };
 
-  const handleCreate = () => {
-    setEditingVehiculo(null);
-    setIsModalOpen(true);
+  const handleBack = () => {
+    setSelectedVehiculo(null);
   };
 
-  const handleDelete = async (v: VehiculoRow) => {
-    const result = await Swal.fire({
-      title: "¿Eliminar vehículo?",
-      text: `¿Está seguro que desea eliminar el vehículo con placa ${v.placa}?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#3f3f46",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-      background: "#18181b",
-      color: "#fff",
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await deleteVehiculo(v.id!);
-        toast.success("Vehículo eliminado");
-        loadData();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Error al eliminar");
-      }
+  const handleDelete = async (vehiculo: VehiculoRow) => {
+    const deleted = await onDelete(vehiculo);
+    if (deleted) {
+      setSelectedVehiculo(null);
     }
   };
 
+  const transition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
+
   return (
-    <div className="mx-auto w-full px-0 pt-6 pb-20 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%] relative">
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
-      {/* HEADER */}
-      <div className="mb-6 flex items-start gap-3 px-3 sm:px-0">
-        <button
-          type="button"
-          onClick={() => router.push("/siget")}
-          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-card border border-border hover:bg-accent transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-celeste-trifinio">
-            Gestión Territorial
-          </p>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground leading-tight uppercase">
-            Flota Vehicular
-          </h1>
-        </div>
-      </div>
-
-      <SubmodulosNav />
-
-      {/* ALERT BANNER */}
-      {(() => {
-        const { documentosEnAlerta, mantenimientoEnAlerta } = getFleetSummary(vehiculosFiltrados);
-        if (documentosEnAlerta === 0 && mantenimientoEnAlerta === 0) return null;
-        return (
-          <div className="mb-6 flex flex-col sm:flex-row gap-4 px-3 sm:px-0">
-            {documentosEnAlerta > 0 && (
-              <div className="flex-1 flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-600 dark:text-red-400">
-                <ShieldAlert className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-semibold">
-                  <strong className="text-lg">{documentosEnAlerta}</strong> unidades con documentos vencidos o próximos a vencer.
-                </p>
-              </div>
-            )}
-            {mantenimientoEnAlerta > 0 && (
-              <div className="flex-1 flex items-center gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-orange-600 dark:text-orange-400">
-                <AlertTriangle className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-semibold">
-                  <strong className="text-lg">{mantenimientoEnAlerta}</strong> unidades requieren mantenimiento preventivo inminente.
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* TOOLBAR */}
-      <div className="mb-6 rounded-2xl border border-border bg-card/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-3 sm:px-4">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-          {/* SEARCH */}
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar por placa, marca o modelo..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-4 text-sm font-semibold text-foreground outline-none transition-all focus-visible:ring-2 focus-visible:ring-celeste-trifinio dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            />
-          </div>
-
-          {/* FILTER */}
-          <div className="w-full sm:w-48">
-            <select
-              value={estadoFilter}
-              onChange={(e) => setEstadoFilter(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm font-semibold text-foreground outline-none transition-all focus-visible:ring-2 focus-visible:ring-celeste-trifinio dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            >
-              <option value={TODOS}>Todos los estados</option>
-              {ESTADOS_VEHICULO.map((est) => (
-                <option key={est} value={est}>
-                  {est.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* VIEW TOGGLE */}
-          <div className="flex items-center rounded-xl border border-border bg-card p-1 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-bold uppercase transition-colors",
-                viewMode === "list"
-                  ? "bg-azul-trifinio text-white"
-                  : "text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
-              )}
-            >
-              <ListIcon className="h-4 w-4" />
-              Lista
-            </button>
-            <button
-              onClick={() => setViewMode("cards")}
-              className={cn(
-                "flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-bold uppercase transition-colors",
-                viewMode === "cards"
-                  ? "bg-azul-trifinio text-white"
-                  : "text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
-              )}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Tarjetas
-            </button>
-          </div>
-
-          {/* ADD BUTTON */}
-          <button
-            onClick={handleCreate}
-            className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-azul-trifinio px-5 text-white font-bold uppercase text-[10px] tracking-widest hover:opacity-90 transition-all active:scale-95 cursor-pointer"
+    <div className="relative overflow-hidden">
+      <AnimatePresence mode="wait" initial={false}>
+        {selectedVehiculo ? (
+          <motion.div
+            key={`detail-${selectedVehiculo.id}`}
+            initial={prefersReducedMotion ? false : { opacity: 0, x: 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, x: 32 }}
+            transition={transition}
           >
-            <Plus className="w-4 h-4" />
-            Añadir
-          </button>
-        </div>
-      </div>
-
-      {/* CONTENT */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 className="w-10 h-10 animate-spin text-celeste-trifinio mb-4" />
-          <p className="text-muted-foreground">Cargando vehículos...</p>
-        </div>
-      ) : error ? (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-          {error}
-        </div>
-      ) : (
-        <div className="px-3 sm:px-0">
-          <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Total: {vehiculosFiltrados.length}
-          </p>
-          {viewMode === "list" ? (
-            <VehiculosList
-              vehiculos={vehiculosFiltrados}
-              onEdit={handleEdit}
+            <VehiculoDetalleView
+              vehiculo={selectedVehiculo}
+              onBack={handleBack}
+              onEdit={onEdit}
               onDelete={handleDelete}
             />
-          ) : (
+          </motion.div>
+        ) : viewMode === "list" ? (
+          <motion.div
+            key="list"
+            initial={prefersReducedMotion ? false : { opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, x: -24 }}
+            transition={transition}
+          >
+            <VehiculosList vehiculos={vehiculos} onDetail={handleDetail} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="cards"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: 12 }}
+            transition={transition}
+            className="p-4"
+          >
             <VehiculosCards
-              vehiculos={vehiculosFiltrados}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              vehiculos={vehiculos}
+              onEdit={onEdit}
+              onDelete={(vehiculo) => {
+                void onDelete(vehiculo);
+              }}
             />
-          )}
-        </div>
-      )}
-
-      {/* MODAL */}
-      <VehiculoFormModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        initialData={editingVehiculo}
-        onSaved={loadData}
-      />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

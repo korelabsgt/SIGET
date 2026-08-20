@@ -7,9 +7,11 @@ import {
   AtenderFallaSchema, 
   type AtenderFallaFormData, 
   SolventarFallaSchema, 
-  type SolventarFallaFormData 
-} from "./lib/zod";
-import { atenderFalla, solventarFalla, type FallaRow } from "./lib/actions";
+  type SolventarFallaFormData,
+  type FallaRow,
+  type MecanicoOption,
+} from "../lib/zod";
+import { useAtenderFalla, useSolventarFalla } from "../lib/hooks";
 import {
   Dialog,
   DialogContent,
@@ -38,17 +40,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function DiagnosticoModal({ 
+export function VerEditar({ 
   falla, 
   mecanicos,
   isAuthorized 
 }: { 
   falla: FallaRow; 
-  mecanicos: any[];
+  mecanicos: MecanicoOption[];
   isAuthorized: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [isPending, setIsPending] = useState(false);
+  const atender = useAtenderFalla();
+  const solventar = useSolventarFalla();
 
   const isPendiente = falla.estado === "PENDIENTE";
   const isEnReparacion = falla.estado === "EN_REPARACION";
@@ -75,28 +78,22 @@ export function DiagnosticoModal({
   if (falla.estado === "SOLVENTADA") return null;
 
   async function onAtender(data: AtenderFallaFormData) {
-    setIsPending(true);
     try {
-      await atenderFalla(data);
+      await atender.mutateAsync(data);
       toast.success("Vehículo en reparación.");
       setOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Error al actualizar la avería.");
-    } finally {
-      setIsPending(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al actualizar la avería.");
     }
   }
 
   async function onSolventar(data: SolventarFallaFormData) {
-    setIsPending(true);
     try {
-      await solventarFalla(data);
+      await solventar.mutateAsync(data);
       toast.success("Avería solventada exitosamente.");
       setOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Error al solventar la avería.");
-    } finally {
-      setIsPending(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al solventar la avería.");
     }
   }
 
@@ -168,8 +165,8 @@ export function DiagnosticoModal({
               />
 
               <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Procesando..." : "Pasar a En Reparación"}
+                <Button type="submit" disabled={atender.isPending}>
+                  {atender.isPending ? "Procesando..." : "Pasar a En Reparación"}
                 </Button>
               </div>
             </form>
@@ -218,8 +215,8 @@ export function DiagnosticoModal({
               />
 
               <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isPending} className="bg-green-600 hover:bg-green-700">
-                  {isPending ? "Guardando..." : "Solventar Avería"}
+                <Button type="submit" disabled={solventar.isPending} className="bg-green-600 hover:bg-green-700">
+                  {solventar.isPending ? "Guardando..." : "Solventar Avería"}
                 </Button>
               </div>
             </form>

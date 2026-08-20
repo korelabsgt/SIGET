@@ -62,5 +62,7 @@ export interface SolicitudRow {
     placa: string;
     marca: string;
     modelo: string;
+    color?: string | null;
+    kilometraje_actual?: number | null;
   };
 }

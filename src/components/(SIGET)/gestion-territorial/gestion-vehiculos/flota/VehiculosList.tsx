@@ -1,194 +1,95 @@
+import { Eye } from "lucide-react";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
-import { PenSquare, Trash2, MoreVertical, FileText, Wrench } from "lucide-react";
-import { differenceInDays, format } from "date-fns";
-import { es } from "date-fns/locale";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { getDocumentAlertStatus, getMantenimientoAlertStatus } from "./lib/alerts";
 
-export function VehiculosList({
-  vehiculos,
-  onEdit,
-  onDelete,
-}: {
-  vehiculos: VehiculoRow[];
-  onEdit: (vehiculo: VehiculoRow) => void;
-  onDelete: (vehiculo: VehiculoRow) => void;
-}) {
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case "LIBRE":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      case "RESERVADO":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-      case "EN_MANTENIMIENTO":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-zinc-500/10 text-zinc-500 border-zinc-500/20";
-    }
-  };
+const cellPad = "px-3 py-3";
 
-  const getVencimientoStatus = (fecha: string | null | undefined) => {
-    if (!fecha) return <span className="text-muted-foreground">-</span>;
-    const days = differenceInDays(new Date(fecha), new Date());
-    const formatted = format(new Date(fecha), "dd MMM yyyy", { locale: es });
-    if (days < 0) {
-      return <span className="text-red-500 font-bold">{formatted} (Vencido)</span>;
-    }
-    if (days <= 30) {
-      return <span className="text-orange-500 font-bold">{formatted} (Próximo)</span>;
-    }
-    return <span className="text-foreground">{formatted}</span>;
+function EstadoBadge({ estado }: { estado: VehiculoRow["estado"] }) {
+  const colors: Record<VehiculoRow["estado"], string> = {
+    LIBRE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+    RESERVADO: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400",
+    EN_MANTENIMIENTO: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-800 dark:bg-zinc-900/50">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-muted/50 text-[10px] font-black uppercase tracking-widest text-muted-foreground dark:border-zinc-800 dark:bg-zinc-900/50">
-            <tr>
-              <th className="px-6 py-4">NO.</th>
-              <th className="px-6 py-4">PLACA</th>
-              <th className="px-6 py-4">MARCA / MODELO</th>
-              <th className="px-6 py-4">KILOMETRAJE</th>
-              <th className="px-6 py-4">ESTADO</th>
-              <th className="px-6 py-4">AÑO / COLOR</th>
-              <th className="px-6 py-4">VENCIMIENTOS</th>
-              <th className="px-6 py-4 text-center">ALERTAS</th>
-              <th className="px-6 py-4 text-center">ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border font-medium text-foreground dark:divide-zinc-800">
-            {vehiculos.map((vehiculo, index) => (
-              <tr
-                key={vehiculo.id}
-                className="transition-colors hover:bg-muted/50 dark:hover:bg-zinc-800/50"
-              >
-                <td className="px-6 py-4 text-muted-foreground">{index + 1}</td>
-                <td className="px-6 py-4 font-bold uppercase">{vehiculo.placa}</td>
-                <td className="px-6 py-4">
-                  <span className="block text-foreground">{vehiculo.marca}</span>
-                  <span className="block text-xs text-muted-foreground">{vehiculo.modelo}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-azul-trifinio/10 px-2 py-1 text-xs font-bold text-azul-trifinio">
-                    {vehiculo.kilometraje_actual.toLocaleString()} km
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                      getEstadoColor(vehiculo.estado)
-                    )}
-                  >
-                    {vehiculo.estado.replace("_", " ")}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  {vehiculo.anio || "N/A"} / <span className="capitalize">{vehiculo.color}</span>
-                </td>
-                <td className="px-6 py-4 text-xs">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground w-16">Seguro:</span>
-                      {getVencimientoStatus(vehiculo.vencimiento_seguro)}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground w-16">Circ.:</span>
-                      {getVencimientoStatus(vehiculo.vencimiento_circulacion)}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className={cn(
-                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm",
-                            getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "VERDE" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                            getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "AMARILLO" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                            "bg-red-500/10 text-red-500 border-red-500/20"
-                          )}>
-                            <FileText className="h-4 w-4" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "VERDE" ? "Documentación al día" :
-                           getDocumentAlertStatus(vehiculo.vencimiento_seguro, vehiculo.vencimiento_circulacion) === "AMARILLO" ? "Documentos próximos a vencer" :
-                           "Documentos vencidos o faltantes"}
-                        </TooltipContent>
-                      </Tooltip>
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+        colors[estado],
+      )}
+    >
+      {estado.replace("_", " ")}
+    </span>
+  );
+}
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className={cn(
-                            "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm",
-                            getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "VERDE" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                            getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "AMARILLO" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                            "bg-red-500/10 text-red-500 border-red-500/20"
-                          )}>
-                            <Wrench className="h-4 w-4" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "VERDE" ? 
-                            `Faltan ${getMantenimientoAlertStatus(vehiculo.kilometraje_actual).kmFaltantes.toLocaleString()} km para el próximo servicio` :
-                           getMantenimientoAlertStatus(vehiculo.kilometraje_actual).estado === "AMARILLO" ? 
-                            `Próximo servicio en ${getMantenimientoAlertStatus(vehiculo.kilometraje_actual).kmFaltantes.toLocaleString()} km` :
-                            "Mantenimiento preventivo requerido / vencido"}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800">
-                      <MoreVertical className="h-4 w-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem
-                        onClick={() => onEdit(vehiculo)}
-                        className="flex items-center gap-2 font-semibold text-azul-trifinio focus:bg-azul-trifinio/10 focus:text-azul-trifinio"
-                      >
-                        <PenSquare className="h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete(vehiculo)}
-                        className="flex items-center gap-2 font-semibold text-red-500 focus:bg-red-500/10 focus:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
-            {vehiculos.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
-                  No se encontraron vehículos.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+export function VehiculosList({
+  vehiculos,
+  onDetail,
+}: {
+  vehiculos: VehiculoRow[];
+  onDetail: (vehiculo: VehiculoRow) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>{[
+          <col key="no" />,
+          <col key="placa" />,
+          <col key="marca" />,
+          <col key="estado" />,
+          <col key="acciones" />,
+        ]}</colgroup>
+        <thead>
+          <tr className="border-b border-border bg-sky-50/80 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950/30">{[
+            <th key="no" className={cn(cellPad, "text-center")}>No.</th>,
+            <th key="placa" className={cn(cellPad, "text-left")}>Placa</th>,
+            <th key="marca" className={cn(cellPad, "text-left")}>Marca / modelo</th>,
+            <th key="estado" className={cn(cellPad, "text-center")}>Estado</th>,
+            <th key="acciones" className={cn(cellPad, "text-center")}>Acciones</th>,
+          ]}</tr>
+        </thead>
+        <tbody>
+          {vehiculos.map((vehiculo, index) => (
+            <tr
+              key={vehiculo.id}
+              className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
+            >{[
+              <td
+                key="no"
+                className={cn(cellPad, "text-center align-middle tabular-nums font-medium text-muted-foreground")}
+              >
+                {index + 1}
+              </td>,
+              <td key="placa" className={cn(cellPad, "align-middle")}>
+                <span className="inline-flex rounded-lg bg-zinc-100 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-foreground dark:bg-zinc-700">
+                  {vehiculo.placa}
+                </span>
+              </td>,
+              <td key="marca" className={cn(cellPad, "align-middle")}>
+                <span className="inline-flex max-w-full items-baseline gap-1.5 truncate capitalize">
+                  <span className="font-semibold text-foreground">{vehiculo.marca}</span>
+                  <span className="truncate text-sm text-muted-foreground">{vehiculo.modelo}</span>
+                </span>
+              </td>,
+              <td key="estado" className={cn(cellPad, "text-center align-middle")}>
+                <EstadoBadge estado={vehiculo.estado} />
+              </td>,
+              <td key="acciones" className={cn(cellPad, "text-center align-middle")}>
+                <button
+                  type="button"
+                  onClick={() => onDetail(vehiculo)}
+                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
+                  aria-label={`Detalle de ${vehiculo.placa}`}
+                >
+                  <Eye className="size-3.5" />
+                  Detalle
+                </button>
+              </td>,
+            ]}</tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

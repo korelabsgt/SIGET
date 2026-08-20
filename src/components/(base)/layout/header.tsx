@@ -9,7 +9,7 @@ import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
 import { Menu as MenuIcon, X, RefreshCw } from "lucide-react";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import Menu from "./Menu";
-import { getPendingDevicesCount } from "@/components/(SIGET)/admin/lib/actions";
+import { getPendingDevicesCount } from "@/components/(base)/admin/lib/actions";
 import { createPortal } from "react-dom";
 import AnimacionLogoTrifinio from "@/components/(SIGET)/logo/AnimacionLogoTrifinio";
 
@@ -31,7 +31,9 @@ export default function Header() {
   useEffect(() => {
     setMounted(true);
     if (!canManage) return;
-    getPendingDevicesCount().then((c) => setPendingDevices(c ?? 0));
+    getPendingDevicesCount()
+      .then((c) => setPendingDevices(c ?? 0))
+      .catch(() => setPendingDevices(0));
   }, [canManage]);
 
   const handleLogoClick = (e: React.MouseEvent) => {

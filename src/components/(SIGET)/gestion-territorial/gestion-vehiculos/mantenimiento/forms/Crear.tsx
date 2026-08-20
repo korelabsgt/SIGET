@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "./lib/zod";
-import { createFalla } from "./lib/actions";
+import { FallaMantenimientoSchema, type FallaMantenimientoFormData, type VehiculoFallaOption } from "../lib/zod";
+import { useCrearFalla } from "../lib/hooks";
 import { createClient } from "@/utils/supabase/client";
 import {
   Dialog,
@@ -34,9 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function FallaFormModal({ vehiculos }: { vehiculos: any[] }) {
+export function Crear({ vehiculos }: { vehiculos: VehiculoFallaOption[] }) {
   const [open, setOpen] = useState(false);
-  const [isPending, setIsPending] = useState(false);
+  const crear = useCrearFalla();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -70,7 +70,6 @@ export function FallaFormModal({ vehiculos }: { vehiculos: any[] }) {
   };
 
   async function onSubmit(data: FallaMantenimientoFormData) {
-    setIsPending(true);
     setUploading(true);
     try {
       let finalEvidenciaUrl = data.evidencia_url;
@@ -96,15 +95,14 @@ export function FallaFormModal({ vehiculos }: { vehiculos: any[] }) {
         finalEvidenciaUrl = publicUrlData.publicUrl;
       }
 
-      await createFalla({ ...data, evidencia_url: finalEvidenciaUrl });
+      await crear.mutateAsync({ ...data, evidencia_url: finalEvidenciaUrl });
       toast.success("Avería reportada exitosamente.");
       form.reset();
       clearFile();
       setOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Error al reportar la avería.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al reportar la avería.");
     } finally {
-      setIsPending(false);
       setUploading(false);
     }
   }
@@ -224,13 +222,13 @@ export function FallaFormModal({ vehiculos }: { vehiculos: any[] }) {
             </div>
 
             <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={isPending || uploading} className="min-w-[140px]">
+              <Button type="submit" disabled={crear.isPending || uploading} className="min-w-[140px]">
                 {uploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Subiendo...
                   </>
-                ) : isPending ? (
+                ) : crear.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enviando...

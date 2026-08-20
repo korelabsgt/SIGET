@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { getOrganizaciones } from "./actions";
+import { getOrganizaciones } from "./lib/actions";
 import { MagicCard } from "@/components/ui/magic-card";
 import {
   X,
@@ -16,16 +16,16 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSignupLogic } from "./hooks";
+import { useSignupLogic } from "./lib/hooks";
 import { AnimatePresence, motion } from "framer-motion";
-import { INITIAL_USER_PASSWORD } from "./zod";
+import { INITIAL_USER_PASSWORD } from "./lib/zod";
 import { AuroraText } from "@/components/ui/aurora-text";
-import { useUser, useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import {
   getManageableRoles,
   isObservatorioRole,
-  ROLE_LABELS,
 } from "@/components/(base)/(users)/usuarios/lib/permissions";
+import { SelectorRol } from "@/components/(base)/(users)/usuarios/forms/SelectorRol";
 
 interface SignUpProps {
   isOpen: boolean;
@@ -119,12 +119,6 @@ export default function SignUp({
       getOrganizaciones().then(setOrganizaciones).catch(() => setOrganizaciones([]));
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen && creatableRoles.length > 0 && !creatableRoles.includes(logic.rol)) {
-      logic.setRol(creatableRoles[0]);
-    }
-  }, [isOpen, creatableRoles, logic.rol, logic.setRol]);
 
   const showOrganizacion = isObservatorioRole(logic.rol);
 
@@ -349,24 +343,22 @@ export default function SignUp({
 
                     <div className="grid gap-2">
                       <Label htmlFor="rol">Rol</Label>
-                      <Select
-                        id="rol"
-                        name="rol"
+                      <SelectorRol
                         value={logic.rol}
-                        onChange={(e) => {
-                          const newRol = e.target.value;
+                        onChange={(newRol) => {
                           logic.setRol(newRol);
                           if (!isObservatorioRole(newRol)) {
                             logic.setOrganizacionId("");
                           }
                         }}
-                      >
-                        {creatableRoles.map((role) => (
-                          <option key={role} value={role}>
-                            {ROLE_LABELS[role] || role}
-                          </option>
-                        ))}
-                      </Select>
+                        roleOptions={creatableRoles}
+                        allowCustom={effectiveRole === "super"}
+                        preferredRole={creatableRoles[0]}
+                        resetKey={isOpen}
+                        inputClassName="focus-visible:ring-2 focus-visible:ring-ring"
+                        selectClassName="appearance-none focus-visible:ring-2 focus-visible:ring-ring"
+                        toggleClassName="border-border bg-background"
+                      />
                     </div>
 
                     {showOrganizacion && (

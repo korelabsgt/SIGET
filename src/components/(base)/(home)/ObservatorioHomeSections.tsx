@@ -37,7 +37,7 @@ import {
   getPublicObsStats,
   type ObsPublicStats,
 } from "@/app/obs-public-actions";
-import { softBarColor } from "@/components/(SIGET)/observatorio/reportes/lib/chart-colors";
+import { softBarColor } from "@/components/(SIGET)/observatorio/lib/chart-colors";
 import { TrifinioDottedMapSection } from "@/components/(base)/(home)/TrifinioDottedMapSection";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import OrganizacionesLogoCintillo from "@/components/(SIGET)/observatorio/OrganizacionesLogoCintillo";

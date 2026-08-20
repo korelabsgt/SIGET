@@ -9,7 +9,8 @@ import Providers from "@/components/(base)/providers/QueryProviders";
 import { UserProvider } from "@/components/(base)/providers/UserProvider";
 import ConditionalFooter from "@/components/(base)/layout/ConditionalFooter";
 import OfflineBanner from "@/components/OfflineBanner";
-import ObsToastContainer from "@/components/(SIGET)/observatorio/forms/ObsToastContainer";
+import ObsToastContainer from "@/components/(SIGET)/observatorio/lib/ObsToastContainer";
+import { safeGetUser } from "@/utils/supabase/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,10 +49,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const supabase = await createClient();
+    user = await safeGetUser(supabase);
+  } catch {
+    user = null;
+  }
 
   return (
     <html lang="es" suppressHydrationWarning>

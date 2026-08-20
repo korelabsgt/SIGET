@@ -61,21 +61,7 @@ export const OBSERVATORIO_MENU_OPTIONS = [
   },
 ] as const;
 
-export const GESTION_TERRITORIAL_MENU_OPTIONS = [
-  {
-    id: "memoria-labores",
-    title: "Memoria de Labores",
-    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    href: "/siget/gestion-territorial/memoria-labores",
-    animatedIcon: "wvhscmei",
-  },
-  {
-    id: "asistencia-actividades",
-    title: "Registro de Asistencia",
-    desc: "Actividades con código QR y estadísticas de asistencia.",
-    href: "/siget/gestion-territorial/asistencia-actividades",
-    animatedIcon: "unfvchvi",
-  },
+export const GESTION_VEHICULOS_MENU_OPTIONS = [
   {
     id: "flota",
     title: "Flota",
@@ -95,14 +81,38 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     title: "Bitácoras",
     desc: "Registro digital de viajes y métricas operativas.",
     href: "/siget/gestion-territorial/gestion-vehiculos/bitacoras",
-    animatedIcon: "wyqtxzlg", // Or any other suitable icon if known, using a placeholder for now
+    animatedIcon: "wyqtxzlg",
   },
   {
     id: "mantenimiento",
     title: "Mantenimiento",
     desc: "Gestión de averías y mantenimiento preventivo.",
     href: "/siget/gestion-territorial/gestion-vehiculos/mantenimiento",
-    animatedIcon: "zchvbdce", // placeholder
+    animatedIcon: "zchvbdce",
+  },
+] as const;
+
+export const GESTION_TERRITORIAL_MENU_OPTIONS = [
+  {
+    id: "memoria-labores",
+    title: "Memoria de Labores",
+    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    href: "/siget/gestion-territorial/memoria-labores",
+    animatedIcon: "wvhscmei",
+  },
+  {
+    id: "asistencia-actividades",
+    title: "Registro de Asistencia",
+    desc: "Actividades con código QR y estadísticas de asistencia.",
+    href: "/siget/gestion-territorial/asistencia-actividades",
+    animatedIcon: "unfvchvi",
+  },
+  {
+    id: "gestion-vehiculos",
+    title: "Gestión de Vehículos",
+    desc: "Flota, solicitudes, bitácoras y mantenimiento vehicular.",
+    href: "/siget/gestion-territorial/gestion-vehiculos",
+    animatedIcon: "cdxxgczv",
   },
 ] as const;
 

@@ -46,12 +46,12 @@ import {
   getReportOrganizaciones,
   getReportPoliticas,
   type ReportRow,
-} from "./lib/reportes-actions";
+} from "./lib/actions";
 import {
   ReportGlobalCrossSection,
   ReportPoliticaIndicadorSection,
 } from "./ReportCrossSections";
-import { rowsConNacPerfil, rowsOmiteNacPerfil } from "./lib/cross-report-lib";
+import { rowsConNacPerfil, rowsOmiteNacPerfil } from "./lib/helpers";
 import { ReportExcelButton } from "./ReportExcelButton";
 import { ReportExportHeader } from "./ReportExportHeader";
 import {
@@ -77,7 +77,7 @@ import {
   nationalityColor,
   perfilColor,
   softBarColor,
-} from "./lib/chart-colors";
+} from "../lib/chart-colors";
 
 const MONTH_NAMES = [
   "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",

@@ -9,6 +9,9 @@ import {
   AtenderFallaSchema,
   type SolventarFallaFormData,
   SolventarFallaSchema,
+  type FallaRow,
+  type VehiculoFallaOption,
+  type MecanicoOption,
 } from "./zod";
 
 const TABLE = "ter_fallas_mantenimiento";
@@ -26,25 +29,6 @@ async function requireAuth() {
   return { supabase, user };
 }
 
-export type FallaRow = {
-  id: string;
-  vehiculo_id: string;
-  reportado_por: string;
-  mecanico_id: string | null;
-  severidad: "BAJA" | "MEDIA" | "ALTA";
-  descripcion: string;
-  evidencia_url: string | null;
-  diagnostico: string | null;
-  reparacion_detalle: string | null;
-  taller_externo: string | null;
-  estado: "PENDIENTE" | "EN_REPARACION" | "SOLVENTADA";
-  created_at: string;
-  solventado_at: string | null;
-  vehiculo: { placa: string; marca: string; modelo: string };
-  reportador: { nombre: string };
-  mecanico: { nombre: string } | null;
-};
-
 export async function getFallasMantenimiento(): Promise<FallaRow[]> {
   const { supabase } = await requireAuth();
 
@@ -60,10 +44,10 @@ export async function getFallasMantenimiento(): Promise<FallaRow[]> {
 
   if (error) throw new Error(error.message);
 
-  return data as any;
+  return data as FallaRow[];
 }
 
-export async function getVehiculosParaFallas() {
+export async function getVehiculosParaFallas(): Promise<VehiculoFallaOption[]> {
   const { supabase } = await requireAuth();
   
   const { data, error } = await supabase
@@ -73,10 +57,10 @@ export async function getVehiculosParaFallas() {
 
   if (error) throw new Error(error.message);
 
-  return data;
+  return (data ?? []) as VehiculoFallaOption[];
 }
 
-export async function getMecanicos() {
+export async function getMecanicos(): Promise<MecanicoOption[]> {
   const { supabase } = await requireAuth();
   
   const { data, error } = await supabase
@@ -86,7 +70,7 @@ export async function getMecanicos() {
 
   if (error) throw new Error(error.message);
 
-  return data;
+  return (data ?? []) as MecanicoOption[];
 }
 
 export async function createFalla(input: FallaMantenimientoFormData): Promise<void> {
@@ -119,7 +103,7 @@ export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
     throw new Error("Datos inválidos: " + parsed.error.message);
   }
 
-  const payload: any = {
+  const payload: Record<string, string> = {
     estado: "EN_REPARACION",
   };
 

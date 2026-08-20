@@ -3,6 +3,7 @@
 import { useState, useMemo, Fragment, useEffect } from "react";
 import { useUsers } from "./lib/hooks";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { extractRolesFromProfiles } from "./lib/helpers";
 import {
   canCreateUsers,
   canManageUsers,
@@ -35,8 +36,8 @@ export function VerUsuarios() {
   const { data: users, isLoading, isError, refetch } = useUsers(effectiveRole);
 
   const manageableRoles = useMemo(
-    () => getManageableRoles(effectiveRole),
-    [effectiveRole],
+    () => getManageableRoles(effectiveRole, extractRolesFromProfiles(users)),
+    [effectiveRole, users],
   );
 
   const [searchQuery, setSearchQuery] = useState("");

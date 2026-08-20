@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, FileSpreadsheet } from "lucide-react";
 import { toast } from "react-toastify";
-import { getDatosReporteBitacora } from "./lib/reports";
+import { getDatosReporteBitacora } from "./lib/actions";
 import { getVehiculos } from "../flota/lib/actions";
 import { type VehiculoRow } from "../flota/lib/zod";
 import { format } from "date-fns";

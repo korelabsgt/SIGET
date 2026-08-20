@@ -1,5 +1,5 @@
-import type { ReportRow } from "./reportes-actions";
-import { GUATEMALTECO_CELESTE, indicadorColor, isGuatemalteco, nationalityColor, perfilColor } from "./chart-colors";
+import type { ReportRow } from "./actions";
+import { GUATEMALTECO_CELESTE, indicadorColor, isGuatemalteco, nationalityColor, perfilColor } from "../../lib/chart-colors";
 
 export const ALL_INDICADORES_ID = "__all_ind__";
 

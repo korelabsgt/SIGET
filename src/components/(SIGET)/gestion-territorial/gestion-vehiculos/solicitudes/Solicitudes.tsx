@@ -1,0 +1,141 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Loader2, ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import { SubmodulosNav } from "../../SubmodulosNav";
+import { SolicitudesPanel } from "./SolicitudesPanel";
+import { Crear } from "./forms/Crear";
+import { SolicitudActionModal } from "./SolicitudActionModal";
+import { GestionVehiculosTableShell } from "../lib/table-ui";
+
+import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
+import { type SolicitudRow } from "./lib/zod";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
+
+const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
+type TabSolicitud = (typeof TABS)[number];
+
+const TAB_LABELS: Record<TabSolicitud, string> = {
+  TODAS: "Todas",
+  PENDIENTES: "Pendientes",
+  ACTIVAS: "Activas",
+  HISTORIAL: "Historial",
+};
+
+export function Solicitudes() {
+  const { data: solicitudes = [], isLoading: loading } = useSolicitudes();
+  const invalidate = useInvalidateSolicitudes();
+  const { effectiveRole } = useUserContext();
+  const canManage = ["super", "admin"].includes(effectiveRole);
+  const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
+  const [inDetailView, setInDetailView] = useState(false);
+  const router = useRouter();
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudRow | null>(null);
+  const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR" | null>(null);
+
+  const handleAction = (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => {
+    setSelectedSolicitud(solicitud);
+    setActionType(action);
+    setActionModalOpen(true);
+  };
+
+  const filtradas = solicitudes.filter((sol) => {
+    if (tabActiva === "TODAS") return true;
+    if (tabActiva === "PENDIENTES") return sol.estado === "PENDIENTE";
+    if (tabActiva === "ACTIVAS") return sol.estado === "APROBADA" || sol.estado === "EN_MISION";
+    if (tabActiva === "HISTORIAL") return sol.estado === "FINALIZADA" || sol.estado === "RECHAZADA";
+    return true;
+  });
+
+  return (
+    <div className="mx-auto w-full px-0 pt-6 pb-20 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%] relative">
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
+      {!inDetailView ? <SubmodulosNav /> : null}
+
+      {!inDetailView ? (
+        <div className="mb-6 flex flex-col gap-4 px-3 sm:flex-row sm:items-start sm:justify-between sm:px-0">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/siget")}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-accent"
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-celeste-trifinio">
+                Gestión Territorial
+              </p>
+              <h1 className="text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
+                Solicitudes
+              </h1>
+            </div>
+          </div>
+          <Button
+            onClick={() => setFormOpen(true)}
+            className="h-11 w-full cursor-pointer rounded-xl border-0 bg-celeste-trifinio text-xs font-bold uppercase tracking-widest text-white shadow-none hover:opacity-90 sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Solicitud
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="px-3 sm:px-0">
+        <GestionVehiculosTableShell
+          toolbar={
+            !inDetailView ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setTabActiva(tab)}
+                    className={cn(
+                      "inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border-0 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors",
+                      tabActiva === tab
+                        ? "bg-celeste-trifinio text-white hover:opacity-90"
+                        : "text-zinc-700 hover:bg-zinc-300 dark:text-zinc-200 dark:hover:bg-zinc-600",
+                    )}
+                  >
+                    {TAB_LABELS[tab]}
+                  </button>
+                ))}
+              </div>
+            ) : undefined
+          }
+        >
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
+            </div>
+          ) : (
+            <SolicitudesPanel
+              solicitudes={filtradas}
+              canManage={canManage}
+              onAction={handleAction}
+              onDetailViewChange={setInDetailView}
+            />
+          )}
+        </GestionVehiculosTableShell>
+      </div>
+
+      <Crear open={formOpen} onOpenChange={setFormOpen} onSaved={invalidate} />
+
+      <SolicitudActionModal
+        open={actionModalOpen}
+        onOpenChange={setActionModalOpen}
+        solicitud={selectedSolicitud}
+        actionType={actionType}
+        onSaved={invalidate}
+      />
+    </div>
+  );
+}

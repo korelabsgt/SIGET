@@ -29,10 +29,10 @@ import {
   sortMemoriasPorMesDir,
 } from "./lib/helpers";
 import type { FiltroPeriodoMemoria, ProyectosMemoria } from "./lib/zod";
-import ProyectosMemoriaForm from "./form/ProyectosMemoriaForm";
+import Crear from "./forms/Crear";
+import VerEditar from "./forms/VerEditar";
 import { InformeMemoriaVista } from "./InformeMemoriaVista";
 import { MemoriaPeriodoFiltro } from "./MemoriaPeriodoFiltro";
-import { SubmodulosNav } from "../SubmodulosNav";
 
 type View =
   | { mode: "list" }
@@ -256,14 +256,24 @@ export default function ProyectosMemoriaList() {
   if (view.mode !== "list") {
     return (
       <div className="mx-auto w-full px-0 pt-6 sm:px-6 md:pt-10 lg:px-8 xl:w-[80%]">
-        <ProyectosMemoriaForm
-            initial={view.mode === "edit" ? view.memoria : null}
+        {view.mode === "create" ? (
+          <Crear
             onBack={() => setView({ mode: "list" })}
             onSaved={() => {
               setView({ mode: "list" });
               load();
             }}
           />
+        ) : (
+          <VerEditar
+            initial={view.memoria}
+            onBack={() => setView({ mode: "list" })}
+            onSaved={() => {
+              setView({ mode: "list" });
+              load();
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -298,8 +308,6 @@ export default function ProyectosMemoriaList() {
           Nuevo informe
         </button>
       </div>
-
-      <SubmodulosNav />
 
       <button
         type="button"

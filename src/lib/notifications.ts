@@ -1,22 +1,37 @@
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 
+type ToastKind = "success" | "error" | "warning" | "info";
+
+const DEFAULT_AUTO_CLOSE: Record<ToastKind, number> = {
+  success: 3000,
+  error: 3000,
+  warning: 6000,
+  info: 3000,
+};
+
 export const showToast = (
-  icon: "success" | "error" | "warning" | "info",
+  icon: ToastKind,
   title: string,
+  options?: { toastId?: string; autoClose?: number },
 ) => {
+  const toastOptions = {
+    toastId: options?.toastId,
+    autoClose: options?.autoClose ?? DEFAULT_AUTO_CLOSE[icon],
+  };
+
   switch (icon) {
     case "success":
-      toast.success(title);
+      toast.success(title, toastOptions);
       break;
     case "error":
-      toast.error(title);
+      toast.error(title, toastOptions);
       break;
     case "warning":
-      toast.warn(title);
+      toast.warn(title, toastOptions);
       break;
     case "info":
-      toast.info(title);
+      toast.info(title, toastOptions);
       break;
   }
 };

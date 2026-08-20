@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { SolicitudesPanel } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/SolicitudesPanel";
+import { Solicitudes } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/Solicitudes";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function SolicitudesPage() {
   return (
     <Suspense>
-      <SolicitudesPanel />
+      <Solicitudes />
     </Suspense>
   );
 }

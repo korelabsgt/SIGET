@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import AnimatedIcon from "@/components/ui/AnimatedIcon";
-import { getPendingDevicesCount } from "@/components/(SIGET)/admin/lib/actions";
+import { getPendingDevicesCount } from "@/components/(base)/admin/lib/actions";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
 import { isSuperOrAdminRole } from "@/components/(base)/dashboard/modules";
 import { AdminCards } from "./AdminCards";

@@ -9,6 +9,7 @@ import {
   BookOpen,
   Building2,
   CalendarCheck,
+  Car,
   ChevronDown,
   FileText,
   Globe,
@@ -50,14 +51,15 @@ const MENU_OPTION_ICONS: Record<string, LucideIcon> = {
   dispositivos: Smartphone,
   usuarios: Users,
   configuraciones: Settings,
+  "memoria-labores": FileText,
+  "asistencia-actividades": CalendarCheck,
+  "gestion-vehiculos": Car,
 };
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
   observatorio: Globe,
   perfil: User,
   admin: Settings,
-  "memoria-labores": FileText,
-  "asistencia-actividades": CalendarCheck,
 };
 
 type MenuAccordionOption = {

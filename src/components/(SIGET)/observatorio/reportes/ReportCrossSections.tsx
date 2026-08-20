@@ -35,7 +35,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { ReportRow } from "./lib/reportes-actions";
+import type { ReportRow } from "./lib/actions";
 import {
   ALL_INDICADORES_ID,
   filterReportRows,
@@ -57,8 +57,8 @@ import {
   OMITE_NAC_PERFIL_SECTION_TITLE,
   type ReportChartSlice,
   type ReportCampoOption,
-} from "./lib/cross-report-lib";
-import { HEATMAP_RGB, GUATEMALTECO_CELESTE, isGuatemalteco, nationalityColor, nacPerfilBarColor, softBarColor } from "./lib/chart-colors";
+} from "./lib/helpers";
+import { HEATMAP_RGB, GUATEMALTECO_CELESTE, isGuatemalteco, nationalityColor, nacPerfilBarColor, softBarColor } from "../lib/chart-colors";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 
 const LEGEND_ACCORDION_MIN_LEN = 42;

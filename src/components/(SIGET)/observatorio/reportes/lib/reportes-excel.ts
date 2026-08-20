@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import type { ReportRow } from "./reportes-actions";
+import type { ReportRow } from "./actions";
 import {
   aggregateReportByNacPerfil,
   buildReportCampoDimensionCross,
@@ -13,7 +13,7 @@ import {
   OMITE_NAC_PERFIL_SECTION_TITLE,
   reportRowOmiteNacPerfil,
   rowsOmiteNacPerfil,
-} from "./cross-report-lib";
+} from "./helpers";
 
 export type ExcelSheetDef = { name: string; rows: unknown[][] };
 

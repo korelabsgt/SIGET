@@ -1,4 +1,6 @@
-import { useEffect, useTransition } from "react";
+"use client";
+
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
@@ -12,16 +14,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PasajerosSelect } from "./PasajerosSelect";
+import { PasajerosSelect } from "../PasajerosSelect";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-import { solicitudInputSchema, type SolicitudInput } from "./lib/zod";
-import { createSolicitud } from "./lib/actions";
+import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
+import { useCrearSolicitud } from "../lib/hooks";
 
-export function SolicitudFormModal({
+export function Crear({
   open,
   onOpenChange,
   onSaved,
@@ -30,7 +32,7 @@ export function SolicitudFormModal({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
-  const [isPending, startTransition] = useTransition();
+  const crear = useCrearSolicitud();
 
   const {
     register,
@@ -65,21 +67,19 @@ export function SolicitudFormModal({
     }
   }, [open, reset]);
 
-  const onSubmit = (data: SolicitudInput) => {
-    startTransition(async () => {
-      try {
-        const res = await createSolicitud(data);
-        if (!res.success) {
-          toast.error(res.error || "Error al crear la solicitud");
-          return;
-        }
-        toast.success("Solicitud creada y enviada a revisión");
-        onSaved();
-        onOpenChange(false);
-      } catch (err: any) {
-        toast.error(err?.message || "Ocurrió un error inesperado");
+  const onSubmit = async (data: SolicitudInput) => {
+    try {
+      const res = await crear.mutateAsync(data);
+      if (!res.success) {
+        toast.error(res.error || "Error al crear la solicitud");
+        return;
       }
-    });
+      toast.success("Solicitud creada y enviada a revisión");
+      onSaved();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ocurrió un error inesperado");
+    }
   };
 
   return (
@@ -169,12 +169,12 @@ export function SolicitudFormModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending || isSubmitting}
+              disabled={crear.isPending || isSubmitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending || isSubmitting}>
-              {(isPending || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={crear.isPending || isSubmitting}>
+              {(crear.isPending || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Enviar Solicitud
             </Button>
           </DialogFooter>

@@ -24,8 +24,13 @@ export function isObservatorioRole(role: string | null | undefined): boolean {
 }
 
 /** Roles que el actor puede ver y gestionar en usuarios */
-export function getManageableRoles(actorRole: string): string[] {
-  if (actorRole === "super") return [...ALL_KNOWN_ROLES];
+const KNOWN_ROLE_SET = new Set<string>(ALL_KNOWN_ROLES);
+
+export function getManageableRoles(actorRole: string, customRoles: string[] = []): string[] {
+  if (actorRole === "super") {
+    const extras = customRoles.filter((r) => !KNOWN_ROLE_SET.has(r));
+    return [...ALL_KNOWN_ROLES, ...extras];
+  }
   if (actorRole === "admin") return ALL_KNOWN_ROLES.filter((r) => r !== "super");
   if (actorRole === "admin-observatorio") {
     return ALL_KNOWN_ROLES.filter((r) => isObservatorioRole(r));
@@ -42,6 +47,7 @@ export function canCreateUsers(actorRole: string): boolean {
 }
 
 export function canAssignRole(actorRole: string, targetRole: string): boolean {
+  if (actorRole === "super") return true;
   return getManageableRoles(actorRole).includes(targetRole);
 }
 
@@ -49,6 +55,7 @@ export function isUserVisibleToActor(
   targetRole: string | null | undefined,
   actorRole: string,
 ): boolean {
+  if (actorRole === "super") return true;
   const role = targetRole || "user";
   return getManageableRoles(actorRole).includes(role);
 }
@@ -56,6 +63,6 @@ export function isUserVisibleToActor(
 export function orderRoles(roles: string[]): string[] {
   const set = new Set(roles);
   const ordered = ROLE_ORDER.filter((r) => set.has(r));
-  const extras = roles.filter((r) => !ROLE_ORDER.includes(r as (typeof ROLE_ORDER)[number]));
+  const extras = roles.filter((r) => !KNOWN_ROLE_SET.has(r));
   return [...ordered, ...extras];
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -12,29 +12,16 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Car, MapPin, GaugeCircle, Receipt, User, Link as LinkIcon, Route, Fuel } from "lucide-react";
 import { toast } from "react-toastify";
 
-import { type BitacoraInput, bitacoraInputSchema } from "./lib/zod";
-import { getConductores, getSolicitudesEnMision } from "./lib/actions";
-// Re-use getVehiculos from flota module to populate the vehicle selector if they don't select a mission
-import { getVehiculos } from "../flota/lib/actions";
-import { type VehiculoRow } from "../flota/lib/zod";
-
-interface ConductoresType {
-  id: string;
-  full_name: string;
-}
+import { type BitacoraInput, bitacoraInputSchema } from "../lib/zod";
+import { useBitacoraFormOptions, useCrearBitacora } from "../lib/hooks";
+import { type VehiculoRow } from "../../flota/lib/zod";
 
 interface SolicitudActiva {
   id: string;
   destino: string;
   conductor_id: string;
   vehiculo_id: string;
-  ter_vehiculos: { kilometraje_actual: number } | null;
-}
-
-interface BitacoraFormModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: BitacoraInput) => Promise<boolean>;
+  ter_vehiculos: { kilometraje_actual: number } | { kilometraje_actual: number }[] | null;
 }
 
 const CHECKLIST_PRE = [
@@ -55,16 +42,28 @@ const CHECKLIST_POST = [
 const defaultChecklistPre = CHECKLIST_PRE.reduce((acc, item) => ({ ...acc, [item.id]: true }), {});
 const defaultChecklistPost = CHECKLIST_POST.reduce((acc, item) => ({ ...acc, [item.id]: true }), {});
 
-export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraFormModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  
-  const [conductores, setConductores] = useState<ConductoresType[]>([]);
-  const [vehiculos, setVehiculos] = useState<VehiculoRow[]>([]);
-  const [misiones, setMisiones] = useState<SolicitudActiva[]>([]);
+function kmDeMision(
+  rel: SolicitudActiva["ter_vehiculos"],
+): number {
+  if (!rel) return 0;
+  if (Array.isArray(rel)) return rel[0]?.kilometraje_actual || 0;
+  return rel.kilometraje_actual || 0;
+}
+
+interface CrearProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function Crear({ open, onOpenChange }: CrearProps) {
+  const crear = useCrearBitacora();
+  const { data: options, isLoading: loading } = useBitacoraFormOptions(open);
+  const conductores = (options?.conductores ?? []) as { id: string; full_name: string | null }[];
+  const vehiculos = (options?.vehiculos ?? []) as VehiculoRow[];
+  const misiones = (options?.misiones ?? []) as SolicitudActiva[];
 
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } = useForm<BitacoraInput>({
-    resolver: zodResolver(bitacoraInputSchema) as any,
+    resolver: zodResolver(bitacoraInputSchema) as never,
     defaultValues: {
       solicitud_id: "",
       vehiculo_id: "",
@@ -87,7 +86,6 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
 
   useEffect(() => {
     if (open) {
-      loadData();
       reset({
         solicitud_id: "",
         vehiculo_id: "",
@@ -103,35 +101,17 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
     }
   }, [open, reset]);
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [condData, vehData, misData] = await Promise.all([
-        getConductores(),
-        getVehiculos(),
-        getSolicitudesEnMision()
-      ]);
-      setConductores(condData || []);
-      setVehiculos(vehData || []);
-      setMisiones(misData as unknown as SolicitudActiva[] || []);
-    } catch (error) {
-      console.error("Error loading form data", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   // Handle Misión Selection
   useEffect(() => {
     if (selectedMisionId && misiones.length > 0) {
       const mision = misiones.find(m => m.id === selectedMisionId);
       if (mision) {
+        const kmActual = kmDeMision(mision.ter_vehiculos);
         setValue("vehiculo_id", mision.vehiculo_id, { shouldValidate: true });
         setValue("conductor_id", mision.conductor_id, { shouldValidate: true });
         setValue("destino", mision.destino, { shouldValidate: true });
-        setValue("km_inicial", mision.ter_vehiculos?.kilometraje_actual || 0, { shouldValidate: true });
-        // Set km_final to initially match km_inicial
-        setValue("km_final", mision.ter_vehiculos?.kilometraje_actual || 0);
+        setValue("km_inicial", kmActual, { shouldValidate: true });
+        setValue("km_final", kmActual);
       }
     }
   }, [selectedMisionId, misiones, setValue]);
@@ -147,20 +127,17 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
     }
   }, [selectedVehiculoId, selectedMisionId, vehiculos, setValue]);
 
-  const onFormSubmit = async (data: any) => {
-    setSubmitting(true);
+  const onFormSubmit = async (data: BitacoraInput) => {
     try {
-      const success = await onSubmit(data);
-      if (success) {
+      const res = await crear.mutateAsync(data);
+      if (res.success) {
         toast.success("Bitácora registrada con éxito");
         onOpenChange(false);
       } else {
         toast.error("Hubo un error al guardar la bitácora");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error inesperado");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -201,7 +178,7 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
                       <SelectItem value="none">Ninguna (Registro manual)</SelectItem>
                       {misiones.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
-                          Misión a {m.destino} (In: {m.ter_vehiculos?.kilometraje_actual} km)
+                          Misión a {m.destino} (In: {kmDeMision(m.ter_vehiculos)} km)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -356,8 +333,8 @@ export function BitacoraFormModal({ open, onOpenChange, onSubmit }: BitacoraForm
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={crear.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                {crear.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Bitácora
               </Button>
             </div>

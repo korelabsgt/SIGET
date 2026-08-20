@@ -31,6 +31,7 @@ export const vehiculoSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => (val ? new Date(val).toISOString() : null)),
+  imagen_url: z.string().url().optional().nullable(),
   created_at: z.string().optional(),
 });
 
@@ -42,3 +43,6 @@ export const vehiculoInputSchema = vehiculoSchema.omit({
 export type VehiculoRow = z.infer<typeof vehiculoSchema>;
 export type VehiculoInput = z.infer<typeof vehiculoInputSchema>;
 export type EstadoVehiculo = (typeof ESTADOS_VEHICULO)[number];
+
+export const ALERT_STATUS = ["VERDE", "AMARILLO", "ROJO"] as const;
+export type AlertStatus = (typeof ALERT_STATUS)[number];

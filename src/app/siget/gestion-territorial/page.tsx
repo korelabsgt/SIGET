@@ -12,7 +12,6 @@ import {
 } from "@/components/(base)/providers/UserProvider";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { createClient } from "@/utils/supabase/client";
-import { GESTION_TERRITORIAL_MENU_OPTIONS } from "@/components/(base)/dashboard/modules";
 
 const FRASES_BIENVENIDA = [
   "¡Es un gusto saludarte! Accede a las herramientas para el seguimiento y control territorial.",

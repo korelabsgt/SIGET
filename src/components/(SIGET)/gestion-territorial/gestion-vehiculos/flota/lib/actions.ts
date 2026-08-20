@@ -9,13 +9,16 @@ const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
 
 async function requireAuth() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("No autenticado.");
-
-  return { supabase, user };
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("No autenticado.");
+    return { supabase, user };
+  } catch (err) {
+    if (err instanceof Error && err.message === "No autenticado.") throw err;
+    throw new Error("No se pudo verificar la sesión.");
+  }
 }
 
 export async function getVehiculos(

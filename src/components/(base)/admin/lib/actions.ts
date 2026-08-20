@@ -11,8 +11,7 @@ export async function getPendingDevicesCount() {
       .eq("is_authorized", false);
 
     return count || 0;
-  } catch (error) {
-    console.error("Error getting pending devices count:", error);
+  } catch {
     return 0;
   }
 }
