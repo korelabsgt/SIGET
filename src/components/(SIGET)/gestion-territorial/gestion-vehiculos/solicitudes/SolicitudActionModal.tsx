@@ -35,14 +35,10 @@ import { formatFechaCortaGt, formatHoraGt } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { ESTADOS_SOLICITUD, type SolicitudRow } from "./lib/zod";
-import { getVehiculos } from "../flota/lib/actions";
-import { type VehiculoRow } from "../flota/lib/zod";
+import { useVehiculosParaSolicitud } from "./lib/hooks";
+import { formatVehiculoOpcion } from "../flota/lib/helpers";
 
 type ActionType = "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR";
-
-function formatVehiculoLabel(v: Pick<VehiculoRow, "placa" | "marca" | "modelo">) {
-  return `${v.placa} · ${v.marca} ${v.modelo}`;
-}
 
 const ACTION_META: Record<
   ActionType,
@@ -155,21 +151,16 @@ export function SolicitudActionModal({
   onSaved: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [vehiculosLibres, setVehiculosLibres] = useState<VehiculoRow[]>([]);
   const [selectedVehiculo, setSelectedVehiculo] = useState("");
-  const [loadingVehiculos, setLoadingVehiculos] = useState(false);
+  const cargarLibres = open && actionType === "APROBAR";
+  const { data: vehiculosLibres = [], isLoading: loadingVehiculos } =
+    useVehiculosParaSolicitud(cargarLibres);
 
   useEffect(() => {
-    if (open && actionType === "APROBAR") {
-      setLoadingVehiculos(true);
-      getVehiculos().then((data) => {
-        setVehiculosLibres(data.filter((v) => v.estado === "LIBRE"));
-        setLoadingVehiculos(false);
-      });
-    } else {
+    if (!cargarLibres) {
       setSelectedVehiculo("");
     }
-  }, [open, actionType]);
+  }, [cargarLibres]);
 
   const meta = actionType ? ACTION_META[actionType] : null;
   const Icon = meta?.icon ?? CheckCircle;
@@ -294,7 +285,7 @@ export function SolicitudActionModal({
                     className="z-[200] max-h-60 w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
                   >
                     {vehiculosLibres.filter((v) => v.id).map((v) => {
-                      const label = formatVehiculoLabel(v);
+                      const label = formatVehiculoOpcion(v);
                       return (
                         <SelectItem
                           key={v.id}

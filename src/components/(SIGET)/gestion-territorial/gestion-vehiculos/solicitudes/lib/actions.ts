@@ -17,13 +17,10 @@ async function requireAuth() {
     throw new Error("No autenticado");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
 
-  return { user, role: profile?.role || "user" };
+  return { user, role, supabase };
 }
 
 export async function getSolicitudes(): Promise<SolicitudRow[]> {
@@ -60,6 +57,28 @@ export async function createSolicitud(input: SolicitudInput) {
     const { vehiculo_id, ...rest } = parsed;
 
     const supabase = await createClient();
+
+    if (vehiculo_id) {
+      const { data: vehiculo, error: vehiculoError } = await supabase
+        .from("ter_vehiculos")
+        .select("id, estado")
+        .eq("id", vehiculo_id)
+        .maybeSingle();
+
+      if (vehiculoError) {
+        return { success: false, error: "No se pudo verificar el vehículo seleccionado." };
+      }
+      if (!vehiculo) {
+        return { success: false, error: "El vehículo seleccionado no existe." };
+      }
+      if (vehiculo.estado !== "LIBRE") {
+        return {
+          success: false,
+          error: "El vehículo seleccionado ya no está disponible. Elija otro o deje sin preferencia.",
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from(TABLE)
       .insert([

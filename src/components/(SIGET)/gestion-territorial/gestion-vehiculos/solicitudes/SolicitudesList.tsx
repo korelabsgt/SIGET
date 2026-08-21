@@ -1,13 +1,91 @@
-import { Eye, CalendarRange } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { ArrowRight, Play } from "lucide";
+import { CalendarRange } from "lucide-react";
 import { type SolicitudRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
   GestionVehiculosTableEmpty,
   GestionVehiculosThead,
-  GestionVehiculosTr,
 } from "../lib/table-ui";
-import { formatFechaHoraGt } from "@/lib/fechas-gt";
+import { GvMorphIcon } from "../lib/morph-icon";
+import { formatDiaFechaCortaGt, formatHoraAmGt } from "@/lib/fechas-gt";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
+
+function SolicitudListRow({
+  solicitud,
+  onDetail,
+}: {
+  solicitud: SolicitudRow;
+  onDetail: (solicitud: SolicitudRow) => void;
+}) {
+  const [rowHover, setRowHover] = useState(false);
+
+  return (
+    <tr
+      className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
+      onMouseEnter={() => setRowHover(true)}
+      onMouseLeave={() => setRowHover(false)}
+    >
+      <td className="px-4 py-3 align-middle">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-foreground">
+            {solicitud.solicitante?.nombre || "Desconocido"}
+          </p>
+          {solicitud.solicitante?.email ? (
+            <p className="truncate text-xs text-muted-foreground">{solicitud.solicitante.email}</p>
+          ) : null}
+        </div>
+      </td>
+      <td className="px-4 py-3 align-middle">
+        <div className="tabular-nums">
+          <p className="text-sm font-bold text-foreground">
+            {formatDiaFechaCortaGt(solicitud.fecha_inicio)}
+          </p>
+          <p className="text-sm font-semibold text-celeste-trifinio">
+            {formatHoraAmGt(solicitud.fecha_inicio)}
+          </p>
+        </div>
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 align-middle">
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoBadgeClass(solicitud.estado)}`}
+        >
+          {formatEstadoLabel(solicitud.estado)}
+        </span>
+      </td>
+      <td className="px-4 py-3 align-middle">
+        {solicitud.vehiculo ? (
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {solicitud.vehiculo.marca} {solicitud.vehiculo.modelo}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{solicitud.vehiculo.placa}</p>
+          </div>
+        ) : (
+          <span className="text-xs italic text-muted-foreground">Sin asignar</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-center align-middle">
+        <button
+          type="button"
+          onClick={() => onDetail(solicitud)}
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
+          aria-label={`Ejecutar solicitud a ${solicitud.destino}`}
+        >
+          <GvMorphIcon
+            icon={Play}
+            hoverIcon={ArrowRight}
+            size={14}
+            externalHover={rowHover}
+          />
+          Ejecutar
+        </button>
+      </td>
+    </tr>
+  );
+}
 
 export function SolicitudesList({
   solicitudes,
@@ -39,67 +117,7 @@ export function SolicitudesList({
       />
       <tbody>
         {solicitudes.map((sol) => (
-          <GestionVehiculosTr
-            key={sol.id}
-            cells={[
-              {
-                key: "solicitante",
-                className: "align-middle",
-                content: (
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">
-                      {sol.solicitante?.nombre || "Desconocido"}
-                    </p>
-                    {sol.solicitante?.email ? (
-                      <p className="truncate text-xs text-muted-foreground">{sol.solicitante.email}</p>
-                    ) : null}
-                  </div>
-                ),
-              },
-              {
-                key: "salida",
-                className: "whitespace-nowrap align-middle text-sm font-semibold tabular-nums text-foreground",
-                content: formatFechaHoraGt(sol.fecha_inicio),
-              },
-              {
-                key: "estado",
-                className: "whitespace-nowrap align-middle",
-                content: (
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoBadgeClass(sol.estado)}`}
-                  >
-                    {formatEstadoLabel(sol.estado)}
-                  </span>
-                ),
-              },
-              {
-                key: "vehiculo",
-                className: "align-middle",
-                content: sol.vehiculo ? (
-                  <span className="text-xs text-muted-foreground">
-                    {sol.vehiculo.placa} · {sol.vehiculo.marca} {sol.vehiculo.modelo}
-                  </span>
-                ) : (
-                  <span className="text-xs italic text-muted-foreground">Sin asignar</span>
-                ),
-              },
-              {
-                key: "acciones",
-                className: "align-middle text-center",
-                content: (
-                  <button
-                    type="button"
-                    onClick={() => onDetail(sol)}
-                    className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-                    aria-label={`Detalle de solicitud a ${sol.destino}`}
-                  >
-                    <Eye className="size-3.5" />
-                    Detalle
-                  </button>
-                ),
-              },
-            ]}
-          />
+          <SolicitudListRow key={sol.id} solicitud={sol} onDetail={onDetail} />
         ))}
       </tbody>
     </GestionVehiculosTable>

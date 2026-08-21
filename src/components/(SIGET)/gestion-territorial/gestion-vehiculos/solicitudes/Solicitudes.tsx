@@ -9,11 +9,10 @@ import { SolicitudesPanel } from "./SolicitudesPanel";
 import { Crear } from "./forms/Crear";
 import { SolicitudActionModal } from "./SolicitudActionModal";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
+import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
 
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { type SolicitudRow } from "./lib/zod";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
@@ -29,8 +28,8 @@ const TAB_LABELS: Record<TabSolicitud, string> = {
 export function Solicitudes() {
   const { data: solicitudes = [], isLoading: loading } = useSolicitudes();
   const invalidate = useInvalidateSolicitudes();
-  const { effectiveRole } = useUserContext();
-  const canManage = ["super", "admin"].includes(effectiveRole);
+  const { realRole } = useUserContext();
+  const canManage = ["super", "admin"].includes(realRole);
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
   const [inDetailView, setInDetailView] = useState(false);
   const router = useRouter();
@@ -78,13 +77,14 @@ export function Solicitudes() {
               </h1>
             </div>
           </div>
-          <Button
+          <button
+            type="button"
             onClick={() => setFormOpen(true)}
-            className="h-11 w-full cursor-pointer rounded-xl border-0 bg-celeste-trifinio text-xs font-bold uppercase tracking-widest text-white shadow-none hover:opacity-90 sm:w-auto"
+            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-celeste-trifinio px-5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:opacity-90 sm:w-auto"
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="size-4 shrink-0" />
             Nueva Solicitud
-          </Button>
+          </button>
         </div>
       ) : null}
 
@@ -92,23 +92,18 @@ export function Solicitudes() {
         <GestionVehiculosTableShell
           toolbar={
             !inDetailView ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <GvSwitchGroup layoutId="gv-solicitudes-tabs">
                 {TABS.map((tab) => (
-                  <button
+                  <GvSwitchItem
                     key={tab}
-                    type="button"
+                    active={tabActiva === tab}
                     onClick={() => setTabActiva(tab)}
-                    className={cn(
-                      "inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border-0 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors",
-                      tabActiva === tab
-                        ? "bg-celeste-trifinio text-white hover:opacity-90"
-                        : "text-zinc-700 hover:bg-zinc-300 dark:text-zinc-200 dark:hover:bg-zinc-600",
-                    )}
+                    size="sm"
                   >
                     {TAB_LABELS[tab]}
-                  </button>
+                  </GvSwitchItem>
                 ))}
-              </div>
+              </GvSwitchGroup>
             ) : undefined
           }
         >

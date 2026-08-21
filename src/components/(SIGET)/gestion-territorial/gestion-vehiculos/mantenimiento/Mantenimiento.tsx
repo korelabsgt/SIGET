@@ -9,13 +9,9 @@ import { differenceInDays } from "date-fns";
 import { SubmodulosNav } from "../../SubmodulosNav";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
-import {
-  useFallasMantenimiento,
-  useMecanicos,
-  useVehiculosParaFallas,
-} from "./lib/hooks";
+import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
-import { cn } from "@/lib/utils";
+import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
 
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
 type TabMantenimiento = (typeof TABS)[number];
@@ -33,7 +29,6 @@ export function Mantenimiento() {
     effectiveRole,
   );
   const { data: fallas = [], isLoading } = useFallasMantenimiento();
-  const { data: vehiculos = [] } = useVehiculosParaFallas();
   const { data: mecanicos = [] } = useMecanicos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
 
@@ -88,7 +83,7 @@ export function Mantenimiento() {
             <p className="text-sm text-muted-foreground">
               Administración del mantenimiento vehicular y reportes de fallas.
             </p>
-            <Crear vehiculos={vehiculos} />
+            <Crear />
           </div>
 
           <div className="mb-6 grid gap-4 px-3 sm:px-0 md:grid-cols-3">
@@ -132,27 +127,19 @@ export function Mantenimiento() {
           <div className="px-3 sm:px-0">
             <GestionVehiculosTableShell
               toolbar={
-                <div className="flex flex-wrap items-center gap-2">
+                <GvSwitchGroup layoutId="gv-mantenimiento-tabs">
                   {TABS.map((tab) => (
-                    <button
+                    <GvSwitchItem
                       key={tab}
-                      type="button"
+                      active={tabActiva === tab}
                       onClick={() => setTabActiva(tab)}
-                      className={cn(
-                        "inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border-0 px-3 text-[10px] font-bold uppercase tracking-wider transition-colors",
-                        tabActiva === tab
-                          ? tab === "CRITICAS"
-                            ? "bg-red-600 text-white hover:opacity-90"
-                            : "bg-celeste-trifinio text-white hover:opacity-90"
-                          : tab === "CRITICAS"
-                            ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                            : "text-zinc-700 hover:bg-zinc-300 dark:text-zinc-200 dark:hover:bg-zinc-600",
-                      )}
+                      size="sm"
+                      tone={tab === "CRITICAS" ? "danger" : "default"}
                     >
                       {TAB_LABELS[tab]}
-                    </button>
+                    </GvSwitchItem>
                   ))}
-                </div>
+                </GvSwitchGroup>
               }
             >
               <MantenimientoList

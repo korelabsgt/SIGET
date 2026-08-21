@@ -67,8 +67,8 @@ export function BitacorasList({ bitacoras }: { bitacoras: BitacoraRow[] }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="max-w-[150px] truncate text-xs text-muted-foreground" title={b.profiles?.full_name}>
-                      {b.profiles?.full_name || "Desconocido"}
+                    <span className="max-w-[150px] truncate text-xs text-muted-foreground" title={b.profiles?.nombre}>
+                      {b.profiles?.nombre || "Desconocido"}
                     </span>
                   </div>
                 </div>

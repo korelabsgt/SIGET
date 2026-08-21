@@ -1,6 +1,8 @@
 "use client";
 
-import { Bell, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, Bell, BellRing, CircleAlert } from "lucide";
+import { GvMorphIcon } from "../lib/morph-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,20 +12,32 @@ import { getFleetAllAlerts } from "./lib/helpers";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 
-export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] }) {
+export function FlotaNotificaciones({
+  vehiculos,
+  onSelectVehiculo,
+}: {
+  vehiculos: VehiculoRow[];
+  onSelectVehiculo?: (vehiculoId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
   const alertas = getFleetAllAlerts(vehiculos);
   const total = alertas.length;
   const criticas = alertas.filter((a) => a.severidad === "error").length;
 
+  const handleAlertClick = (vehiculoId: string) => {
+    onSelectVehiculo?.(vehiculoId);
+    setOpen(false);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 text-zinc-700 transition-colors hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
           aria-label={`Alertas de flota${total > 0 ? `, ${total} pendientes` : ""}`}
         >
-          <Bell className="size-5" />
+          <GvMorphIcon icon={Bell} hoverIcon={BellRing} size={20} />
           {total > 0 ? (
             <span
               className={cn(
@@ -54,7 +68,7 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
 
         {alertas.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <Bell className="mx-auto mb-2 size-8 text-muted-foreground/40" />
+            <GvMorphIcon icon={Bell} hoverIcon={BellRing} size={32} className="mx-auto mb-2 text-muted-foreground/40" />
             <p className="text-sm font-medium text-foreground">Todo al día</p>
             <p className="mt-1 text-xs text-muted-foreground">
               No hay alertas de documentos ni mantenimiento.
@@ -63,11 +77,13 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
         ) : (
           <ul className="max-h-80 overflow-y-auto py-1">
             {alertas.map((alerta) => (
-              <li
-                key={alerta.id}
-                className="border-b border-border px-4 py-3 last:border-0 dark:border-zinc-800"
-              >
-                <div className="flex items-start gap-3">
+              <li key={alerta.id} className="border-b border-border last:border-0 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => handleAlertClick(alerta.vehiculo_id)}
+                  className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-sky-50/80 dark:hover:bg-sky-950/25"
+                  aria-label={`Ver vehículo ${alerta.placa}: ${alerta.titulo}`}
+                >
                   <div
                     className={cn(
                       "flex size-8 shrink-0 items-center justify-center rounded-lg",
@@ -76,7 +92,7 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
                         : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
                     )}
                   >
-                    <AlertTriangle className="size-4" />
+                    <GvMorphIcon icon={AlertTriangle} hoverIcon={CircleAlert} size={16} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -99,7 +115,7 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
                       {alerta.detalle}
                     </p>
                   </div>
-                </div>
+                </button>
               </li>
             ))}
           </ul>

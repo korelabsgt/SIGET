@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
-import { Loader2 } from "lucide-react";
+import { Loader2, Car } from "lucide-react";
 
 import {
   Dialog,
@@ -14,6 +14,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PasajerosSelect } from "../PasajerosSelect";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
@@ -21,7 +28,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
-import { useCrearSolicitud } from "../lib/hooks";
+import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
+import { formatVehiculoOpcion } from "../../flota/lib/helpers";
+
+const selectTriggerClass =
+  "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
+const selectContentClass =
+  "z-[200] max-h-60 w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
+const selectItemClass =
+  "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
 
 export function Crear({
   open,
@@ -33,6 +48,7 @@ export function Crear({
   onSaved: () => void;
 }) {
   const crear = useCrearSolicitud();
+  const { data: vehiculosLibres = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
 
   const {
     register,
@@ -148,6 +164,58 @@ export function Crear({
             {errors.justificacion && (
               <p className="text-xs text-red-500">{errors.justificacion.message}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Car className="size-3.5" />
+              Vehículo preferido (Opcional)
+            </Label>
+            <Controller
+              control={control}
+              name="vehiculo_id"
+              render={({ field }) => (
+                <Select
+                  disabled={loadingVehiculos}
+                  value={field.value || "none"}
+                  onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                >
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue
+                      placeholder={
+                        loadingVehiculos ? "Cargando vehículos..." : "Sin preferencia de vehículo"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className={selectContentClass}>
+                    <SelectItem value="none" className={selectItemClass}>
+                      Sin preferencia de vehículo
+                    </SelectItem>
+                    {vehiculosLibres.filter((v) => v.id).map((v) => {
+                      const label = formatVehiculoOpcion(v);
+                      return (
+                        <SelectItem
+                          key={v.id}
+                          value={v.id as string}
+                          textValue={label}
+                          className={selectItemClass}
+                        >
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {!loadingVehiculos && vehiculosLibres.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No hay vehículos libres. Puede enviar la solicitud sin preferencia.
+              </p>
+            ) : null}
+            {errors.vehiculo_id ? (
+              <p className="text-xs text-red-500">{errors.vehiculo_id.message}</p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

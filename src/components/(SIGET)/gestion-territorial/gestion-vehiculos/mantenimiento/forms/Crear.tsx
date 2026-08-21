@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FallaMantenimientoSchema, type FallaMantenimientoFormData, type VehiculoFallaOption } from "../lib/zod";
-import { useCrearFalla } from "../lib/hooks";
+import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
+import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
 import { createClient } from "@/utils/supabase/client";
 import {
   Dialog,
@@ -34,9 +34,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function Crear({ vehiculos }: { vehiculos: VehiculoFallaOption[] }) {
+export function Crear() {
   const [open, setOpen] = useState(false);
   const crear = useCrearFalla();
+  const { data: vehiculos = [] } = useVehiculosParaFallas(open);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

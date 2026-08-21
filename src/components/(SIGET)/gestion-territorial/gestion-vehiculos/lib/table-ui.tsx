@@ -19,7 +19,7 @@ export function GestionVehiculosTableShell({
     >
       <div className="h-1 w-full bg-celeste-trifinio" />
       {toolbar ? (
-        <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:flex-wrap sm:items-center dark:border-zinc-700">
+        <div className="grid grid-cols-1 gap-3 border-b border-border p-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)] md:items-center dark:border-zinc-700">
           {toolbar}
         </div>
       ) : null}

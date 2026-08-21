@@ -9,12 +9,15 @@ interface StatsProps {
     total_combustible: number;
     total_misiones: number;
   };
+  filtroVehiculo?: boolean;
 }
 
-export function BitacoraStatsCards({ metrics }: StatsProps) {
+export function BitacoraStatsCards({ metrics, filtroVehiculo = false }: StatsProps) {
+  const periodoLabel = filtroVehiculo ? "Mes · Vehículo filtrado" : "Mes";
+
   const stats = [
     {
-      title: "Recorrido Total (Mes)",
+      title: `Recorrido Total (${periodoLabel})`,
       value: `${metrics.total_km.toLocaleString()} km`,
       icon: <Route className="h-5 w-5 text-indigo-500" />,
       bg: "bg-indigo-500/10",
@@ -40,7 +43,7 @@ export function BitacoraStatsCards({ metrics }: StatsProps) {
     <div className="grid gap-4 md:grid-cols-3 mb-6 px-3 sm:px-0">
       {stats.map((stat, i) => (
         <motion.div
-          key={stat.title}
+          key={`${stat.title}-${stat.value}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: i * 0.1 }}

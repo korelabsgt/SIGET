@@ -41,6 +41,6 @@ export type BitacoraRow = {
     modelo: string;
   };
   profiles?: {
-    full_name: string;
+    nombre: string;
   };
 };

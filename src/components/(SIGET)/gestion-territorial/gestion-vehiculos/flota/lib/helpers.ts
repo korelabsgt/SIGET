@@ -269,6 +269,7 @@ export function getFleetAlertNotifications(
 
 export type FleetAlertItem = {
   id: string;
+  vehiculo_id: string;
   placa: string;
   titulo: string;
   detalle: string;
@@ -287,6 +288,7 @@ export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
     if (docStatus === "ROJO") {
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-docs-crit`,
+        vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Documentos críticos",
         detalle: "Seguro o circulación vencidos o sin registrar",
@@ -295,6 +297,7 @@ export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
     } else if (docStatus === "AMARILLO") {
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-docs-warn`,
+        vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Documentos por vencer",
         detalle: "Seguro o circulación vence en los próximos 30 días",
@@ -307,6 +310,7 @@ export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
     if (mantenimiento.estado === "ROJO") {
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-mant-crit`,
+        vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Mantenimiento vencido",
         detalle: `Servicio debió realizarse a los ${mantenimiento.siguienteServicio.toLocaleString()} km`,
@@ -315,6 +319,7 @@ export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
     } else if (mantenimiento.estado === "AMARILLO") {
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-mant-warn`,
+        vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Mantenimiento próximo",
         detalle: `Servicio programado en ${mantenimiento.kmFaltantes.toLocaleString()} km`,
@@ -330,5 +335,37 @@ export type FleetMediumAlert = FleetAlertItem;
 
 export function getFleetMediumAlerts(vehiculos: VehiculoRow[]): FleetMediumAlert[] {
   return getFleetAllAlerts(vehiculos).filter((alerta) => alerta.severidad === "warn");
+}
+
+export function formatVehiculoOpcion(
+  v: Pick<VehiculoRow, "placa" | "marca" | "modelo" | "color">,
+): string {
+  const base = `${v.placa} · ${v.marca} ${v.modelo}`;
+  const color = v.color?.trim();
+  return color ? `${base} · ${color}` : base;
+}
+
+export const MAX_FOTOS_VEHICULO = 4;
+export const MIN_FOTOS_VEHICULO = 1;
+
+export function fotosVehiculo(
+  vehiculo: Pick<VehiculoRow, "imagen_url" | "imagenes">,
+): string[] {
+  const fromArray = Array.isArray(vehiculo.imagenes)
+    ? vehiculo.imagenes.filter((url) => url.trim().length > 0)
+    : [];
+  const cover = vehiculo.imagen_url?.trim();
+  const merged =
+    cover && !fromArray.includes(cover) ? [cover, ...fromArray] : fromArray;
+  return [...new Set(merged)].slice(0, MAX_FOTOS_VEHICULO);
+}
+
+export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
+  const fotos = fotosVehiculo(row);
+  return {
+    ...row,
+    imagenes: fotos,
+    imagen_url: fotos[0] ?? null,
+  };
 }
 

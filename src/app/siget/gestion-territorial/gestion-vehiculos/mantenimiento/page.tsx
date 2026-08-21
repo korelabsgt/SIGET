@@ -1,10 +1,10 @@
-import { Suspense } from "react";
-import { Mantenimiento } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/mantenimiento/Mantenimiento";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Mantenimiento y Averías - SIGET",
+  description: "Gestión de averías y mantenimiento preventivo",
+};
 
 export default function MantenimientoPage() {
-  return (
-    <Suspense>
-      <Mantenimiento />
-    </Suspense>
-  );
+  return null;
 }

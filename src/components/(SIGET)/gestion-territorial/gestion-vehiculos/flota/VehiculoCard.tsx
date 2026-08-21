@@ -1,14 +1,32 @@
-import { Car, Calendar, Activity, AlertTriangle, PenSquare, Trash2, Clock } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Calendar,
+  CalendarDays,
+  Car,
+  CarFront,
+  CircleAlert,
+  LogIn,
+  PenSquare,
+  Pencil,
+  Trash,
+  Trash2,
+  TrendingUp,
+} from "lucide";
+import { GvMorphIcon } from "../lib/morph-icon";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 
 export function VehiculoCard({
   vehiculo,
+  onDetail,
   onEdit,
   onDelete,
 }: {
   vehiculo: VehiculoRow;
+  onDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -37,14 +55,14 @@ export function VehiculoCard({
   const vencCirculacion = checkVencimiento(vehiculo.vencimiento_circulacion);
 
   return (
-    <div className="relative flex flex-col rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900/50">
-      <div className="flex items-start justify-between mb-4">
+    <div className="relative flex flex-col rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900/50" data-morph-hover-scope>
+      <div className="mb-4 flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-azul-trifinio/10 text-azul-trifinio">
-            <Car className="h-6 w-6" />
+            <GvMorphIcon icon={Car} hoverIcon={CarFront} size={24} />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-lg uppercase tracking-wider">
+            <h3 className="text-lg font-bold uppercase tracking-wider text-foreground">
               {vehiculo.placa}
             </h3>
             <p className="text-sm font-medium text-muted-foreground">
@@ -55,17 +73,17 @@ export function VehiculoCard({
         <span
           className={cn(
             "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
-            getEstadoColor(vehiculo.estado)
+            getEstadoColor(vehiculo.estado),
           )}
         >
           {vehiculo.estado.replace("_", " ")}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-5">
+      <div className="mb-5 grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Activity className="h-3 w-3" />
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <GvMorphIcon icon={Activity} hoverIcon={TrendingUp} size={12} />
             Kilometraje
           </span>
           <span className="text-sm font-semibold text-foreground">
@@ -73,8 +91,8 @@ export function VehiculoCard({
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Calendar className="h-3 w-3" />
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <GvMorphIcon icon={Calendar} hoverIcon={CalendarDays} size={12} />
             Año
           </span>
           <span className="text-sm font-semibold text-foreground">
@@ -84,9 +102,9 @@ export function VehiculoCard({
       </div>
 
       {(vencSeguro || vencCirculacion) && (
-        <div className="mt-auto mb-4 flex flex-col gap-2 rounded-xl bg-red-500/10 p-3 border border-red-500/20">
+        <div className="mb-4 mt-auto flex flex-col gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3">
           <div className="flex items-center gap-2 text-xs font-bold text-red-500">
-            <AlertTriangle className="h-4 w-4" />
+            <GvMorphIcon icon={AlertTriangle} hoverIcon={CircleAlert} size={16} />
             <span>Alertas de Vencimiento</span>
           </div>
           {vencSeguro && (
@@ -104,19 +122,29 @@ export function VehiculoCard({
         </div>
       )}
 
-      <div className="mt-auto pt-4 flex items-center gap-2 border-t border-border dark:border-zinc-800">
+      <div className="mt-auto flex items-center gap-2 border-t border-border pt-4 dark:border-zinc-800">
         <button
-          onClick={onEdit}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-azul-trifinio/10 px-3 py-2 text-xs font-bold text-azul-trifinio transition-colors hover:bg-azul-trifinio/20"
+          type="button"
+          onClick={onDetail}
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-celeste-trifinio px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
         >
-          <PenSquare className="h-4 w-4" />
+          <GvMorphIcon icon={LogIn} hoverIcon={ArrowRight} size={16} />
+          ENTRAR
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-azul-trifinio/10 px-3 py-2 text-xs font-bold text-azul-trifinio transition-colors hover:bg-azul-trifinio/20"
+        >
+          <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={16} />
           EDITAR
         </button>
         <button
+          type="button"
           onClick={onDelete}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-500/20"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-500/20"
         >
-          <Trash2 className="h-4 w-4" />
+          <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={16} />
           ELIMINAR
         </button>
       </div>

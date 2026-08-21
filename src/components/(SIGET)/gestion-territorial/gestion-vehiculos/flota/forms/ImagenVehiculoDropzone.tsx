@@ -1,66 +1,116 @@
 "use client";
 
-import { UploadCloud, X } from "lucide-react";
+import { Plus, UploadCloud, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
 
-const MAX_BYTES = 512_000;
+const MAX_BYTES = 2_000_000;
 const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const ACCEPT_ATTR = ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
 
 export function ImagenVehiculoDropzone({
-  previewUrl,
-  onFileSelect,
-  onClear,
+  previews,
+  onAddFiles,
+  onRemove,
   disabled,
 }: {
-  previewUrl: string | null;
-  onFileSelect: (file: File) => void;
-  onClear: () => void;
+  previews: string[];
+  onAddFiles: (files: File[]) => void;
+  onRemove: (index: number) => void;
   disabled?: boolean;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  const remaining = MAX_FOTOS_VEHICULO - previews.length;
+  const canAdd = remaining > 0 && !disabled;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
+    const selected = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!selectedFile) return;
+    if (selected.length === 0) return;
 
-    if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
-      toast.error("Formato no válido. Use JPG, PNG o WEBP.");
-      return;
+    const valid: File[] = [];
+    for (const selectedFile of selected) {
+      if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
+        toast.error("Formato no válido. Use JPG, PNG o WEBP.");
+        continue;
+      }
+      if (selectedFile.size > MAX_BYTES) {
+        toast.error("Cada imagen no debe superar los 2 MB");
+        continue;
+      }
+      valid.push(selectedFile);
     }
 
-    if (selectedFile.size > MAX_BYTES) {
-      toast.error("La imagen no debe superar los 500 KB");
-      return;
-    }
-
-    onFileSelect(selectedFile);
+    if (valid.length === 0) return;
+    onAddFiles(valid.slice(0, Math.max(0, remaining)));
   };
 
   return (
     <div className="space-y-2">
-      <Label>Fotografía del vehículo (opcional)</Label>
-      {previewUrl ? (
-        <div className="relative h-44 w-full overflow-hidden rounded-xl border border-border">
-          <img src={previewUrl} alt="Vista previa del vehículo" className="size-full object-cover" />
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            disabled={disabled}
-            className="absolute right-2 top-2 size-7 rounded-full"
-            onClick={onClear}
-          >
-            <X className="size-4" />
-          </Button>
+      <Label>Fotografías del vehículo</Label>
+      <p className="text-xs text-muted-foreground">
+        Obligatoria 1. Las otras {MAX_FOTOS_VEHICULO - MIN_FOTOS_VEHICULO} son opcionales.
+      </p>
+      {previews.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {previews.map((url, index) => (
+              <motion.div
+                key={`${url}-${index}`}
+                layout={!prefersReducedMotion}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={
+                  prefersReducedMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, y: -8, scale: 0.99 }
+                }
+                transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800"
+              >
+                <img
+                  src={url}
+                  alt={`Fotografía ${index + 1}`}
+                  className="size-full object-cover"
+                />
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onRemove(index)}
+                  className="absolute right-1.5 top-1.5 inline-flex size-7 cursor-pointer items-center justify-center rounded-lg border-0 bg-red-100 text-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
+                  aria-label={`Quitar fotografía ${index + 1}`}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {canAdd ? (
+            <label className="relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl bg-sky-100 text-celeste-trifinio hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900">
+              <Plus className="size-5" />
+              <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">
+                Añadir
+              </span>
+              <Input
+                type="file"
+                accept={ACCEPT_ATTR}
+                multiple
+                disabled={disabled}
+                className="absolute inset-0 size-full cursor-pointer opacity-0"
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : null}
         </div>
       ) : (
         <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
           <Input
             type="file"
             accept={ACCEPT_ATTR}
+            multiple
             disabled={disabled}
             className="absolute inset-0 size-full cursor-pointer opacity-0"
             onChange={handleFileChange}
@@ -68,27 +118,67 @@ export function ImagenVehiculoDropzone({
           <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950/60">
             <UploadCloud className="size-5" />
           </div>
-          <p className="text-sm font-medium">Haz clic o arrastra una imagen aquí</p>
-          <p className="mt-1 text-xs text-muted-foreground">JPG, PNG o WEBP (máx. 500 KB)</p>
+          <p className="text-sm font-medium">Haz clic o arrastra imágenes aquí</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            JPG, PNG o WEBP (máx. 2 MB). Mínimo {MIN_FOTOS_VEHICULO}, máximo {MAX_FOTOS_VEHICULO}.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
+export async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string" || result.length === 0) {
+        reject(new Error("No se pudo leer la imagen"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function uploadImagenVehiculo(file: File, placa: string): Promise<string> {
   const { createClient } = await import("@/utils/supabase/client");
   const supabase = createClient();
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const placaSegment = placa.trim().toUpperCase() || String(Date.now());
-  const filePath = `flota/${placaSegment}_${Date.now()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage.from("vehiculos").upload(filePath, file);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Debes iniciar sesión para subir la fotografía.");
+  }
+
+  const extensionFromName = file.name.split(".").pop()?.toLowerCase();
+  const extensionFromType = file.type.split("/")[1]?.replace("jpeg", "jpg");
+  const extension = (extensionFromName || extensionFromType || "jpg").replace(/[^a-z0-9]/g, "");
+  const placaSegment =
+    placa
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "vehiculo";
+  const filePath = `flota/${placaSegment}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension || "jpg"}`;
+
+  const { error: uploadError } = await supabase.storage.from("vehiculos").upload(filePath, file, {
+    cacheControl: "3600",
+    upsert: true,
+    contentType: file.type || "image/jpeg",
+  });
 
   if (uploadError) {
-    throw new Error("Error subiendo la imagen: " + uploadError.message);
+    throw new Error("No se pudo guardar la imagen en Storage: " + uploadError.message);
   }
 
   const { data: publicUrlData } = supabase.storage.from("vehiculos").getPublicUrl(filePath);
+  if (!publicUrlData.publicUrl) {
+    throw new Error("La imagen se subió pero no se obtuvo la URL pública.");
+  }
   return publicUrlData.publicUrl;
 }

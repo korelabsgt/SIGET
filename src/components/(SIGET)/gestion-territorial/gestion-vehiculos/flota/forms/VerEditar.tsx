@@ -25,7 +25,8 @@ import {
   type VehiculoRow,
 } from "../lib/zod";
 import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
-import { ImagenVehiculoDropzone, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
+import { fotosVehiculo, MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
+import { ImagenVehiculoDropzone, fileToDataUrl, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
 
 export function VerEditar({
   open,
@@ -40,10 +41,10 @@ export function VerEditar({
 }) {
   const crear = useCrearVehiculo();
   const editar = useEditarVehiculo();
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [existingUrls, setExistingUrls] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [imagenRemovida, setImagenRemovida] = useState(false);
 
   const {
     register,
@@ -64,27 +65,45 @@ export function VerEditar({
       vencimiento_seguro: "",
       vencimiento_circulacion: "",
       imagen_url: null,
+      imagenes: [],
     },
   });
 
-  const clearImagen = () => {
-    setFile(null);
-    setPreviewUrl(null);
-    setImagenRemovida(true);
+  const previews = [...existingUrls, ...pendingPreviews];
+
+  const handleRemoveFoto = (index: number) => {
+    if (index < existingUrls.length) {
+      setExistingUrls((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+    const pendingIndex = index - existingUrls.length;
+    setPendingFiles((prev) => prev.filter((_, i) => i !== pendingIndex));
+    setPendingPreviews((prev) => prev.filter((_, i) => i !== pendingIndex));
   };
 
-  const handleFileSelect = (selectedFile: File) => {
-    setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
-    setImagenRemovida(false);
+  const handleAddFiles = async (selectedFiles: File[]) => {
+    const room = MAX_FOTOS_VEHICULO - existingUrls.length - pendingFiles.length;
+    const toAdd = selectedFiles.slice(0, Math.max(0, room));
+    if (toAdd.length === 0) {
+      toast.warn(`Puedes agregar hasta ${MAX_FOTOS_VEHICULO} fotografías.`);
+      return;
+    }
+    try {
+      const urls = await Promise.all(toAdd.map((item) => fileToDataUrl(item)));
+      setPendingFiles((prev) => [...prev, ...toAdd]);
+      setPendingPreviews((prev) => [...prev, ...urls]);
+    } catch {
+      toast.error("No se pudo leer la imagen seleccionada.");
+    }
   };
 
   useEffect(() => {
     if (open) {
-      setFile(null);
-      setImagenRemovida(false);
+      setPendingFiles([]);
+      setPendingPreviews([]);
       if (initialData) {
-        setPreviewUrl(initialData.imagen_url ?? null);
+        const fotos = fotosVehiculo(initialData);
+        setExistingUrls(fotos);
         reset({
           placa: initialData.placa,
           marca: initialData.marca,
@@ -99,10 +118,11 @@ export function VerEditar({
           vencimiento_circulacion: initialData.vencimiento_circulacion
             ? new Date(initialData.vencimiento_circulacion).toISOString().split("T")[0]
             : "",
-          imagen_url: initialData.imagen_url ?? null,
+          imagen_url: fotos[0] ?? null,
+          imagenes: fotos,
         });
       } else {
-        setPreviewUrl(null);
+        setExistingUrls([]);
         reset({
           placa: "",
           marca: "",
@@ -114,27 +134,29 @@ export function VerEditar({
           vencimiento_seguro: "",
           vencimiento_circulacion: "",
           imagen_url: null,
+          imagenes: [],
         });
       }
     }
   }, [open, initialData, reset]);
 
   const onSubmit = async (data: VehiculoInput) => {
+    if (existingUrls.length + pendingFiles.length < MIN_FOTOS_VEHICULO) {
+      toast.warn("Debes subir al menos una fotografía del vehículo.");
+      return;
+    }
+
     setUploading(true);
     try {
-      let imagenUrl: string | null = initialData?.imagen_url ?? null;
-
-      if (imagenRemovida && !file) {
-        imagenUrl = null;
-      }
-
-      if (file) {
-        imagenUrl = await uploadImagenVehiculo(file, data.placa);
-      }
+      const uploaded = await Promise.all(
+        pendingFiles.map((item) => uploadImagenVehiculo(item, data.placa)),
+      );
+      const imagenes = [...existingUrls, ...uploaded];
 
       const payload: VehiculoInput = {
         ...data,
-        imagen_url: imagenUrl,
+        imagenes,
+        imagen_url: imagenes[0] ?? null,
       };
 
       if (initialData?.id) {
@@ -283,9 +305,11 @@ export function VerEditar({
           </div>
 
           <ImagenVehiculoDropzone
-            previewUrl={previewUrl}
-            onFileSelect={handleFileSelect}
-            onClear={clearImagen}
+            previews={previews}
+            onAddFiles={(files) => {
+              void handleAddFiles(files);
+            }}
+            onRemove={handleRemoveFoto}
             disabled={isWorking}
           />
 
@@ -302,7 +326,7 @@ export function VerEditar({
               {uploading ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Subiendo imagen...
+                  Subiendo fotografías...
                 </>
               ) : isWorking ? (
                 <>

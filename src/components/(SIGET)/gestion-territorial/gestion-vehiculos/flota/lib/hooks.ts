@@ -1,21 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createVehiculo,
-  deleteVehiculo,
-  getVehiculos,
-  updateVehiculo,
-} from "./actions";
+
+import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
+import { fetchVehiculos } from "../../lib/client-db";
+import { createVehiculo, deleteVehiculo, updateVehiculo } from "./actions";
 import type { VehiculoInput } from "./zod";
 
-const VEHICULOS_KEY = ["ter-vehiculos"];
+export const VEHICULOS_KEY = ["ter-vehiculos"];
 
 export function useVehiculos() {
   return useQuery({
     queryKey: VEHICULOS_KEY,
-    queryFn: () => getVehiculos(),
-    retry: 1,
+    queryFn: () => shareInflight("ter-vehiculos", fetchVehiculos),
+    ...GV_QUERY_OPTIONS,
   });
 }
 
@@ -26,6 +24,7 @@ function useInvalidateVehiculos() {
 
 export function useCrearVehiculo() {
   const invalidate = useInvalidateVehiculos();
+
   return useMutation({
     mutationFn: (input: VehiculoInput) => createVehiculo(input),
     onSuccess: invalidate,
@@ -34,6 +33,7 @@ export function useCrearVehiculo() {
 
 export function useEditarVehiculo() {
   const invalidate = useInvalidateVehiculos();
+
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: VehiculoInput }) =>
       updateVehiculo(id, input),
@@ -43,8 +43,13 @@ export function useEditarVehiculo() {
 
 export function useEliminarVehiculo() {
   const invalidate = useInvalidateVehiculos();
+
   return useMutation({
-    mutationFn: (id: string) => deleteVehiculo(id),
+    mutationFn: async (id: string) => {
+      const res = await deleteVehiculo(id);
+      if (!res.success) throw new Error(res.error);
+      return res;
+    },
     onSuccess: invalidate,
   });
 }

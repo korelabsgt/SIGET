@@ -4,9 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   atenderFalla,
   createFalla,
-  getFallasMantenimiento,
-  getMecanicos,
-  getVehiculosParaFallas,
   solventarFalla,
 } from "./actions";
 import type {
@@ -14,27 +11,46 @@ import type {
   FallaMantenimientoFormData,
   SolventarFallaFormData,
 } from "./zod";
+import { VEHICULOS_KEY } from "../../flota/lib/hooks";
+import {
+  fetchFallasMantenimiento,
+  fetchPerfilesNombre,
+  fetchVehiculos,
+} from "../../lib/client-db";
+import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
 
-const FALLAS_KEY = ["ter-fallas-mantenimiento"];
+export const FALLAS_KEY = ["ter-fallas-mantenimiento"];
 
 export function useFallasMantenimiento() {
   return useQuery({
     queryKey: FALLAS_KEY,
-    queryFn: getFallasMantenimiento,
+    queryFn: () => shareInflight("ter-fallas", fetchFallasMantenimiento),
+    ...GV_QUERY_OPTIONS,
   });
 }
 
-export function useVehiculosParaFallas() {
+export function useVehiculosParaFallas(enabled = true) {
   return useQuery({
-    queryKey: [...FALLAS_KEY, "vehiculos"],
-    queryFn: getVehiculosParaFallas,
+    queryKey: VEHICULOS_KEY,
+    queryFn: () => shareInflight("ter-vehiculos", fetchVehiculos),
+    select: (vehiculos) =>
+      vehiculos.map((v) => ({
+        id: v.id ?? "",
+        placa: v.placa,
+        marca: v.marca,
+        modelo: v.modelo,
+        estado: v.estado,
+      })),
+    enabled,
+    ...GV_QUERY_OPTIONS,
   });
 }
 
 export function useMecanicos() {
   return useQuery({
     queryKey: [...FALLAS_KEY, "mecanicos"],
-    queryFn: getMecanicos,
+    queryFn: () => shareInflight("ter-perfiles-nombre", fetchPerfilesNombre),
+    ...GV_QUERY_OPTIONS,
   });
 }
 

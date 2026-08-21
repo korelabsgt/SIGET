@@ -31,7 +31,16 @@ export const vehiculoSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => (val ? new Date(val).toISOString() : null)),
-  imagen_url: z.string().url().optional().nullable(),
+  imagen_url: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val && val.trim().length > 0 ? val : null)),
+  imagenes: z
+    .array(z.string())
+    .max(4)
+    .optional()
+    .transform((val) => (val ?? []).filter((url) => url.trim().length > 0)),
   created_at: z.string().optional(),
 });
 

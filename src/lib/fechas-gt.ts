@@ -90,6 +90,40 @@ export function formatFechaCortaGt(value: string | null | undefined): string {
   }).format(date);
 }
 
+export function formatDiaFechaCortaGt(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const weekdayRaw = new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    weekday: "short",
+  })
+    .format(date)
+    .replace(/\.$/, "")
+    .slice(0, 3);
+
+  const weekday =
+    weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1).toLowerCase();
+
+  return `${weekday} ${formatFechaCortaGt(value)}`;
+}
+
+export function formatHoraAmGt(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE_GT,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
 export function formatHoraGt(value: string | null | undefined): string {
   if (!value) return "—";
 

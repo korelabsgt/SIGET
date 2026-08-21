@@ -22,7 +22,7 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
       .select(`
         *,
         ter_vehiculos (placa, marca, modelo),
-        profiles:conductor_id (full_name)
+        profiles:conductor_id (nombre)
       `)
       .order("fecha", { ascending: false });
 
@@ -98,11 +98,11 @@ export async function getConductores() {
     const { supabase } = await requireAuth();
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name")
-      .order("full_name");
-      
+      .select("id, nombre")
+      .order("nombre");
+
     if (error) throw error;
-    return data;
+    return data ?? [];
   } catch (error) {
     console.error("Error fetching conductores:", error);
     return [];
@@ -115,16 +115,32 @@ export async function getSolicitudesEnMision() {
     const { data, error } = await supabase
       .from("ter_solicitudes")
       .select(`
-        id, 
-        destino, 
-        conductor_id, 
+        id,
+        destino,
+        solicitante_id,
         vehiculo_id,
-        ter_vehiculos (kilometraje_actual)
+        vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
       `)
       .eq("estado", "EN_MISION");
-      
+
     if (error) throw error;
-    return data;
+
+    return (data ?? [])
+      .filter((row) => row.id && row.vehiculo_id && row.solicitante_id)
+      .map((row) => {
+        const vehiculoJoin = row.vehiculo;
+        const ter_vehiculos = Array.isArray(vehiculoJoin)
+          ? (vehiculoJoin[0] ?? null)
+          : (vehiculoJoin ?? null);
+
+        return {
+          id: row.id as string,
+          destino: row.destino as string,
+          conductor_id: row.solicitante_id as string,
+          vehiculo_id: row.vehiculo_id as string,
+          ter_vehiculos: ter_vehiculos as { kilometraje_actual: number } | null,
+        };
+      });
   } catch (error) {
     console.error("Error fetching solicitudes activas:", error);
     return [];
@@ -134,7 +150,7 @@ export async function getSolicitudesEnMision() {
 export async function getDatosReporteBitacora(mes: number, anio: number, vehiculo_id: string) {
   try {
     const { supabase } = await requireAuth();
-    const startDate = new Date(anio, mes - 1, 1).toISOString();
+    const startDate = new Date(anio, mes - 1, 1, 0, 0, 0, 0).toISOString();
     const endDate = new Date(anio, mes, 0, 23, 59, 59, 999).toISOString();
 
     let query = supabase
@@ -149,7 +165,7 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
         vale_combustible,
         monto_combustible,
         ter_vehiculos (placa, marca, modelo),
-        profiles:conductor_id (full_name)
+        profiles:conductor_id (nombre)
       `)
       .gte("fecha", startDate)
       .lte("fecha", endDate)
