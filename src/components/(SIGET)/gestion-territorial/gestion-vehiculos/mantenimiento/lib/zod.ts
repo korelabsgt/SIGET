@@ -6,7 +6,7 @@ export const FallaMantenimientoSchema = z.object({
     message: "La severidad es obligatoria.",
   }),
   descripcion: z.string().min(10, "La descripción debe tener al menos 10 caracteres."),
-  evidencia_url: z.string().url("Debe ser una URL válida.").optional().or(z.literal("")),
+  evidencia_url: z.string().optional().or(z.literal("")),
 });
 
 export type FallaMantenimientoFormData = z.infer<typeof FallaMantenimientoSchema>;

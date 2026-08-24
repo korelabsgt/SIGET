@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SolicitudesList } from "./SolicitudesList";
+import { SolicitudesCards } from "./SolicitudesCards";
 import { SolicitudDetalleView } from "./SolicitudDetalleView";
 import { type SolicitudRow } from "./lib/zod";
 
@@ -64,7 +65,12 @@ export function SolicitudesPanel({
             exit={prefersReducedMotion ? undefined : { opacity: 0, x: -24 }}
             transition={transition}
           >
-            <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+            <div className="hidden lg:block">
+              <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+            </div>
+            <div className="p-4 lg:hidden">
+              <SolicitudesCards solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

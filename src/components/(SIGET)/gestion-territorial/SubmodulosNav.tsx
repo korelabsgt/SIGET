@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookMarked,
   BookOpen,
@@ -29,12 +29,13 @@ const SUBMODULO_ICON: Record<string, { icon: IconNode; hoverIcon: IconNode }> = 
 
 export function SubmodulosNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const gvTab = useGvSubmoduloTab();
 
   if (!pathname.includes("/gestion-vehiculos")) return null;
 
   return (
-    <div className="mb-6 flex flex-wrap items-end gap-2 px-3 pb-1 sm:px-0">
+    <div className="mb-6 flex flex-wrap items-end gap-2 pb-1">
       <GvSwitchGroup layoutId="gv-submodulos-nav">
         {GESTION_VEHICULOS_MENU_OPTIONS.map((opt) => {
           const isActive = gvTab
@@ -47,7 +48,11 @@ export function SubmodulosNav() {
               key={opt.id}
               active={isActive}
               onClick={() => {
-                gvTab?.selectTab(opt.id as GvSubmoduloId);
+                if (gvTab) {
+                  gvTab.selectTab(opt.id as GvSubmoduloId);
+                  return;
+                }
+                router.push(opt.href, { scroll: false });
               }}
             >
               {icons ? (

@@ -1,38 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarClock,
   Car,
   CarFront,
-  Check,
+  CheckCircle,
   ChevronLeft,
+  CircleAlert,
   CircleCheck,
-  CirclePlay,
-  CircleStop,
-  CircleX,
   Clock,
-  Mail,
-  MapPin,
-  Play,
-  Route,
-  Square,
-  Timer,
+  FileText,
+  Image,
+  Images,
   User,
-  Users,
-  X,
+  Wrench,
 } from "lucide";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGt } from "@/lib/fechas-gt";
-import { type SolicitudRow } from "./lib/zod";
-import { estadoBadgeClass, formatDuracionMision, formatEstadoLabel } from "./lib/helpers";
 import { cn } from "@/lib/utils";
-
-function tituloEstado(estado: SolicitudRow["estado"]) {
-  return formatEstadoLabel(estado)
-    .toLowerCase()
-    .replace(/\b\w/g, (letra) => letra.toUpperCase());
-}
+import { type FallaRow, type MecanicoOption } from "./lib/zod";
+import {
+  estadoFallaBadgeClass,
+  formatEstadoFallaLabel,
+  formatSeveridadLabel,
+  formatVehiculoFalla,
+  severidadBadgeClass,
+} from "./lib/helpers";
+import { VerEditar } from "./forms/VerEditar";
 
 function ChipDato({
   icon,
@@ -40,8 +37,8 @@ function ChipDato({
   label,
   value,
 }: {
-  icon: typeof MapPin;
-  hoverIcon: typeof MapPin;
+  icon: typeof Car;
+  hoverIcon: typeof Car;
   label: string;
   value: string;
 }) {
@@ -67,8 +64,8 @@ function FilaDocumento({
   label,
   value,
 }: {
-  icon: typeof MapPin;
-  hoverIcon: typeof MapPin;
+  icon: typeof Car;
+  hoverIcon: typeof Car;
   label: string;
   value: string;
 }) {
@@ -94,67 +91,47 @@ function FilaSimple({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function SolicitudDetalleView({
-  solicitud,
-  canManage,
+export function FallaDetalleView({
+  falla,
+  mecanicos,
+  isAuthorized,
   onBack,
-  onAction,
 }: {
-  solicitud: SolicitudRow;
-  canManage: boolean;
+  falla: FallaRow;
+  mecanicos: MecanicoOption[];
+  isAuthorized: boolean;
   onBack: () => void;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
 }) {
-  const pasajeros = solicitud.pasajeros?.trim() || "Ninguno registrado";
-  const ruta = solicitud.ruta_planificada?.trim() || "No especificada";
-  const nombreSolicitante = solicitud.solicitante?.nombre?.trim() || "Desconocido";
-  const placa = solicitud.vehiculo?.placa ?? "Sin asignar";
+  const [accion, setAccion] = useState<"atender" | "solventar" | null>(null);
+  const vehiculoNombre = formatVehiculoFalla(falla);
+  const reportador = falla.reportador?.nombre?.trim() || "Desconocido";
+  const atencion = falla.taller_externo
+    ? `Taller: ${falla.taller_externo}`
+    : falla.mecanico?.nombre?.trim() || "Sin asignar";
 
   const acciones = (() => {
-    if (!canManage) return null;
-    if (solicitud.estado === "PENDIENTE") {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => onAction(solicitud, "APROBAR")}
-            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-emerald-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
-          >
-            <GvMorphIcon icon={Check} hoverIcon={CircleCheck} size={14} />
-            Aprobar
-          </button>
-          <button
-            type="button"
-            onClick={() => onAction(solicitud, "RECHAZAR")}
-            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-red-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
-          >
-            <GvMorphIcon icon={X} hoverIcon={CircleX} size={14} />
-            Rechazar
-          </button>
-        </>
-      );
-    }
-    if (solicitud.estado === "APROBADA") {
+    if (!isAuthorized) return null;
+    if (falla.estado === "PENDIENTE") {
       return (
         <button
           type="button"
-          onClick={() => onAction(solicitud, "INICIAR")}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-sky-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
+          onClick={() => setAccion("atender")}
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-orange-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
         >
-          <GvMorphIcon icon={Play} hoverIcon={CirclePlay} size={14} />
-          Iniciar misión
+          <GvMorphIcon icon={Wrench} hoverIcon={Wrench} size={14} />
+          Atender
         </button>
       );
     }
-    if (solicitud.estado === "EN_MISION") {
+    if (falla.estado === "EN_REPARACION") {
       return (
         <button
           type="button"
-          onClick={() => onAction(solicitud, "FINALIZAR")}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-violet-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
+          onClick={() => setAccion("solventar")}
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-emerald-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
         >
-          <GvMorphIcon icon={Square} hoverIcon={CircleStop} size={14} />
-          Finalizar misión
+          <GvMorphIcon icon={CheckCircle} hoverIcon={CircleCheck} size={14} />
+          Solventar
         </button>
       );
     }
@@ -180,82 +157,91 @@ export function SolicitudDetalleView({
                 <span
                   className={cn(
                     "inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                    estadoBadgeClass(solicitud.estado),
+                    estadoFallaBadgeClass(falla.estado),
                   )}
                 >
-                  {tituloEstado(solicitud.estado)}
+                  {formatEstadoFallaLabel(falla.estado)}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                    severidadBadgeClass(falla.severidad),
+                  )}
+                >
+                  {formatSeveridadLabel(falla.severidad)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  Creada el {formatFechaHoraGt(solicitud.created_at)}
+                  Reportada el {formatFechaHoraGt(falla.created_at)}
                 </span>
               </div>
               <h1 className="mt-3 flex items-start gap-2.5 text-3xl font-black tracking-tight text-foreground md:text-4xl">
                 <span className="mt-1 shrink-0 text-celeste-trifinio">
-                  <GvMorphIcon icon={MapPin} size={28} morphOnHover={false} />
+                  <GvMorphIcon icon={Car} hoverIcon={CarFront} size={28} />
                 </span>
-                <span className="min-w-0 capitalize">{solicitud.destino}</span>
+                <span className="min-w-0">{vehiculoNombre}</span>
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">Solicitado por {nombreSolicitante}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Reportado por {reportador}</p>
             </div>
-            {acciones ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div>
-            ) : null}
+            {acciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <ChipDato
-              icon={CalendarClock}
-              hoverIcon={Clock}
-              label="Salida"
-              value={formatFechaHoraGt(solicitud.fecha_inicio)}
+              icon={AlertTriangle}
+              hoverIcon={CircleAlert}
+              label="Severidad"
+              value={formatSeveridadLabel(falla.severidad)}
             />
             <ChipDato
               icon={CalendarClock}
               hoverIcon={Clock}
-              label="Retorno"
-              value={formatFechaHoraGt(solicitud.fecha_fin_estimada)}
+              label="Fecha de reporte"
+              value={formatFechaHoraGt(falla.created_at)}
             />
-            <ChipDato
-              icon={Timer}
-              hoverIcon={Clock}
-              label="Duración estimada"
-              value={formatDuracionMision(solicitud.fecha_inicio, solicitud.fecha_fin_estimada)}
-            />
-            <ChipDato icon={Car} hoverIcon={CarFront} label="Vehículo" value={placa} />
+            <ChipDato icon={User} hoverIcon={User} label="Reportado por" value={reportador} />
+            <ChipDato icon={Wrench} hoverIcon={Wrench} label="Atención" value={atencion} />
           </div>
         </div>
 
         <div className="grid gap-8 px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 lg:px-8 lg:py-8">
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Detalle de la misión
+              Detalle de la avería
             </h2>
             <div className="mt-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Justificación
+                Descripción
               </p>
-              <p className="mt-2 max-w-prose text-[15px] leading-7 text-foreground">
-                {solicitud.justificacion}
-              </p>
+              <p className="mt-2 max-w-prose text-[15px] leading-7 text-foreground">{falla.descripcion}</p>
             </div>
             <div className="mt-6">
-              <FilaDocumento icon={Route} hoverIcon={MapPin} label="Ruta planificada" value={ruta} />
-              <FilaDocumento icon={Users} hoverIcon={User} label="Pasajeros" value={pasajeros} />
               <FilaDocumento
-                icon={User}
-                hoverIcon={Mail}
-                label="Solicitante"
-                value={`${nombreSolicitante}${solicitud.solicitante?.email ? ` · ${solicitud.solicitante.email}` : ""}`}
+                icon={FileText}
+                hoverIcon={FileText}
+                label="Diagnóstico"
+                value={falla.diagnostico?.trim() || "Sin diagnóstico"}
+              />
+              <FilaDocumento
+                icon={Wrench}
+                hoverIcon={Wrench}
+                label="Reparación"
+                value={falla.reparacion_detalle?.trim() || "Sin detalle de reparación"}
+              />
+              <FilaDocumento
+                icon={CalendarClock}
+                hoverIcon={Clock}
+                label="Solventada"
+                value={falla.solventado_at ? formatFechaHoraGt(falla.solventado_at) : "Aún no solventada"}
               />
             </div>
           </section>
 
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Vehículo asignado
+              Vehículo
             </h2>
             <div className="mt-4 rounded-2xl bg-zinc-200 p-5 dark:bg-zinc-900" data-morph-hover-scope>
-              {solicitud.vehiculo ? (
+              {falla.vehiculo ? (
                 <>
                   <div className="flex items-center gap-3">
                     <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-celeste-trifinio text-white">
@@ -263,34 +249,45 @@ export function SolicitudDetalleView({
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-lg font-black uppercase tracking-wide text-foreground">
-                        {solicitud.vehiculo.placa}
+                        {falla.vehiculo.placa}
                       </p>
-                      <p className="truncate text-sm capitalize text-muted-foreground">
-                        {solicitud.vehiculo.marca} {solicitud.vehiculo.modelo}
-                      </p>
+                      <p className="truncate text-sm capitalize text-muted-foreground">{vehiculoNombre}</p>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <FilaSimple label="Color" value={solicitud.vehiculo.color?.trim() || "—"} />
-                    <FilaSimple
-                      label="Odómetro"
-                      value={
-                        solicitud.vehiculo.kilometraje_actual != null
-                          ? `${solicitud.vehiculo.kilometraje_actual.toLocaleString("es-GT")} km`
-                          : "—"
-                      }
-                    />
+                    <FilaSimple label="Marca" value={falla.vehiculo.marca || "—"} />
+                    <FilaSimple label="Modelo" value={falla.vehiculo.modelo || "—"} />
+                    <FilaSimple label="Placa" value={falla.vehiculo.placa || "—"} />
                   </div>
                 </>
               ) : (
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Aún no hay vehículo asignado. Se definirá al aprobar la solicitud.
+                  No hay vehículo asociado a esta avería.
                 </p>
               )}
             </div>
+            {falla.evidencia_url ? (
+              <a
+                href={falla.evidencia_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-wider text-celeste-trifinio hover:opacity-80"
+              >
+                <GvMorphIcon icon={Image} hoverIcon={Images} size={14} />
+                Ver evidencia
+              </a>
+            ) : null}
           </section>
         </div>
       </div>
+
+      <VerEditar
+        open={accion !== null}
+        onClose={() => setAccion(null)}
+        modo={accion}
+        falla={falla}
+        mecanicos={mecanicos}
+      />
     </div>
   );
 }

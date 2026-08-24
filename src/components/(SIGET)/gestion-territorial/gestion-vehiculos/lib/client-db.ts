@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 
 import type { BitacoraRow } from "../bitacoras/lib/zod";
-import { normalizeVehiculoRow } from "../flota/lib/helpers";
+import { esVehiculoDisponible, normalizeVehiculoRow } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
 import type { SolicitudRow } from "../solicitudes/lib/zod";
@@ -20,6 +20,39 @@ export async function fetchVehiculos(): Promise<VehiculoRow[]> {
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+}
+
+const ESTADOS_SOLICITUD_OCUPAN_VEHICULO = ["APROBADA", "EN_MISION"] as const;
+
+export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
+  const client = db();
+  const { data, error } = await client
+    .from("ter_vehiculos")
+    .select("*")
+    .order("placa", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const { data: asignados, error: asignadosError } = await client
+    .from("ter_solicitudes")
+    .select("vehiculo_id")
+    .in("estado", [...ESTADOS_SOLICITUD_OCUPAN_VEHICULO])
+    .not("vehiculo_id", "is", null);
+
+  if (asignadosError) throw new Error(asignadosError.message);
+
+  const ocupados = new Set(
+    (asignados ?? [])
+      .map((row) => row.vehiculo_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+
+  return (data ?? [])
+    .map((row) => normalizeVehiculoRow(row as VehiculoRow))
+    .filter((vehiculo) => {
+      if (!vehiculo.id || ocupados.has(vehiculo.id)) return false;
+      return esVehiculoDisponible(vehiculo);
+    });
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {

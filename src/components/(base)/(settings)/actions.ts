@@ -4,18 +4,19 @@ import { createClient } from "@/utils/supabase/server";
 import { AppSettingsUpdate } from "./zod";
 
 export async function getAppSettings(): Promise<AppSettingsUpdate | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("id, require_device_authorization, enable_passkeys, manual_usuario_url")
-    .limit(1)
-    .maybeSingle();
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("id, require_device_authorization, enable_passkeys, manual_usuario_url")
+      .limit(1)
+      .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) return null;
+    return data;
+  } catch {
+    return null;
   }
-
-  return data;
 }
 
 export async function updateAppSettings(settings: AppSettingsUpdate): Promise<void> {

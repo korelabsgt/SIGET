@@ -71,11 +71,15 @@ export function ImagenVehiculoDropzone({
                 transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
                 className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800"
               >
-                <img
-                  src={url}
-                  alt={`Fotografía ${index + 1}`}
-                  className="size-full object-cover"
-                />
+                {url ? (
+                  <img
+                    src={url}
+                    alt={`Fotografía ${index + 1}`}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="size-full bg-zinc-200 dark:bg-zinc-700" />
+                )}
                 <button
                   type="button"
                   disabled={disabled}
@@ -176,9 +180,5 @@ export async function uploadImagenVehiculo(file: File, placa: string): Promise<s
     throw new Error("No se pudo guardar la imagen en Storage: " + uploadError.message);
   }
 
-  const { data: publicUrlData } = supabase.storage.from("vehiculos").getPublicUrl(filePath);
-  if (!publicUrlData.publicUrl) {
-    throw new Error("La imagen se subió pero no se obtuvo la URL pública.");
-  }
-  return publicUrlData.publicUrl;
+  return filePath;
 }

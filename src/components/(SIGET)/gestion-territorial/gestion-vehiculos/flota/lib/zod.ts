@@ -1,6 +1,22 @@
 import { z } from "zod";
+import { fechaManualToTimestamptz } from "@/lib/fechas-gt";
 
 export const ESTADOS_VEHICULO = ["LIBRE", "RESERVADO", "EN_MANTENIMIENTO"] as const;
+
+const fechaManualOpcional = z
+  .string()
+  .nullable()
+  .optional()
+  .superRefine((val, ctx) => {
+    if (!val?.trim()) return;
+    if (!fechaManualToTimestamptz(val)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Fecha inválida. Escriba DD/MM/AAAA",
+      });
+    }
+  })
+  .transform((val) => (val?.trim() ? fechaManualToTimestamptz(val) : null));
 
 export const vehiculoSchema = z.object({
   id: z.string().uuid().optional(),
@@ -21,26 +37,13 @@ export const vehiculoSchema = z.object({
     .min(0, "El kilometraje no puede ser negativo")
     .default(0),
   estado: z.enum(ESTADOS_VEHICULO).default("LIBRE"),
-  vencimiento_seguro: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val ? new Date(val).toISOString() : null)),
-  vencimiento_circulacion: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val ? new Date(val).toISOString() : null)),
+  vencimiento_seguro: fechaManualOpcional,
+  vencimiento_circulacion: fechaManualOpcional,
   imagen_url: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val && val.trim().length > 0 ? val : null)),
-  imagenes: z
     .array(z.string())
     .max(4)
-    .optional()
-    .transform((val) => (val ?? []).filter((url) => url.trim().length > 0)),
+    .default([])
+    .transform((val) => val.filter((url) => url.trim().length > 0)),
   created_at: z.string().optional(),
 });
 

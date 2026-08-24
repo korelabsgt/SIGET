@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
 import { fetchVehiculos } from "../../lib/client-db";
-import { createVehiculo, deleteVehiculo, updateVehiculo } from "./actions";
+import { createVehiculo, deleteVehiculo, removeVehiculoImagen, updateVehiculo } from "./actions";
 import type { VehiculoInput } from "./zod";
 
 export const VEHICULOS_KEY = ["ter-vehiculos"];
@@ -50,6 +50,16 @@ export function useEliminarVehiculo() {
       if (!res.success) throw new Error(res.error);
       return res;
     },
+    onSuccess: invalidate,
+  });
+}
+
+export function useQuitarImagenVehiculo() {
+  const invalidate = useInvalidateVehiculos();
+
+  return useMutation({
+    mutationFn: ({ id, path }: { id: string; path: string }) =>
+      removeVehiculoImagen(id, path),
     onSuccess: invalidate,
   });
 }

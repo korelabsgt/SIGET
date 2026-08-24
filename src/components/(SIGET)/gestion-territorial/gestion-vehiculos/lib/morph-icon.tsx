@@ -44,13 +44,25 @@ export function GvMorphIcon({
       el.closest("button, a, [role='button'], label, [data-morph-hover-scope]") ?? el;
     const onEnter = () => setInternalHover(true);
     const onLeave = () => setInternalHover(false);
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "touch") onEnter();
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === "touch") onLeave();
+    };
 
-    scope.addEventListener("mouseenter", onEnter);
-    scope.addEventListener("mouseleave", onLeave);
+    scope.addEventListener("pointerenter", onEnter);
+    scope.addEventListener("pointerleave", onLeave);
+    scope.addEventListener("pointerdown", onPointerDown);
+    scope.addEventListener("pointerup", onPointerUp);
+    scope.addEventListener("pointercancel", onPointerUp);
 
     return () => {
-      scope.removeEventListener("mouseenter", onEnter);
-      scope.removeEventListener("mouseleave", onLeave);
+      scope.removeEventListener("pointerenter", onEnter);
+      scope.removeEventListener("pointerleave", onLeave);
+      scope.removeEventListener("pointerdown", onPointerDown);
+      scope.removeEventListener("pointerup", onPointerUp);
+      scope.removeEventListener("pointercancel", onPointerUp);
     };
   }, [morphOnHover, useExternalHover]);
 

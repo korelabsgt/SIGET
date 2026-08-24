@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
@@ -14,8 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { formatFechaManualInput, maskFechaManual } from "@/lib/fechas-gt";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -27,6 +27,10 @@ import {
 import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
 import { fotosVehiculo, MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
 import { ImagenVehiculoDropzone, fileToDataUrl, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
+import {
+  resolveStorageDisplaySrc,
+  useSignedStorageUrls,
+} from "../../lib/storage-hooks";
 
 export function VerEditar({
   open,
@@ -45,10 +49,10 @@ export function VerEditar({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const { data: signedMap = {} } = useSignedStorageUrls(existingUrls);
 
   const {
     register,
-    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -64,12 +68,14 @@ export function VerEditar({
       estado: "LIBRE",
       vencimiento_seguro: "",
       vencimiento_circulacion: "",
-      imagen_url: null,
-      imagenes: [],
+      imagen_url: [],
     },
   });
 
-  const previews = [...existingUrls, ...pendingPreviews];
+  const previews = [
+    ...existingUrls.map((path) => resolveStorageDisplaySrc(path, signedMap)),
+    ...pendingPreviews,
+  ];
 
   const handleRemoveFoto = (index: number) => {
     if (index < existingUrls.length) {
@@ -112,14 +118,11 @@ export function VerEditar({
           anio: initialData.anio,
           kilometraje_actual: initialData.kilometraje_actual,
           estado: initialData.estado,
-          vencimiento_seguro: initialData.vencimiento_seguro
-            ? new Date(initialData.vencimiento_seguro).toISOString().split("T")[0]
-            : "",
-          vencimiento_circulacion: initialData.vencimiento_circulacion
-            ? new Date(initialData.vencimiento_circulacion).toISOString().split("T")[0]
-            : "",
-          imagen_url: fotos[0] ?? null,
-          imagenes: fotos,
+          vencimiento_seguro: formatFechaManualInput(initialData.vencimiento_seguro),
+          vencimiento_circulacion: formatFechaManualInput(
+            initialData.vencimiento_circulacion,
+          ),
+          imagen_url: fotos,
         });
       } else {
         setExistingUrls([]);
@@ -133,8 +136,7 @@ export function VerEditar({
           estado: "LIBRE",
           vencimiento_seguro: "",
           vencimiento_circulacion: "",
-          imagen_url: null,
-          imagenes: [],
+          imagen_url: [],
         });
       }
     }
@@ -151,12 +153,11 @@ export function VerEditar({
       const uploaded = await Promise.all(
         pendingFiles.map((item) => uploadImagenVehiculo(item, data.placa)),
       );
-      const imagenes = [...existingUrls, ...uploaded];
+      const imagen_url = [...existingUrls, ...uploaded];
 
       const payload: VehiculoInput = {
         ...data,
-        imagenes,
-        imagen_url: imagenes[0] ?? null,
+        imagen_url,
       };
 
       if (initialData?.id) {
@@ -268,16 +269,19 @@ export function VerEditar({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vencimiento_seguro">Vencimiento Seguro</Label>
-              <Controller
-                control={control}
-                name="vencimiento_seguro"
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
-                  />
-                )}
+              <Input
+                id="vencimiento_seguro"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={10}
+                {...register("vencimiento_seguro", {
+                  onChange: (e) => {
+                    e.target.value = maskFechaManual(e.target.value);
+                  },
+                })}
               />
+              <p className="text-[11px] text-muted-foreground">DD/MM/AAAA</p>
               {errors.vencimiento_seguro && (
                 <p className="text-xs text-red-500">
                   {errors.vencimiento_seguro.message}
@@ -286,16 +290,19 @@ export function VerEditar({
             </div>
             <div className="space-y-2">
               <Label htmlFor="vencimiento_circulacion">Vencimiento Circulación</Label>
-              <Controller
-                control={control}
-                name="vencimiento_circulacion"
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
-                  />
-                )}
+              <Input
+                id="vencimiento_circulacion"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={10}
+                {...register("vencimiento_circulacion", {
+                  onChange: (e) => {
+                    e.target.value = maskFechaManual(e.target.value);
+                  },
+                })}
               />
+              <p className="text-[11px] text-muted-foreground">DD/MM/AAAA</p>
               {errors.vencimiento_circulacion && (
                 <p className="text-xs text-red-500">
                   {errors.vencimiento_circulacion.message}

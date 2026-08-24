@@ -14,6 +14,7 @@ import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { type SolicitudRow } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 type TabSolicitud = (typeof TABS)[number];
@@ -54,12 +55,12 @@ export function Solicitudes() {
   });
 
   return (
-    <div className="mx-auto w-full px-0 pt-6 pb-20 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%] relative">
+    <div className={GV_MODULO_PAGE_CLASS}>
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
       {!inDetailView ? <SubmodulosNav /> : null}
 
       {!inDetailView ? (
-        <div className="mb-6 flex flex-col gap-4 px-3 sm:flex-row sm:items-start sm:justify-between sm:px-0">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <button
               type="button"
@@ -88,8 +89,13 @@ export function Solicitudes() {
         </div>
       ) : null}
 
-      <div className="px-3 sm:px-0">
+      <div>
         <GestionVehiculosTableShell
+          className={
+            inDetailView
+              ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
+              : undefined
+          }
           toolbar={
             !inDetailView ? (
               <GvSwitchGroup layoutId="gv-solicitudes-tabs">

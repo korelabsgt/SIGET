@@ -7,7 +7,9 @@ import {
   Car,
   CarFront,
   CircleAlert,
+  EllipsisVertical,
   LogIn,
+  MoreVertical,
   PenSquare,
   Pencil,
   Trash,
@@ -18,6 +20,12 @@ import { GvMorphIcon } from "../lib/morph-icon";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function VehiculoCard({
   vehiculo,
@@ -122,31 +130,50 @@ export function VehiculoCard({
         </div>
       )}
 
-      <div className="mt-auto flex items-center gap-2 border-t border-border pt-4 dark:border-zinc-800">
+      <div className="mt-auto flex items-center justify-end gap-2 border-t border-border pt-4 dark:border-zinc-800">
         <button
           type="button"
           onClick={onDetail}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-celeste-trifinio px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+          className="inline-flex w-fit cursor-pointer items-center justify-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
         >
           <GvMorphIcon icon={LogIn} hoverIcon={ArrowRight} size={16} />
           ENTRAR
         </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-azul-trifinio/10 px-3 py-2 text-xs font-bold text-azul-trifinio transition-colors hover:bg-azul-trifinio/20"
-        >
-          <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={16} />
-          EDITAR
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-500/20"
-        >
-          <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={16} />
-          ELIMINAR
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 text-celeste-trifinio transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+              aria-label={`Más acciones de ${vehiculo.placa}`}
+            >
+              <GvMorphIcon
+                icon={EllipsisVertical}
+                hoverIcon={MoreVertical}
+                size={18}
+                className="text-current"
+              />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
+          >
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+              onSelect={onEdit}
+            >
+              <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={14} className="text-current" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60"
+              onSelect={onDelete}
+            >
+              <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

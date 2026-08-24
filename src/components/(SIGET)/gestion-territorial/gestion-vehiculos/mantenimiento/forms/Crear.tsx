@@ -89,11 +89,7 @@ export function Crear() {
           throw new Error("Error subiendo la imagen: " + uploadError.message);
         }
 
-        const { data: publicUrlData } = supabase.storage
-          .from("vehiculos")
-          .getPublicUrl(filePath);
-
-        finalEvidenciaUrl = publicUrlData.publicUrl;
+        finalEvidenciaUrl = filePath;
       }
 
       await crear.mutateAsync({ ...data, evidencia_url: finalEvidenciaUrl });

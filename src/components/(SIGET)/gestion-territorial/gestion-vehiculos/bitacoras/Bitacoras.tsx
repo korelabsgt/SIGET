@@ -22,6 +22,7 @@ import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
+import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 
 type BitacorasView = { mode: "list" } | { mode: "create" };
 
@@ -115,12 +116,12 @@ export function Bitacoras() {
   }
 
   return (
-    <div className="mx-auto w-full px-0 pt-6 pb-20 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%] relative">
+    <div className={GV_MODULO_PAGE_CLASS}>
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
 
       <SubmodulosNav />
 
-      <div className="mb-6 flex flex-col gap-4 px-3 sm:flex-row sm:items-start sm:justify-between sm:px-0">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <button
             type="button"
@@ -165,7 +166,7 @@ export function Bitacoras() {
 
       <BitacoraStatsCards metrics={metricas} filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS} />
 
-      <div className="mt-2 px-3 sm:px-0">
+      <div className="mt-2">
         <GestionVehiculosTableShell
           toolbar={
             <>

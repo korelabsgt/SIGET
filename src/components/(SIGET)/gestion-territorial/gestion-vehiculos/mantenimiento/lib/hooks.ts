@@ -56,7 +56,11 @@ export function useMecanicos() {
 
 function useInvalidateFallas() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: FALLAS_KEY });
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: FALLAS_KEY, refetchType: "all" }),
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY, refetchType: "all" }),
+    ]);
 }
 
 export function useCrearFalla() {

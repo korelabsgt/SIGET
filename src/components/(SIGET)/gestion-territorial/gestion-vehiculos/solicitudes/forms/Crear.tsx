@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PasajerosSelect } from "../PasajerosSelect";
-import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
+import { maskFechaHoraManual } from "@/lib/fechas-gt";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
@@ -100,40 +100,50 @@ export function Crear({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="max-h-[85vh] gap-3 overflow-y-auto p-4 sm:max-w-lg"
+      >
         <DialogHeader>
-          <DialogTitle>Nueva Solicitud de Vehículo</DialogTitle>
+          <DialogTitle className="text-base">Nueva Solicitud de Vehículo</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Fecha y Hora de Inicio</Label>
-              <Controller
-                control={control}
-                name="fecha_inicio"
-                render={({ field }) => (
-                  <DateTimePicker
-                    value={field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
-                  />
-                )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 py-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
+              <Input
+                id="fecha_inicio"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={16}
+                placeholder="DD/MM/AAAA HH:mm"
+                {...register("fecha_inicio", {
+                  onChange: (e) => {
+                    e.target.value = maskFechaHoraManual(e.target.value);
+                  },
+                })}
               />
               {errors.fecha_inicio && (
                 <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label>Fecha y Hora de Retorno Estimado</Label>
-              <Controller
-                control={control}
-                name="fecha_fin_estimada"
-                render={({ field }) => (
-                  <DateTimePicker
-                    value={field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : "")}
-                  />
-                )}
+            <div className="space-y-1.5">
+              <Label htmlFor="fecha_fin_estimada">Fecha y Hora de Retorno Estimado</Label>
+              <Input
+                id="fecha_fin_estimada"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={16}
+                placeholder="DD/MM/AAAA HH:mm"
+                {...register("fecha_fin_estimada", {
+                  onChange: (e) => {
+                    e.target.value = maskFechaHoraManual(e.target.value);
+                  },
+                })}
               />
               {errors.fecha_fin_estimada && (
                 <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
@@ -141,7 +151,7 @@ export function Crear({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Destino</Label>
             <Input placeholder="Ej. Ciudad de Guatemala" {...register("destino")} />
             {errors.destino && (
@@ -149,24 +159,24 @@ export function Crear({
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Ruta Planificada (Opcional)</Label>
             <Input placeholder="Ej. CA-1 Occidente..." {...register("ruta_planificada")} />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Justificación de la Misión</Label>
             <Textarea
               placeholder="Detalle el motivo del viaje..."
               {...register("justificacion")}
-              rows={3}
+              rows={2}
             />
             {errors.justificacion && (
               <p className="text-xs text-red-500">{errors.justificacion.message}</p>
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5">
               <Car className="size-3.5" />
               Vehículo preferido (Opcional)
@@ -218,7 +228,7 @@ export function Crear({
             ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label>Pasajeros / Acompañantes (Opcional)</Label>
             <Controller
               control={control}
@@ -232,7 +242,7 @@ export function Crear({
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-2">
             <Button
               type="button"
               variant="outline"

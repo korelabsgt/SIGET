@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MantenimientoList } from "./MantenimientoList";
+import { MantenimientoPanel } from "./MantenimientoPanel";
 import { Crear } from "./forms/Crear";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Car, Clock, ChevronLeft, Loader2 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { SubmodulosNav } from "../../SubmodulosNav";
@@ -11,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
+import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
 
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
@@ -31,6 +31,7 @@ export function Mantenimiento() {
   const { data: fallas = [], isLoading } = useFallasMantenimiento();
   const { data: mecanicos = [] } = useMecanicos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
+  const [enDetalle, setEnDetalle] = useState(false);
 
   const fallasActivas = fallas.filter((f) => f.estado !== "SOLVENTADA").length;
 
@@ -49,12 +50,13 @@ export function Mantenimiento() {
     : 0;
 
   return (
-    <div className="mx-auto w-full px-0 pt-6 pb-20 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%] relative">
+    <div className={GV_MODULO_PAGE_CLASS}>
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
 
-      <SubmodulosNav />
+      {!enDetalle ? <SubmodulosNav /> : null}
 
-      <div className="mb-6 flex items-start gap-3 px-3 sm:px-0">
+      {!enDetalle ? (
+      <div className="mb-6 flex items-start gap-3">
         <button
           type="button"
           onClick={() => router.push("/siget")}
@@ -71,6 +73,7 @@ export function Mantenimiento() {
           </h1>
         </div>
       </div>
+      ) : null}
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24">
@@ -79,74 +82,77 @@ export function Mantenimiento() {
         </div>
       ) : (
         <>
-          <div className="mb-6 flex flex-col gap-4 px-3 sm:flex-row sm:items-center sm:justify-between sm:px-0">
-            <p className="text-sm text-muted-foreground">
-              Administración del mantenimiento vehicular y reportes de fallas.
-            </p>
-            <Crear />
-          </div>
+          {!enDetalle ? (
+            <>
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Administración del mantenimiento vehicular y reportes de fallas.
+                </p>
+                <Crear />
+              </div>
 
-          <div className="mb-6 grid gap-4 px-3 sm:px-0 md:grid-cols-3">
-            <Card className="border-border bg-card shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fallas Activas</CardTitle>
-                <Activity className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">{fallasActivas}</div>
-                <p className="mt-1 text-xs text-muted-foreground">Pendientes o en reparación</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fuera de Servicio</CardTitle>
-                <Car className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">{unidadesFueraDeServicio}</div>
-                <p className="mt-1 text-xs text-muted-foreground">Inmovilizadas por severidad</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Promedio Reparación</CardTitle>
-                <Clock className="h-4 w-4 text-celeste-trifinio" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {promedioDias}{" "}
-                  <span className="text-base font-normal text-muted-foreground">días</span>
+              <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+                  <Activity className="size-3.5 shrink-0 text-orange-500" />
+                  <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Fallas activas
+                  </p>
+                  <p className="text-base font-bold tabular-nums text-foreground">{fallasActivas}</p>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Tiempo medio de solución</p>
-              </CardContent>
-            </Card>
-          </div>
 
-          <div className="px-3 sm:px-0">
+                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+                  <Car className="size-3.5 shrink-0 text-red-500" />
+                  <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Fuera de servicio
+                  </p>
+                  <p className="text-base font-bold tabular-nums text-foreground">{unidadesFueraDeServicio}</p>
+                </div>
+
+                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+                  <Clock className="size-3.5 shrink-0 text-celeste-trifinio" />
+                  <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Promedio reparación
+                  </p>
+                  <p className="text-base font-bold tabular-nums text-foreground">
+                    {promedioDias}
+                    <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">días</span>
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          <div>
             <GestionVehiculosTableShell
+              className={
+                enDetalle
+                  ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
+                  : undefined
+              }
               toolbar={
-                <GvSwitchGroup layoutId="gv-mantenimiento-tabs">
-                  {TABS.map((tab) => (
-                    <GvSwitchItem
-                      key={tab}
-                      active={tabActiva === tab}
-                      onClick={() => setTabActiva(tab)}
-                      size="sm"
-                      tone={tab === "CRITICAS" ? "danger" : "default"}
-                    >
-                      {TAB_LABELS[tab]}
-                    </GvSwitchItem>
-                  ))}
-                </GvSwitchGroup>
+                !enDetalle ? (
+                  <GvSwitchGroup layoutId="gv-mantenimiento-tabs">
+                    {TABS.map((tab) => (
+                      <GvSwitchItem
+                        key={tab}
+                        active={tabActiva === tab}
+                        onClick={() => setTabActiva(tab)}
+                        size="sm"
+                        tone={tab === "CRITICAS" ? "danger" : "default"}
+                      >
+                        {TAB_LABELS[tab]}
+                      </GvSwitchItem>
+                    ))}
+                  </GvSwitchGroup>
+                ) : undefined
               }
             >
-              <MantenimientoList
+              <MantenimientoPanel
                 fallas={fallas}
                 mecanicos={mecanicos}
                 isAuthorized={isAuthorized}
                 filtro={tabActiva}
+                onDetailViewChange={setEnDetalle}
               />
             </GestionVehiculosTableShell>
           </div>

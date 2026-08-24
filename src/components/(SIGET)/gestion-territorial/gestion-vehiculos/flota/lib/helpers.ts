@@ -1,6 +1,7 @@
 import { differenceInDays } from "date-fns";
 
 import { type AlertStatus, type VehiculoRow } from "./zod";
+import { normalizeVehiculoStoragePath } from "../../lib/storage";
 
 
 
@@ -337,6 +338,19 @@ export function getFleetMediumAlerts(vehiculos: VehiculoRow[]): FleetMediumAlert
   return getFleetAllAlerts(vehiculos).filter((alerta) => alerta.severidad === "warn");
 }
 
+export function estadoVehiculoNormalizado(
+  estado: string | null | undefined,
+): string {
+  return (estado ?? "").trim().toUpperCase().replace(/\s+/g, "_");
+}
+
+export function esVehiculoDisponible(
+  vehiculo: Pick<VehiculoRow, "estado">,
+): boolean {
+  const estado = estadoVehiculoNormalizado(vehiculo.estado);
+  return estado === "LIBRE" || estado === "DISPONIBLE";
+}
+
 export function formatVehiculoOpcion(
   v: Pick<VehiculoRow, "placa" | "marca" | "modelo" | "color">,
 ): string {
@@ -349,23 +363,24 @@ export const MAX_FOTOS_VEHICULO = 4;
 export const MIN_FOTOS_VEHICULO = 1;
 
 export function fotosVehiculo(
-  vehiculo: Pick<VehiculoRow, "imagen_url" | "imagenes">,
+  vehiculo: Pick<VehiculoRow, "imagen_url">,
 ): string[] {
-  const fromArray = Array.isArray(vehiculo.imagenes)
-    ? vehiculo.imagenes.filter((url) => url.trim().length > 0)
-    : [];
-  const cover = vehiculo.imagen_url?.trim();
-  const merged =
-    cover && !fromArray.includes(cover) ? [cover, ...fromArray] : fromArray;
-  return [...new Set(merged)].slice(0, MAX_FOTOS_VEHICULO);
+  const raw: unknown = vehiculo.imagen_url;
+  const fromArray = Array.isArray(raw)
+    ? raw.filter((item): item is string => typeof item === "string")
+    : typeof raw === "string" && raw.trim().length > 0
+      ? [raw]
+      : [];
+  const normalized = fromArray
+    .map((url) => normalizeVehiculoStoragePath(url) ?? url.trim())
+    .filter((url) => url.length > 0);
+  return [...new Set(normalized)].slice(0, MAX_FOTOS_VEHICULO);
 }
 
 export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
-  const fotos = fotosVehiculo(row);
   return {
     ...row,
-    imagenes: fotos,
-    imagen_url: fotos[0] ?? null,
+    imagen_url: fotosVehiculo(row),
   };
 }
 

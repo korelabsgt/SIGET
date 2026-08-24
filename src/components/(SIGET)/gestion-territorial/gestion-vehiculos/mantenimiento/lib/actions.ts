@@ -13,6 +13,7 @@ import {
   type VehiculoFallaOption,
   type MecanicoOption,
 } from "./zod";
+import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 
 const TABLE = "ter_fallas_mantenimiento";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/mantenimiento";
@@ -74,25 +75,34 @@ export async function getMecanicos(): Promise<MecanicoOption[]> {
 }
 
 export async function createFalla(input: FallaMantenimientoFormData): Promise<void> {
-  const { supabase, user } = await requireAuth();
+  try {
+    const { supabase, user } = await requireAuth();
 
-  const parsed = FallaMantenimientoSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error("Datos inválidos: " + parsed.error.message);
+    const parsed = FallaMantenimientoSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new Error("Los datos de la avería no son válidos.");
+    }
+
+    const { error } = await supabase.from(TABLE).insert([
+      {
+        ...parsed.data,
+        reportado_por: user.id,
+        estado: "PENDIENTE",
+      },
+    ]);
+
+    if (error) {
+      throw new Error("No se pudo registrar la avería.");
+    }
+
+    await sincronizarEstadoFlotaVehiculo(supabase, parsed.data.vehiculo_id);
+
+    revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(VEHICULOS_ROUTE);
+  } catch (err) {
+    if (err instanceof Error) throw err;
+    throw new Error("No se pudo registrar la avería.");
   }
-
-  const { error } = await supabase
-    .from(TABLE)
-    .insert([{
-      ...parsed.data,
-      reportado_por: user.id,
-      estado: "PENDIENTE"
-    }]);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath(REVALIDATE_ROUTE);
-  revalidatePath(VEHICULOS_ROUTE);
 }
 
 export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
@@ -122,25 +132,44 @@ export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
 }
 
 export async function solventarFalla(input: SolventarFallaFormData): Promise<void> {
-  const { supabase } = await requireAuth();
+  try {
+    const { supabase } = await requireAuth();
 
-  const parsed = SolventarFallaSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error("Datos inválidos: " + parsed.error.message);
+    const parsed = SolventarFallaSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new Error("Los datos de la reparación no son válidos.");
+    }
+
+    const { data: falla, error: fetchError } = await supabase
+      .from(TABLE)
+      .select("id, vehiculo_id")
+      .eq("id", parsed.data.falla_id)
+      .maybeSingle();
+
+    if (fetchError || !falla) {
+      throw new Error("No se encontró la avería.");
+    }
+
+    const { error } = await supabase
+      .from(TABLE)
+      .update({
+        estado: "SOLVENTADA",
+        diagnostico: parsed.data.diagnostico,
+        reparacion_detalle: parsed.data.reparacion_detalle,
+        solventado_at: new Date().toISOString(),
+      })
+      .eq("id", parsed.data.falla_id);
+
+    if (error) {
+      throw new Error("No se pudo marcar la avería como solventada.");
+    }
+
+    await sincronizarEstadoFlotaVehiculo(supabase, falla.vehiculo_id);
+
+    revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(VEHICULOS_ROUTE);
+  } catch (err) {
+    if (err instanceof Error) throw err;
+    throw new Error("No se pudo marcar la avería como solventada.");
   }
-
-  const { error } = await supabase
-    .from(TABLE)
-    .update({
-      estado: "SOLVENTADA",
-      diagnostico: parsed.data.diagnostico,
-      reparacion_detalle: parsed.data.reparacion_detalle,
-      solventado_at: new Date().toISOString(),
-    })
-    .eq("id", parsed.data.falla_id);
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath(REVALIDATE_ROUTE);
-  revalidatePath(VEHICULOS_ROUTE);
 }

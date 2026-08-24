@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { GESTION_VEHICULOS_MENU_OPTIONS } from "@/components/(base)/dashboard/modules";
 import {
   GvTabProvider,
   GV_SUBMODULO_TITLES,
@@ -44,8 +45,13 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
   { id: "mantenimiento", Panel: Mantenimiento },
 ];
 
+function hrefForSubmodulo(id: GvSubmoduloId) {
+  return GESTION_VEHICULOS_MENU_OPTIONS.find((opt) => opt.id === id)?.href;
+}
+
 export function GestionVehiculosShell() {
   const pathname = usePathname();
+  const router = useRouter();
   const [tab, setTab] = useState<GvSubmoduloId>(() => tabFromPathname(pathname));
   const [visited, setVisited] = useState<Set<GvSubmoduloId>>(
     () => new Set([tabFromPathname(pathname)]),
@@ -65,8 +71,12 @@ export function GestionVehiculosShell() {
   const selectTab = useCallback(
     (id: GvSubmoduloId) => {
       visit(id);
+      const href = hrefForSubmodulo(id);
+      if (href && pathname !== href) {
+        router.push(href, { scroll: false });
+      }
     },
-    [visit],
+    [visit, pathname, router],
   );
 
   useEffect(() => {
@@ -75,13 +85,13 @@ export function GestionVehiculosShell() {
 
   return (
     <GvTabProvider tab={tab} selectTab={selectTab}>
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex w-full min-h-[calc(100vh-4rem)] flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden">
         {PANELS.map(({ id, Panel }) =>
           visited.has(id) ? (
             <div
               key={id}
               className={cn(
-                "min-h-0 flex-1 flex-col",
+                "min-h-[calc(100vh-4rem)] flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden",
                 tab === id ? "flex" : "hidden",
               )}
               inert={tab !== id}

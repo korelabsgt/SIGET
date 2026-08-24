@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
 const TABLE = "ter_solicitudes";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/solicitudes";
+const FLOTA_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -125,7 +127,55 @@ export async function cambiarEstadoSolicitud(
     }
 
     const supabase = await createClient();
-    const updateData: any = {
+
+    const { data: actual, error: actualError } = await supabase
+      .from(TABLE)
+      .select("id, vehiculo_id, estado")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (actualError || !actual) {
+      return { success: false, error: "No se encontró la solicitud." };
+    }
+
+    const vehiculoAsignado = payload?.vehiculo_id || actual.vehiculo_id;
+
+    if (nuevoEstado === "APROBADA" || nuevoEstado === "EN_MISION") {
+      if (!vehiculoAsignado) {
+        return {
+          success: false,
+          error: "Debe asignar un vehículo para confirmar la misión.",
+        };
+      }
+
+      const { data: vehiculo, error: vehiculoError } = await supabase
+        .from("ter_vehiculos")
+        .select("id, estado")
+        .eq("id", vehiculoAsignado)
+        .maybeSingle();
+
+      if (vehiculoError || !vehiculo) {
+        return { success: false, error: "No se pudo verificar el vehículo asignado." };
+      }
+
+      const yaAsignadoAEsta = actual.vehiculo_id === vehiculoAsignado;
+      const disponible =
+        vehiculo.estado === "LIBRE" ||
+        (yaAsignadoAEsta && vehiculo.estado === "RESERVADO");
+
+      if (!disponible) {
+        return {
+          success: false,
+          error: "El vehículo ya no está disponible. Elija otro.",
+        };
+      }
+    }
+
+    const updateData: {
+      estado: typeof nuevoEstado;
+      aprobado_por?: string;
+      vehiculo_id?: string;
+    } = {
       estado: nuevoEstado,
     };
 
@@ -145,18 +195,27 @@ export async function cambiarEstadoSolicitud(
       .single();
 
     if (error) {
-      console.error("Error DB cambiarEstadoSolicitud:", error);
       if (error.code === "23P01" || error.message?.includes("no_empalmes")) {
          return { success: false, error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas." };
       }
-      return { success: false, error: error.message };
+      return { success: false, error: "No se pudo actualizar el estado de la solicitud." };
+    }
+
+    const vehiculosAfectados = new Set<string>();
+    if (actual.vehiculo_id) vehiculosAfectados.add(actual.vehiculo_id);
+    if (data.vehiculo_id) vehiculosAfectados.add(data.vehiculo_id);
+
+    for (const vehiculoId of vehiculosAfectados) {
+      await sincronizarEstadoFlotaVehiculo(supabase, vehiculoId);
     }
 
     revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(FLOTA_ROUTE);
     return { success: true, data };
-  } catch (err: any) {
-    console.error("Error en cambiarEstadoSolicitud:", err);
-    return { success: false, error: err.message || "Error desconocido" };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "No se pudo actualizar el estado de la solicitud.";
+    return { success: false, error: message };
   }
 }
 

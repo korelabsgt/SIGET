@@ -4,6 +4,10 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { fotosVehiculo, MIN_FOTOS_VEHICULO, normalizeVehiculoRow } from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
+import {
+  normalizeVehiculoStoragePath,
+  VEHICULOS_STORAGE_BUCKET,
+} from "../../lib/storage";
 
 const TABLE = "ter_vehiculos";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
@@ -48,19 +52,16 @@ export async function getVehiculo(id: string): Promise<VehiculoRow | null> {
 }
 
 function payloadConFotos(data: VehiculoInput) {
-  const imagenes = fotosVehiculo({
-    imagen_url: data.imagen_url ?? null,
-    imagenes: data.imagenes ?? [],
-  });
-  if (imagenes.length < MIN_FOTOS_VEHICULO) {
+  const imagen_url = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
+  if (imagen_url.length < MIN_FOTOS_VEHICULO) {
     throw new Error("Debes subir al menos una fotografía del vehículo.");
   }
-  return { ...data, imagenes, imagen_url: imagenes[0] ?? null };
+  return { ...data, imagen_url };
 }
 
 function mapImagenesDbError(message: string) {
-  if (message.toLowerCase().includes("imagenes")) {
-    return "No se pudieron guardar las fotografías. Falta la columna de galería en la flota.";
+  if (message.toLowerCase().includes("imagen")) {
+    return "No se pudieron guardar las fotografías de la flota.";
   }
   return message;
 }
@@ -127,6 +128,51 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
     .single();
 
   if (error) throw new Error(mapImagenesDbError(error.message));
+
+  revalidatePath(REVALIDATE_ROUTE);
+  return normalizeVehiculoRow(data as VehiculoRow);
+}
+
+export async function removeVehiculoImagen(
+  id: string,
+  storagePath: string,
+): Promise<VehiculoRow> {
+  const { supabase } = await requireAuth();
+  const path = normalizeVehiculoStoragePath(storagePath);
+  if (!path) {
+    throw new Error("No se pudo identificar la fotografía.");
+  }
+
+  const { data: row, error: loadError } = await supabase
+    .from(TABLE)
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (loadError || !row) {
+    throw new Error("No se encontró el vehículo.");
+  }
+
+  const fotos = fotosVehiculo(row as VehiculoRow).filter(
+    (foto) => normalizeVehiculoStoragePath(foto) !== path,
+  );
+
+  if (fotos.length < MIN_FOTOS_VEHICULO) {
+    throw new Error("Debes conservar al menos una fotografía del vehículo.");
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({
+      imagen_url: fotos,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(mapImagenesDbError(error.message));
+
+  await supabase.storage.from(VEHICULOS_STORAGE_BUCKET).remove([path]);
 
   revalidatePath(REVALIDATE_ROUTE);
   return normalizeVehiculoRow(data as VehiculoRow);

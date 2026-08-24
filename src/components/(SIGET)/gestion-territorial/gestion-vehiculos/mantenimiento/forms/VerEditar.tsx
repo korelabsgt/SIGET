@@ -1,64 +1,153 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { 
-  AtenderFallaSchema, 
-  type AtenderFallaFormData, 
-  SolventarFallaSchema, 
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, X } from "lucide-react";
+import { toast } from "react-toastify";
+import {
+  ModalShell,
+  ModalLabel,
+  ModalInput,
+  ModalTextarea,
+  ModalSubmit,
+  ModalFooter,
+} from "@/components/ui/general-modal";
+import { cn } from "@/lib/utils";
+import {
+  AtenderFallaSchema,
+  type AtenderFallaFormData,
+  SolventarFallaSchema,
   type SolventarFallaFormData,
   type FallaRow,
   type MecanicoOption,
 } from "../lib/zod";
 import { useAtenderFalla, useSolventarFalla } from "../lib/hooks";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "react-toastify";
-import { Wrench, CheckCircle } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-export function VerEditar({ 
-  falla, 
+function MecanicoBuscar({
   mecanicos,
-  isAuthorized 
-}: { 
-  falla: FallaRow; 
+  value,
+  onChange,
+}: {
   mecanicos: MecanicoOption[];
-  isAuthorized: boolean;
+  value: string;
+  onChange: (id: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = mecanicos.find((mecanico) => mecanico.id === value);
+  const normalized = query.trim().toLocaleLowerCase("es");
+  const results = useMemo(() => {
+    if (normalized.length < 3) return [];
+    return mecanicos
+      .filter((mecanico) =>
+        (mecanico.nombre ?? "").toLocaleLowerCase("es").includes(normalized),
+      )
+      .sort((a, b) =>
+        (a.nombre ?? "").localeCompare(b.nombre ?? "", "es", { sensitivity: "base" }),
+      )
+      .slice(0, 20);
+  }, [mecanicos, normalized]);
+
+  const showHint = query.trim().length > 0 && query.trim().length < 3;
+  const showEmpty = normalized.length >= 3 && results.length === 0 && !selected;
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <ModalInput
+          id="mecanico_id"
+          autoComplete="off"
+          value={selected ? (selected.nombre ?? "") : query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (value) onChange("");
+          }}
+        />
+        {selected ? (
+          <button
+            type="button"
+            aria-label="Quitar mecánico"
+            onClick={() => {
+              setQuery("");
+              onChange("");
+            }}
+            className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border-0 bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
+      </div>
+      {showHint ? (
+        <p className="text-xs text-muted-foreground">Escribe al menos 3 letras para buscar.</p>
+      ) : null}
+      <AnimatePresence mode="popLayout" initial={false}>
+        {results.length > 0 ? (
+          <motion.ul
+            key="mecanico-results"
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+            className="max-h-48 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 opacity-100 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            {results.map((mecanico) => (
+              <motion.li key={mecanico.id} layout>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(mecanico.id);
+                    setQuery("");
+                  }}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center rounded-lg border-0 bg-white px-3 py-2 text-left text-sm text-zinc-900 hover:bg-sky-50",
+                    "dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800",
+                  )}
+                >
+                  {mecanico.nombre ?? "Sin nombre"}
+                </button>
+              </motion.li>
+            ))}
+          </motion.ul>
+        ) : null}
+        {showEmpty ? (
+          <motion.p
+            key="mecanico-empty"
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+            className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            No hay coincidencias.
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function VerEditar({
+  open,
+  onClose,
+  modo,
+  falla,
+  mecanicos,
+}: {
+  open: boolean;
+  onClose: () => void;
+  modo: "atender" | "solventar" | null;
+  falla: FallaRow;
+  mecanicos: MecanicoOption[];
+}) {
   const atender = useAtenderFalla();
   const solventar = useSolventarFalla();
 
-  const isPendiente = falla.estado === "PENDIENTE";
-  const isEnReparacion = falla.estado === "EN_REPARACION";
-
   const formAtender = useForm<AtenderFallaFormData>({
     resolver: zodResolver(AtenderFallaSchema),
-    defaultValues: {
+    values: {
       falla_id: falla.id,
       mecanico_id: "",
       taller_externo: "",
@@ -67,162 +156,115 @@ export function VerEditar({
 
   const formSolventar = useForm<SolventarFallaFormData>({
     resolver: zodResolver(SolventarFallaSchema),
-    defaultValues: {
+    values: {
       falla_id: falla.id,
       diagnostico: "",
       reparacion_detalle: "",
     },
   });
 
-  if (!isAuthorized) return null;
-  if (falla.estado === "SOLVENTADA") return null;
-
   async function onAtender(data: AtenderFallaFormData) {
     try {
       await atender.mutateAsync(data);
-      toast.success("Vehículo en reparación.");
-      setOpen(false);
+      toast.success("El vehículo pasó a reparación.");
+      onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al actualizar la avería.");
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la avería.");
     }
   }
 
   async function onSolventar(data: SolventarFallaFormData) {
     try {
       await solventar.mutateAsync(data);
-      toast.success("Avería solventada exitosamente.");
-      setOpen(false);
+      toast.success("Avería solventada.");
+      onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al solventar la avería.");
+      toast.error(error instanceof Error ? error.message : "No se pudo solventar la avería.");
     }
   }
 
+  const isAtender = modo === "atender";
+  const pending = isAtender ? atender.isPending : solventar.isPending;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isPendiente ? (
-          <Button variant="outline" size="sm" className="gap-2 text-orange-600 border-orange-600 hover:bg-orange-50">
-            <Wrench className="w-4 h-4" />
-            Atender Falla
-          </Button>
-        ) : (
-          <Button variant="outline" size="sm" className="gap-2 text-green-600 border-green-600 hover:bg-green-50">
-            <CheckCircle className="w-4 h-4" />
-            Marcar Solventada
-          </Button>
-        )}
-      </DialogTrigger>
-      
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isPendiente ? "Iniciar Reparación" : "Finalizar Reparación"}
-          </DialogTitle>
-        </DialogHeader>
-
-        {isPendiente && (
-          <Form {...formAtender}>
-            <form onSubmit={formAtender.handleSubmit(onAtender)} className="space-y-4 mt-4">
-              <FormField
-                control={formAtender.control}
-                name="mecanico_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Asignar Mecánico Interno</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
-                          <SelectValue placeholder="Seleccione un mecánico" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent position="popper" className="bg-white dark:bg-zinc-950 border border-border shadow-md z-[100]">
-                        {mecanicos.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="text-center text-sm text-zinc-500 font-medium">O</div>
-
-              <FormField
-                control={formAtender.control}
-                name="taller_externo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Taller Externo (Si aplica)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nombre del taller externo..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={atender.isPending}>
-                  {atender.isPending ? "Procesando..." : "Pasar a En Reparación"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
-
-        {isEnReparacion && (
-          <Form {...formSolventar}>
-            <form onSubmit={formSolventar.handleSubmit(onSolventar)} className="space-y-4 mt-4">
-              <FormField
-                control={formSolventar.control}
-                name="diagnostico"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diagnóstico Técnico</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Diagnóstico encontrado..."
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={formSolventar.control}
-                name="reparacion_detalle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Detalle de la Reparación y Repuestos</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Repuestos utilizados, trabajos realizados..."
-                        className="resize-none"
-                        rows={4}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={solventar.isPending} className="bg-green-600 hover:bg-green-700">
-                  {solventar.isPending ? "Guardando..." : "Solventar Avería"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
-      </DialogContent>
-    </Dialog>
+    <ModalShell
+      open={open && modo !== null}
+      onClose={onClose}
+      title={isAtender ? "Iniciar reparación" : "Finalizar reparación"}
+      subtitle={isAtender ? "Asignar atención a la avería" : "Registrar diagnóstico y reparación"}
+    >
+      {isAtender ? (
+        <form onSubmit={formAtender.handleSubmit(onAtender)} className="space-y-4">
+          <div className="space-y-2">
+            <ModalLabel htmlFor="mecanico_id">Mecánico interno</ModalLabel>
+            <Controller
+              name="mecanico_id"
+              control={formAtender.control}
+              render={({ field }) => (
+                <MecanicoBuscar
+                  mecanicos={mecanicos}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            {formAtender.formState.errors.mecanico_id ? (
+              <p className="text-xs text-red-500">{formAtender.formState.errors.mecanico_id.message}</p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <ModalLabel htmlFor="taller_externo">Taller externo</ModalLabel>
+            <ModalInput id="taller_externo" {...formAtender.register("taller_externo")} />
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+            >
+              Cancelar
+            </button>
+            <ModalSubmit disabled={pending}>
+              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+              Pasar a reparación
+            </ModalSubmit>
+          </ModalFooter>
+        </form>
+      ) : (
+        <form onSubmit={formSolventar.handleSubmit(onSolventar)} className="space-y-4">
+          <div className="space-y-2">
+            <ModalLabel htmlFor="diagnostico">Diagnóstico técnico</ModalLabel>
+            <ModalTextarea id="diagnostico" rows={3} {...formSolventar.register("diagnostico")} />
+            {formSolventar.formState.errors.diagnostico ? (
+              <p className="text-xs text-red-500">{formSolventar.formState.errors.diagnostico.message}</p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <ModalLabel htmlFor="reparacion_detalle">Detalle de la reparación</ModalLabel>
+            <ModalTextarea
+              id="reparacion_detalle"
+              rows={4}
+              {...formSolventar.register("reparacion_detalle")}
+            />
+            {formSolventar.formState.errors.reparacion_detalle ? (
+              <p className="text-xs text-red-500">{formSolventar.formState.errors.reparacion_detalle.message}</p>
+            ) : null}
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+            >
+              Cancelar
+            </button>
+            <ModalSubmit disabled={pending}>
+              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+              Solventar avería
+            </ModalSubmit>
+          </ModalFooter>
+        </form>
+      )}
+    </ModalShell>
   );
 }

@@ -13,11 +13,11 @@ export function GestionVehiculosTableShell({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-card px-3 sm:px-0 dark:border-zinc-700 dark:bg-zinc-900/40",
+        "overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40",
         className,
       )}
     >
-      <div className="h-1 w-full bg-celeste-trifinio" />
+      {toolbar ? <div className="h-1 w-full bg-celeste-trifinio" /> : null}
       {toolbar ? (
         <div className="grid grid-cols-1 gap-3 border-b border-border p-4 md:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)] md:items-center dark:border-zinc-700">
           {toolbar}

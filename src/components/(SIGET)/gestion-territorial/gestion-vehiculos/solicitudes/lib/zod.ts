@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseFechaHoraManualToIso } from "@/lib/fechas-gt";
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",
@@ -8,10 +9,25 @@ export const ESTADOS_SOLICITUD = [
   "FINALIZADA",
 ] as const;
 
+const fechaHoraManual = (requerido: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, requerido)
+    .superRefine((val, ctx) => {
+      if (!parseFechaHoraManualToIso(val)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Fecha inválida. Escriba DD/MM/AAAA HH:mm",
+        });
+      }
+    })
+    .transform((val) => parseFechaHoraManualToIso(val));
+
 export const solicitudInputSchema = z
   .object({
-    fecha_inicio: z.string().min(1, "La fecha de inicio es requerida"),
-    fecha_fin_estimada: z.string().min(1, "La fecha fin estimada es requerida"),
+    fecha_inicio: fechaHoraManual("La fecha de inicio es requerida"),
+    fecha_fin_estimada: fechaHoraManual("La fecha fin estimada es requerida"),
     destino: z.string().min(3, "El destino debe tener al menos 3 caracteres"),
     ruta_planificada: z.string().optional(),
     justificacion: z.string().min(10, "La justificación debe ser detallada (min 10 caracteres)"),

@@ -40,7 +40,7 @@ export function BitacoraStatsCards({ metrics, filtroVehiculo = false }: StatsPro
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3 mb-6 px-3 sm:px-0">
+    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
       {stats.map((stat, i) => (
         <motion.div
           key={`${stat.title}-${stat.value}`}

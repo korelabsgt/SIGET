@@ -21,6 +21,7 @@ import {
 import { useEliminarVehiculo, useVehiculos } from "./lib/hooks";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
 import { cn } from "@/lib/utils";
+import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
 const VerEditar = dynamic(() => import("./forms/VerEditar").then((m) => m.VerEditar));
@@ -58,7 +59,7 @@ export function Flota() {
   const error = queryError instanceof Error ? queryError.message : queryError ? "Error al cargar" : null;
 
   const vehiculosFiltrados = useMemo(() => {
-    return vehiculos.filter((v) => {
+    const filtrados = vehiculos.filter((v) => {
       const q = searchQuery.toLowerCase();
       const matchSearch =
         v.placa.toLowerCase().includes(q) ||
@@ -66,6 +67,13 @@ export function Flota() {
         v.modelo.toLowerCase().includes(q);
       const matchEstado = estadoFilter === TODOS || v.estado === estadoFilter;
       return matchSearch && matchEstado;
+    });
+
+    return filtrados.sort((a, b) => {
+      const ordenA = ESTADOS_VEHICULO.indexOf(a.estado);
+      const ordenB = ESTADOS_VEHICULO.indexOf(b.estado);
+      if (ordenA !== ordenB) return ordenA - ordenB;
+      return a.placa.localeCompare(b.placa, "es");
     });
   }, [vehiculos, searchQuery, estadoFilter]);
 
@@ -119,17 +127,16 @@ export function Flota() {
   return (
     <div
       className={cn(
-        "relative mx-auto flex w-full flex-col",
-        inDetailView
-          ? "min-h-0 flex-1 p-0"
-          : "px-0 pb-20 pt-6 sm:px-6 md:pt-10 lg:px-8 xl:w-[90%]",
+        GV_MODULO_PAGE_CLASS,
+        inDetailView &&
+          "min-h-0 flex-1 overflow-y-auto pt-16 pb-10 lg:h-full lg:overflow-hidden lg:pt-10 lg:pb-10",
       )}
     >
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
       {!inDetailView ? <SubmodulosNav /> : null}
 
       {!inDetailView ? (
-      <div className="mb-6 flex items-start gap-3 px-3 sm:px-0">
+      <div className="mb-6 flex items-start gap-3">
         <button
           type="button"
           onClick={() => router.push("/siget")}
@@ -155,8 +162,8 @@ export function Flota() {
         className={cn(
           "overflow-hidden dark:border-zinc-700",
           inDetailView
-            ? "flex min-h-0 flex-1 flex-col rounded-none border-0 bg-transparent dark:bg-transparent"
-            : "rounded-2xl border border-border bg-card px-3 sm:px-0 dark:bg-zinc-900/40",
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-transparent dark:bg-transparent"
+            : "rounded-2xl border border-border bg-card dark:bg-zinc-900/40",
         )}
       >
         {inDetailView ? null : <div className="h-1 w-full bg-celeste-trifinio" />}

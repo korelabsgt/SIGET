@@ -68,7 +68,12 @@ export function VehiculosPanel({
     : { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
 
   return (
-    <div className={cn("relative overflow-hidden", fillHeight && "flex h-full min-h-0 flex-1 flex-col")}>
+    <div
+      className={cn(
+        "relative overflow-hidden",
+        fillHeight && "flex h-full min-h-0 flex-1 flex-col",
+      )}
+    >
       <AnimatePresence mode="wait" initial={false}>
         {selectedVehiculo ? (
           <motion.div
@@ -77,7 +82,7 @@ export function VehiculosPanel({
             animate={{ opacity: 1, x: 0 }}
             exit={prefersReducedMotion ? undefined : { opacity: 0, x: 32 }}
             transition={transition}
-            className="flex h-full min-h-0 flex-1 flex-col"
+            className="absolute inset-0 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain pt-8 lg:overflow-hidden lg:pt-0"
           >
             <VehiculoDetalleView
               vehiculo={selectedVehiculo}
