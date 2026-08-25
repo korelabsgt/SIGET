@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import {
   ModalShell,
@@ -10,14 +9,15 @@ import {
   ModalTextarea,
   ModalSubmit,
   ModalFooter,
+  ModalCancelButton,
+  ModalForm,
+  ModalField,
+  ModalFechaInput,
   modalActionMessage,
 } from "@/components/ui/general-modal";
-import { CalendarDatePicker } from "@/components/ui/calendar-date-picker";
-import { MorphSwitch } from "@/components/ui/morph-switch";
 import { useEditarActividad } from "../lib/hooks";
 import { actividadFormSchema, normalizarFechaInput, type ActividadRecord } from "../lib/zod";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
-import { ACTIVIDAD_MODAL_FIELD_CLASS } from "./modal-field-class";
 
 export function VerEditarActividad({
   open,
@@ -35,19 +35,19 @@ export function VerEditarActividad({
   const [direccion, setDireccion] = useState("");
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
-  const [activo, setActivo] = useState(true);
+  const [actividadSincronizada, setActividadSincronizada] = useState<
+    ActividadRecord | null
+  >(null);
 
-  useEffect(() => {
-    if (actividad) {
-      setNombre(actividad.nombre);
-      setDescripcion(actividad.descripcion ?? "");
-      setFechaRealizacion(normalizarFechaInput(actividad.fecha_realizacion));
-      setDireccion(actividad.direccion ?? "");
-      setDepartamento(actividad.departamento ?? "");
-      setMunicipio(actividad.municipio ?? "");
-      setActivo(actividad.activo);
-    }
-  }, [actividad]);
+  if (actividad && actividad !== actividadSincronizada) {
+    setActividadSincronizada(actividad);
+    setNombre(actividad.nombre);
+    setDescripcion(actividad.descripcion ?? "");
+    setFechaRealizacion(normalizarFechaInput(actividad.fecha_realizacion));
+    setDireccion(actividad.direccion ?? "");
+    setDepartamento(actividad.departamento ?? "");
+    setMunicipio(actividad.municipio ?? "");
+  }
 
   const handleClose = () => {
     if (editar.isPending) return;
@@ -64,7 +64,7 @@ export function VerEditarActividad({
       direccion,
       departamento,
       municipio,
-      activo,
+      activo: actividad.activo,
     });
     if (!parsed.success) {
       toast.warn("Revisa los datos del formulario.");
@@ -86,30 +86,27 @@ export function VerEditarActividad({
       open={open}
       onClose={handleClose}
       title="Editar actividad"
-      subtitle="Registro de asistencia"
       maxWidth="max-w-lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+      <ModalForm onSubmit={handleSubmit}>
+        <ModalField>
           <ModalLabel htmlFor="edit-nombre">Nombre de la actividad</ModalLabel>
           <ModalInput
             id="edit-nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             required
-            className={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
-        </div>
-        <div className="space-y-2">
+        </ModalField>
+        <ModalField>
           <ModalLabel htmlFor="edit-fecha">Fecha de la actividad</ModalLabel>
-          <CalendarDatePicker
+          <ModalFechaInput
             id="edit-fecha"
             value={fechaRealizacion}
-            onChange={(val) => setFechaRealizacion(val)}
+            onChange={setFechaRealizacion}
             required
-            inputClassName={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
-        </div>
+        </ModalField>
         <CamposUbicacionActividad
           idPrefix="edit"
           direccion={direccion}
@@ -118,46 +115,21 @@ export function VerEditarActividad({
           onDireccionChange={setDireccion}
           onDepartamentoChange={setDepartamento}
           onMunicipioChange={setMunicipio}
-          fieldClassName={ACTIVIDAD_MODAL_FIELD_CLASS}
         />
-        <div className="space-y-2">
+        <ModalField>
           <ModalLabel htmlFor="edit-desc">Descripción (opcional)</ModalLabel>
           <ModalTextarea
             id="edit-desc"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={3}
-            className={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
-        </div>
-        <MorphSwitch
-          id="edit-activo"
-          checked={activo}
-          onCheckedChange={setActivo}
-          label="Actividad activa"
-          description="Acepta registros públicos"
-        />
+        </ModalField>
         <ModalFooter>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={editar.isPending}
-            className="flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-          >
-            Cancelar
-          </button>
-          <ModalSubmit disabled={editar.isPending}>
-            {editar.isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Guardando…
-              </>
-            ) : (
-              "Guardar"
-            )}
-          </ModalSubmit>
+          <ModalCancelButton onClick={handleClose} disabled={editar.isPending} />
+          <ModalSubmit disabled={editar.isPending} />
         </ModalFooter>
-      </form>
+      </ModalForm>
     </ModalShell>
   );
 }

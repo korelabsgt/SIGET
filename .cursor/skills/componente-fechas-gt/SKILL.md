@@ -32,7 +32,9 @@ fecha_evento date not null default current_date
 |---------|-----|
 | `fechaCalendarioGt()` | Hoy en GT como `YYYY-MM-DD` |
 | `mesCalendarioGt()` | Mes actual como `YYYY-MM` |
-| `normalizarFechaCalendario(value)` | ISO/DB → `YYYY-MM-DD` para `<input type="date">` |
+| `normalizarFechaCalendario(value)` | ISO/DB → `YYYY-MM-DD` para inputs |
+| `formatFechaManualGt(value)` | `YYYY-MM-DD` → `DD/MM/AAAA` para `ModalFechaInput` |
+| `parseFechaManualGt(formatted)` | `DD/MM/AAAA` → `YYYY-MM-DD` o `null` |
 | `formatFechaCalendarioGt(value)` | Mostrar solo fecha |
 | `formatFechaHoraGt(value)` | Mostrar fecha + hora en GT |
 | `mesCalendarioToTimestamptz(mes)` | Guardar mes en `timestamptz` sin desface |
@@ -77,11 +79,12 @@ import {
   normalizarFechaCalendario,
   timestamptzToMesCalendario,
 } from "@/lib/fechas-gt";
+import { ModalFechaInput } from "@/components/ui/general-modal";
 
 const [fecha, setFecha] = useState(fechaCalendarioGt);
 const [mes, setMes] = useState(mesCalendarioGt);
 
-<input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+<ModalFechaInput id="fecha" value={fecha} onChange={setFecha} required />
 <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
 
 // al guardar en action:

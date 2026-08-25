@@ -67,7 +67,7 @@ Plantillas: [plantillas.md](plantillas.md).
 
 | Necesidad | Skill |
 |-----------|-------|
-| Tema, botones | `ui-tema-botones` |
+| Tema, botones de acción | `ui-tema-botones` (**obligatorio** en todo botón) |
 | Formularios flotantes | `ui-modales` |
 | Feedback éxito/error | `ui-toastify` |
 | Confirmar eliminación fuera de modal | `ui-sweetalert` (helper `@/lib/confirm-destructivo`; `lib/swal.ts` solo si hay varias) |

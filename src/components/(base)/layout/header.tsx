@@ -186,7 +186,7 @@ export default function Header() {
         </div>
 
         {showBreadcrumb && !breadcrumbInline && (
-          <div className="flex min-w-0 w-full items-start pt-0 pb-2 pl-2 pr-3 md:pl-4 md:pr-8">
+          <div className="flex min-w-0 w-full items-center pb-1.5 pl-2 pr-3 md:pl-4 md:pr-8">
             <BreadcrumbNav />
           </div>
         )}

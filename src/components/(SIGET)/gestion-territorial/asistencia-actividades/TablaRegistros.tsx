@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { MorphCycleIcon } from "@/components/ui/morph-cycle-icon";
 import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -336,7 +337,6 @@ export function TablaRegistros({
   const [search, setSearch] = useState("");
   const [headerHovered, setHeaderHovered] = useState(false);
   const [buscarActivo, setBuscarActivo] = useState(false);
-  const [excelHovered, setExcelHovered] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [editarRegistro, setEditarRegistro] =
@@ -486,24 +486,15 @@ export function TablaRegistros({
                 />
               </div>
               {registros.length > 0 ? (
-                <button
-                  type="button"
+                <SigetActionButton
+                  label="Excel"
+                  accentColor={sigetAccent.excel}
+                  morphFrom={FileSpreadsheet}
+                  morphTo={ArrowDownToLine}
                   onClick={handleExport}
-                  onPointerEnter={() => setExcelHovered(true)}
-                  onPointerLeave={() => setExcelHovered(false)}
-                  className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-green-600 bg-transparent px-5 text-xs font-bold uppercase tracking-widest text-green-600 transition-colors hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-green-950/40"
-                >
-                  <MorphHoverIcon
-                    from={FileSpreadsheet}
-                    to={ArrowDownToLine}
-                    hovered={excelHovered}
-                    size={18}
-                    color="currentColor"
-                    spring="snappy"
-                  />
-                  <span className="hidden sm:inline">Descargar Excel</span>
-                  <span className="sm:hidden">Excel</span>
-                </button>
+                  ariaLabel="Descargar Excel"
+                  className="w-auto shrink-0"
+                />
               ) : null}
             </div>
           </div>

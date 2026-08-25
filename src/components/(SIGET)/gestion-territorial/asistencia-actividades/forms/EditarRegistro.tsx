@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   ModalShell,
@@ -9,6 +8,7 @@ import {
   ModalLabel,
   ModalSubmit,
   ModalFooter,
+  ModalCancelButton,
 } from "@/components/ui/general-modal";
 import { actionErrorMessage } from "@/components/ui/modal-toast";
 import { CamposInstitucionPuesto } from "./CamposInstitucionPuesto";
@@ -108,7 +108,6 @@ export function EditarRegistro({
       open={open}
       onClose={handleClose}
       title="Editar registro"
-      subtitle="Asistencia"
       maxWidth="max-w-lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,24 +194,8 @@ export function EditarRegistro({
         </div>
 
         <ModalFooter>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={editar.isPending}
-            className="flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-          >
-            Cancelar
-          </button>
-          <ModalSubmit disabled={editar.isPending || !fechaNacimiento}>
-            {editar.isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Guardando…
-              </>
-            ) : (
-              "Guardar cambios"
-            )}
-          </ModalSubmit>
+          <ModalCancelButton onClick={handleClose} disabled={editar.isPending} />
+          <ModalSubmit disabled={editar.isPending || !fechaNacimiento} />
         </ModalFooter>
       </form>
     </ModalShell>

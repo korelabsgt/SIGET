@@ -3,12 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, SquarePen } from "lucide";
 import { ChevronLeft, Loader2, Calendar, MapPin } from "lucide-react";
-import { toast } from "react-toastify";
-import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
-import { MorphSwitch } from "@/components/ui/morph-switch";
-import { modalActionMessage } from "@/components/ui/general-modal";
 import { useActividad, useEditarActividad, useRegistrosActividad } from "./lib/hooks";
 import { rutaDetalleActividadAsistencia, slugActividadDesdeRecord } from "./lib/helpers";
 import {
@@ -22,6 +19,7 @@ import {
   statsPorGenero,
   statsPorInstitucion,
 } from "./lib/stats";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { QrActividad } from "./QrActividad";
 import { GraficasAsistencia } from "./GraficasAsistencia";
 import { TablaRegistros } from "./TablaRegistros";
@@ -29,17 +27,28 @@ import { VerEditarActividad } from "./forms/VerEditar";
 
 export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const { data: actividad, isLoading: loadingAct } = useActividad(actividadRef);
   const { data: registros = [], isLoading: loadingReg } =
     useRegistrosActividad(actividadRef, !!actividadRef);
   const editar = useEditarActividad();
   const [editarOpen, setEditarOpen] = useState(false);
+  const [activoObjetivo, setActivoObjetivo] = useState<boolean | null>(null);
+  const [guardandoActivo, setGuardandoActivo] = useState(false);
 
   useEffect(() => {
     if (actividad?.slug && actividad.slug !== actividadRef) {
       router.replace(rutaDetalleActividadAsistencia(actividad));
     }
   }, [actividad, actividadRef, router]);
+
+  useEffect(() => {
+    if (activoObjetivo === null || !actividad) return;
+    if (actividad.activo === activoObjetivo) {
+      setActivoObjetivo(null);
+      setGuardandoActivo(false);
+    }
+  }, [actividad?.activo, activoObjetivo, actividad]);
 
   const porGenero = useMemo(() => statsPorGenero(registros), [registros]);
   const edadPorGenero = useMemo(
@@ -52,7 +61,12 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
   );
 
   const handleActivoChange = async (checked: boolean) => {
-    if (!actividad || editar.isPending) return;
+    if (!actividad || guardandoActivo) return;
+    if (checked === actividad.activo) return;
+
+    setActivoObjetivo(checked);
+    setGuardandoActivo(true);
+
     const parsed = actividadFormSchema.safeParse({
       nombre: actividad.nombre,
       descripcion: actividad.descripcion ?? "",
@@ -62,22 +76,31 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
       municipio: actividad.municipio ?? "",
       activo: checked,
     });
+
     if (!parsed.success) {
-      toast.warn("No se pudo cambiar el estado.");
+      setActivoObjetivo(null);
+      setGuardandoActivo(false);
       return;
     }
-    const res = await editar.mutateAsync({
-      id: actividad.id,
-      values: parsed.data,
-    });
-    if (res.success) {
-      toast.success(
-        checked ? "Actividad activada." : "Actividad desactivada.",
+
+    try {
+      const res = await editar.mutateAsync({
+        id: actividad.id,
+        values: parsed.data,
+      });
+      if (!res.success) {
+        setActivoObjetivo(null);
+        setGuardandoActivo(false);
+        return;
+      }
+      qc.setQueryData(
+        ["asist-actividades", actividadRef],
+        (prev: typeof actividad | undefined) =>
+          prev ? { ...prev, activo: checked } : prev,
       );
-    } else {
-      toast.error(
-        modalActionMessage(res.error ?? undefined, "No se pudo actualizar."),
-      );
+    } catch {
+      setActivoObjetivo(null);
+      setGuardandoActivo(false);
     }
   };
 
@@ -104,6 +127,8 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
       </div>
     );
   }
+
+  const activoConfirmado = actividad.activo;
 
   return (
     <div className="w-full overflow-x-hidden px-4 pb-8 pt-1 sm:px-6 lg:px-8">
@@ -149,20 +174,15 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
                   </p>
                 ) : null}
               </div>
-              <button
-                type="button"
+              <SigetActionButton
+                label="Editar"
+                accentColor={sigetAccent.editar}
+                morphFrom={Pencil}
+                morphTo={SquarePen}
                 onClick={() => setEditarOpen(true)}
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 self-start rounded-lg border-0 bg-sky-100 px-3 text-xs font-bold text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
-              >
-                <MorphHoverIcon
-                  from={Pencil}
-                  to={SquarePen}
-                  size={15}
-                  color="#1a95d3"
-                  spring="snappy"
-                />
-                Editar actividad
-              </button>
+                ariaLabel="Editar actividad"
+                className="w-auto shrink-0 self-start"
+              />
             </div>
           </div>
         </div>
@@ -170,40 +190,17 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
 
       <div className="mb-8 flex w-full flex-col gap-6">
         <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-stretch">
-          <div className="flex w-full shrink-0 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card lg:w-fit">
-            <div className="mb-4 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                Código QR de asistencia
-              </p>
-              <p className="max-w-xs text-sm font-semibold leading-snug text-foreground">
-                {actividad.nombre}
-              </p>
-            </div>
+          <div className="flex min-h-[420px] w-full min-w-0 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card lg:basis-[34%] lg:shrink-0">
             <QrActividad
               actividadSlug={slugActividadDesdeRecord(actividad)}
               nombreActividad={actividad.nombre}
-              size={220}
-              showNombre={false}
+              activo={activoConfirmado}
+              activoPending={guardandoActivo}
+              onActivoChange={handleActivoChange}
             />
-            <div className="mt-6 border-t border-slate-200/70 pt-6 dark:border-zinc-800">
-              <MorphSwitch
-                id="detalle-activo"
-                checked={actividad.activo}
-                onCheckedChange={handleActivoChange}
-                label={actividad.activo ? "Actividad activa" : "Actividad inactiva"}
-                description={
-                  actividad.activo
-                    ? "Acepta registros públicos"
-                    : "El formulario público está cerrado"
-                }
-                variant="plain"
-                className="w-full"
-                disabled={editar.isPending}
-              />
-            </div>
           </div>
 
-          <div className="flex min-h-[420px] min-w-0 flex-1 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card">
+          <div className="flex min-h-[420px] min-w-0 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card lg:min-w-0 lg:basis-[66%]">
             <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
               Minuta de reunión
             </p>

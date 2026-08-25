@@ -7,22 +7,23 @@ description: Implementa formularios y ventanas flotantes con ModalShell de gener
 
 Implementación única: `@/components/ui/general-modal.tsx`.
 
-Componentes: `ModalShell`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`.
+Componentes: `ModalShell`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalFechaInput`, `ModalForm`, `ModalField`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`.
 
 ## Comportamiento
 
 - Portal al `body` con `createPortal`; `z-[200]`; bloquear scroll del body.
 - **Escritorio:** centrado, overlay `bg-zinc-700/20 backdrop-blur-sm`, borde animado celeste, `rounded-3xl`, sombra ligera.
 - **Teléfono:** pantalla completa `100dvh`, fondo zinc sólido, sin blur ni borde animado.
-- Campos: **sin placeholder**; `border-2 border-celeste-trifinio`; fondo transparente; focus ring celeste.
-- Footer: Cancelar (gris) izquierda + Guardar (esmeralda) derecha; una sola acción → Guardar centrado.
+- Campos: borde zinc (`modalFieldClass`); fondo transparente; focus ring zinc. Fecha manual con `ModalFechaInput` (`DD/MM/AAAA`, sin calendario).
+- Layout formulario: `ModalForm` (`space-y-4`) + `ModalField` (`space-y-2` por campo).
+- Footer: acciones con `SigetActionButton` (skill `ui-tema-botones`): Cancelar + Guardar, una palabra cada uno, icono morph a la derecha.
 - Safe area superior e inferior en teléfono.
 
 ## Prohibido
 
 - `Dialog` de shadcn u otros modales ad hoc para formularios.
 - SweetAlert dentro de `ModalShell` (usar `ModalConfirmDelete`).
-- Botones con borde u outline en guardar/cancelar.
+- `ModalSubmit`, `<button>` suelto o cualquier botón que no sea `SigetActionButton`.
 
 ## Plantilla
 
@@ -30,13 +31,16 @@ Componentes: `ModalShell`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalSu
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import {
   ModalShell,
   ModalLabel,
   ModalInput,
-  ModalSubmit,
+  ModalFechaInput,
+  ModalForm,
+  ModalField,
   ModalFooter,
+  ModalCancelButton,
+  ModalSubmit,
   modalActionMessage,
   toast,
 } from "@/components/ui/general-modal";
@@ -66,10 +70,10 @@ export function EjemploModal({
   };
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Título" subtitle="Subtítulo">
+    <ModalShell open={open} onClose={onClose} title="Título">
       {open && (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid gap-2">
+        <ModalForm onSubmit={handleSubmit}>
+          <ModalField>
             <ModalLabel htmlFor="campo">Campo</ModalLabel>
             <ModalInput
               id="campo"
@@ -77,20 +81,12 @@ export function EjemploModal({
               onChange={(e) => setCampo(e.target.value)}
               autoFocus
             />
-          </div>
+          </ModalField>
           <ModalFooter>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-            >
-              Cancelar
-            </button>
-            <ModalSubmit disabled={pending}>
-              {pending ? <Loader2 className="size-4 animate-spin" /> : "Guardar"}
-            </ModalSubmit>
+            <ModalCancelButton onClick={onClose} disabled={pending} />
+            <ModalSubmit disabled={pending} />
           </ModalFooter>
-        </form>
+        </ModalForm>
       )}
     </ModalShell>
   );

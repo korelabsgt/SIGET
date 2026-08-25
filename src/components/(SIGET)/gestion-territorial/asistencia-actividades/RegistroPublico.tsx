@@ -87,7 +87,7 @@ function limpiarDatosPersonales(setters: {
   setEmail: (v: string) => void;
   setTelefono: (v: string) => void;
   setFechaNacimiento: (v: string) => void;
-  setGenero: (v: "masculino" | "femenino" | "") => void;
+  setGenero: (v: "masculino" | "femenino") => void;
   setTipoInstitucion: (v: TipoInstitucion) => void;
   setInstitucionOtra: (v: string) => void;
   setPuesto: (v: string) => void;
@@ -225,7 +225,7 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
           Plan Trifinio · SIGET
         </p>
         <h1 className="mt-1 text-2xl font-black text-foreground">
-          Registro de asistencia
+          Registro de actividades
         </h1>
         <p className="mt-2 text-sm font-semibold text-azul-trifinio">
           {actividad.nombre}

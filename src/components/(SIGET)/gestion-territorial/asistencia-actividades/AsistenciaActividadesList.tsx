@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -359,9 +359,12 @@ export default function AsistenciaActividadesList() {
     return agruparActividadesPorMes(pageItems);
   }, [esTabOtros, pageItems]);
 
-  useEffect(() => {
+  const paginacionKey = `${tabActiva}|${search}|${pageSize}`;
+  const [paginacionKeyPrevia, setPaginacionKeyPrevia] = useState(paginacionKey);
+  if (paginacionKey !== paginacionKeyPrevia) {
+    setPaginacionKeyPrevia(paginacionKey);
     setPage(1);
-  }, [tabActiva, search, pageSize]);
+  }
 
   const handleDelete = async (act: ActividadRecord) => {
     const ok = await confirmQuitarActividad(
@@ -385,7 +388,7 @@ export default function AsistenciaActividadesList() {
       <div className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h1 className="text-2xl font-black text-foreground sm:text-3xl">
-            Registro de asistencia
+            Registro de actividades
           </h1>
           {canVerOtros &&
             (isLoading ? (

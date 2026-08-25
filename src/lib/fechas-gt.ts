@@ -162,3 +162,32 @@ export function timestamptzToMesCalendario(
 
   return y && m ? `${y}-${m}` : mesCalendarioGt();
 }
+
+export function formatFechaManualGt(value: string | null | undefined): string {
+  const norm = normalizarFechaCalendario(value);
+  if (!norm) return "";
+  const [y, m, d] = norm.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+export function parseFechaManualGt(formatted: string): string | null {
+  if (formatted.length !== 10) return null;
+  const [dd, mm, yyyy] = formatted.split("/");
+  if (!dd || !mm || !yyyy || dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) {
+    return null;
+  }
+  const d = Number(dd);
+  const m = Number(mm);
+  const y = Number(yyyy);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const date = new Date(y, m - 1, d);
+  if (
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
+  }
+  const iso = `${yyyy}-${mm}-${dd}`;
+  return normalizarFechaCalendario(iso) ? iso : null;
+}

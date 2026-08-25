@@ -105,7 +105,7 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
   },
   {
     id: "asistencia-actividades",
-    title: "Registro de Asistencia",
+    title: "Registro de Actividades",
     desc: "Gestión de asistentes, minuta de actividad y estadísticas en tiempo real.",
     href: "/siget/gestion-territorial/asistencia-actividades",
     animatedIcon: "unfvchvi",

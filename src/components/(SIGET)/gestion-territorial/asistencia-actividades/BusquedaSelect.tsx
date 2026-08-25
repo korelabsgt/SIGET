@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { modalFieldClass } from "@/components/ui/general-modal";
 import {
   Popover,
   PopoverContent,
@@ -62,7 +63,8 @@ export function BusquedaSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-2 border-celeste-trifinio bg-transparent px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-celeste-trifinio/30 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg bg-transparent px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+            modalFieldClass,
             !value && "text-muted-foreground",
             triggerClassName,
           )}

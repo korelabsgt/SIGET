@@ -24,7 +24,7 @@ const sigetCrumbText =
   "whitespace-nowrap group-hover:underline underline-offset-4";
 
 const sigetCrumbActive =
-  "shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-xs md:text-lg";
+  "shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-[10px] md:text-xs";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,7 +38,7 @@ const iconMotion =
   "transition-transform duration-500 ease-out group-hover:scale-125";
 
 const crumbRow =
-  "flex min-w-0 w-full items-center gap-1.5 overflow-x-auto text-[9px] font-medium text-muted-foreground md:pt-1 md:text-base";
+  "flex min-w-0 w-full items-center gap-1 overflow-x-auto text-[9px] font-medium text-muted-foreground sm:text-[10px] md:pt-0.5 md:text-xs";
 
 function SigetCrumb({ active = false }: { active?: boolean }) {
   if (active) {
@@ -104,7 +104,7 @@ export function BreadcrumbNav() {
             className={cn(crumbIconLink, "mr-0.5")}
             title="Atrás"
           >
-            <ArrowLeft className={cn("size-4 md:size-5", iconMotion, "group-hover:-translate-x-1")} />
+            <ArrowLeft className={cn("size-3.5 md:size-4", iconMotion, "group-hover:-translate-x-1")} />
           </Link>
         </motion.div>
 
@@ -139,12 +139,12 @@ export function BreadcrumbNav() {
                   }}
                   className="flex items-center gap-1 shrink-0 whitespace-nowrap group/segment"
                 >
-                  <ChevronRight className="size-4 md:size-5 text-muted-foreground/40 shrink-0 transition-all duration-300 group-hover/segment:text-celeste-trifinio group-hover/segment:translate-x-0.5" />
+                  <ChevronRight className="size-3 md:size-3.5 text-muted-foreground/40 shrink-0 transition-all duration-300 group-hover/segment:text-celeste-trifinio group-hover/segment:translate-x-0.5" />
                   <Link
                     href={href}
                     className={cn(
                       isLast
-                        ? cn(crumbActive, "capitalize whitespace-nowrap underline underline-offset-4 pointer-events-none text-xs md:text-lg")
+                        ? cn(crumbActive, "capitalize whitespace-nowrap underline underline-offset-4 pointer-events-none text-[10px] md:text-xs")
                         : crumbTextLink,
                     )}
                   >
