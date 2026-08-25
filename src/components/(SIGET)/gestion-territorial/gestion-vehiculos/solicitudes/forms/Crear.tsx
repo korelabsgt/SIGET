@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
-import { maskFechaHoraManual } from "@/lib/fechas-gt";
+import { aplicarMascaraEnInput, maskFechaHoraManual } from "@/lib/fechas-gt";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
@@ -122,7 +122,7 @@ export function Crear({
                 placeholder="DD/MM/AAAA HH:mm"
                 {...register("fecha_inicio", {
                   onChange: (e) => {
-                    e.target.value = maskFechaHoraManual(e.target.value);
+                    aplicarMascaraEnInput(e.target, maskFechaHoraManual);
                   },
                 })}
               />
@@ -141,7 +141,7 @@ export function Crear({
                 placeholder="DD/MM/AAAA HH:mm"
                 {...register("fecha_fin_estimada", {
                   onChange: (e) => {
-                    e.target.value = maskFechaHoraManual(e.target.value);
+                    aplicarMascaraEnInput(e.target, maskFechaHoraManual);
                   },
                 })}
               />

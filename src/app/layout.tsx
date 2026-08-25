@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/(base)/theme/provider";
@@ -11,16 +10,6 @@ import ConditionalFooter from "@/components/(base)/layout/ConditionalFooter";
 import OfflineBanner from "@/components/OfflineBanner";
 import ObsToastContainer from "@/components/(SIGET)/observatorio/lib/ObsToastContainer";
 import { safeGetUser } from "@/utils/supabase/auth";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -65,7 +54,7 @@ export default async function RootLayout({
           paddingTop: "var(--banner-height, 0px)",
           transition: "padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background flex flex-col`}
+        className="antialiased min-h-screen bg-background flex flex-col font-sans"
       >
         <Providers>
           <ThemeProvider

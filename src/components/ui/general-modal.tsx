@@ -143,9 +143,11 @@ export function ModalConfirmDelete({
 function ModalFrame({
   children,
   className,
+  rounded = false,
 }: {
   children: React.ReactNode;
   className?: string;
+  rounded?: boolean;
 }) {
   const mouseX = useMotionValue(-MODAL_GRADIENT_SIZE);
   const mouseY = useMotionValue(-MODAL_GRADIENT_SIZE);
@@ -175,6 +177,7 @@ function ModalFrame({
     <div
       className={cn(
         "group relative h-full md:rounded-3xl md:p-[3px] md:shadow-sm",
+        rounded && "rounded-3xl p-[3px] shadow-sm",
         className,
       )}
       onPointerMove={handlePointerMove}
@@ -182,10 +185,20 @@ function ModalFrame({
     >
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-0 hidden rounded-3xl md:block"
+        className={cn(
+          "pointer-events-none absolute inset-0 rounded-3xl",
+          rounded ? "block" : "hidden md:block",
+        )}
         style={{ background: glowBackground }}
       />
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-zinc-100 max-md:rounded-none dark:bg-zinc-800 md:rounded-[calc(1.5rem-3px)]">
+      <div
+        className={cn(
+          "relative flex h-full min-h-0 flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-800",
+          rounded
+            ? "rounded-[calc(1.5rem-3px)]"
+            : "max-md:rounded-none md:rounded-[calc(1.5rem-3px)]",
+        )}
+      >
         {children}
       </div>
     </div>
@@ -199,6 +212,7 @@ export function ModalShell({
   subtitle,
   children,
   maxWidth = "max-w-md",
+  variant = "default",
 }: {
   open: boolean;
   onClose: () => void;
@@ -206,6 +220,7 @@ export function ModalShell({
   subtitle: string;
   children: React.ReactNode;
   maxWidth?: string;
+  variant?: "default" | "floating";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -218,22 +233,49 @@ export function ModalShell({
 
   if (typeof document === "undefined") return null;
 
+  const isFloating = variant === "floating";
+
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[200] flex bg-zinc-100 dark:bg-zinc-900 max-md:flex-col md:items-center md:justify-center md:bg-zinc-700/20 md:p-4 md:backdrop-blur-sm">
+        <div
+          className={cn(
+            "fixed inset-0 z-[200] flex",
+            isFloating
+              ? "items-center justify-center p-4 sm:p-6"
+              : "bg-zinc-100 dark:bg-zinc-900 max-md:flex-col md:items-center md:justify-center md:bg-zinc-700/20 md:p-4 md:backdrop-blur-sm",
+          )}
+        >
+          {isFloating ? (
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={onClose}
+              className="absolute inset-0 cursor-default border-0 bg-black/15 dark:bg-black/45"
+            />
+          ) : null}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "relative flex min-h-0 w-full flex-col max-md:h-dvh max-md:max-w-none",
-              maxWidth,
+              "relative flex min-h-0 w-full flex-col",
+              isFloating
+                ? cn("z-10 max-h-[min(90dvh,720px)] shadow-xl", maxWidth)
+                : cn("max-md:h-dvh max-md:max-w-none", maxWidth),
             )}
           >
-            <ModalFrame>
-              <div className="flex shrink-0 items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-6 md:pt-6">
+            <ModalFrame
+              className={isFloating ? "h-auto max-h-[inherit]" : undefined}
+              rounded={isFloating}
+            >
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-between p-4 md:p-6 md:pt-6",
+                  !isFloating && "pt-[max(1rem,env(safe-area-inset-top))]",
+                )}
+              >
                 <div className="min-w-0 pr-3">
                   <h3 className="truncate text-lg font-bold tracking-tight text-foreground md:text-xl">
                     {title}

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatFechaManualInput, maskFechaManual } from "@/lib/fechas-gt";
+import { aplicarMascaraEnInput, formatFechaManualInput, maskFechaManual } from "@/lib/fechas-gt";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -277,7 +277,7 @@ export function VerEditar({
                 maxLength={10}
                 {...register("vencimiento_seguro", {
                   onChange: (e) => {
-                    e.target.value = maskFechaManual(e.target.value);
+                    aplicarMascaraEnInput(e.target, maskFechaManual);
                   },
                 })}
               />
@@ -298,7 +298,7 @@ export function VerEditar({
                 maxLength={10}
                 {...register("vencimiento_circulacion", {
                   onChange: (e) => {
-                    e.target.value = maskFechaManual(e.target.value);
+                    aplicarMascaraEnInput(e.target, maskFechaManual);
                   },
                 })}
               />

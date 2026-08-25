@@ -190,6 +190,7 @@ export function VerEditar({
     <ModalShell
       open={open && modo !== null}
       onClose={onClose}
+      variant="floating"
       title={isAtender ? "Iniciar reparación" : "Finalizar reparación"}
       subtitle={isAtender ? "Asignar atención a la avería" : "Registrar diagnóstico y reparación"}
     >
@@ -226,7 +227,7 @@ export function VerEditar({
             </button>
             <ModalSubmit disabled={pending}>
               {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Pasar a reparación
+              Reparación
             </ModalSubmit>
           </ModalFooter>
         </form>

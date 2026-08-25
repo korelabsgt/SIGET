@@ -34,7 +34,7 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
-        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual)
+        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `)
       .order("created_at", { ascending: false });
 

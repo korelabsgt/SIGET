@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { MantenimientoPanel } from "./MantenimientoPanel";
 import { Crear } from "./forms/Crear";
-import { Activity, Car, Clock, ChevronLeft, Loader2 } from "lucide-react";
+import { Activity, AlertTriangle, CalendarDays, CircleAlert, Clock, TrendingUp } from "lucide";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { SubmodulosNav } from "../../SubmodulosNav";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
+import { GvMorphIcon } from "../lib/morph-icon";
 
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
 type TabMantenimiento = (typeof TABS)[number];
@@ -92,24 +94,48 @@ export function Mantenimiento() {
               </div>
 
               <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
-                  <Activity className="size-3.5 shrink-0 text-orange-500" />
+                <div
+                  className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700"
+                  data-morph-hover-scope
+                >
+                  <GvMorphIcon
+                    icon={Activity}
+                    hoverIcon={TrendingUp}
+                    size={14}
+                    className="text-orange-500"
+                  />
                   <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Fallas activas
                   </p>
                   <p className="text-base font-bold tabular-nums text-foreground">{fallasActivas}</p>
                 </div>
 
-                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
-                  <Car className="size-3.5 shrink-0 text-red-500" />
+                <div
+                  className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700"
+                  data-morph-hover-scope
+                >
+                  <GvMorphIcon
+                    icon={AlertTriangle}
+                    hoverIcon={CircleAlert}
+                    size={14}
+                    className="text-red-500"
+                  />
                   <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Fuera de servicio
                   </p>
                   <p className="text-base font-bold tabular-nums text-foreground">{unidadesFueraDeServicio}</p>
                 </div>
 
-                <div className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
-                  <Clock className="size-3.5 shrink-0 text-celeste-trifinio" />
+                <div
+                  className="flex items-center gap-2.5 rounded-xl bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700"
+                  data-morph-hover-scope
+                >
+                  <GvMorphIcon
+                    icon={Clock}
+                    hoverIcon={CalendarDays}
+                    size={14}
+                    className="text-celeste-trifinio"
+                  />
                   <p className="min-w-0 flex-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Promedio reparación
                   </p>

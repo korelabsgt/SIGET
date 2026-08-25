@@ -21,6 +21,11 @@ import {
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGt } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
+import {
+  GV_DETALLE_CARD_CLASS,
+  GV_DETALLE_CHIP_CLASS,
+  GV_DETALLE_NESTED_CLASS,
+} from "../lib/detalle-ui";
 import { type FallaRow, type MecanicoOption } from "./lib/zod";
 import {
   estadoFallaBadgeClass,
@@ -44,7 +49,7 @@ function ChipDato({
 }) {
   return (
     <div
-      className="flex min-w-0 items-center gap-3 rounded-2xl bg-zinc-200/90 px-4 py-3 dark:bg-zinc-900"
+      className={GV_DETALLE_CHIP_CLASS}
       data-morph-hover-scope
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950">
@@ -149,9 +154,8 @@ export function FallaDetalleView({
         Regresar
       </button>
 
-      <div className="mt-4 overflow-hidden rounded-2xl bg-zinc-50 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
-        <div className="border-b border-zinc-200 px-5 py-5 dark:border-zinc-700 sm:px-6 sm:py-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className={cn("mt-4", GV_DETALLE_CARD_CLASS)}>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -201,9 +205,8 @@ export function FallaDetalleView({
             <ChipDato icon={User} hoverIcon={User} label="Reportado por" value={reportador} />
             <ChipDato icon={Wrench} hoverIcon={Wrench} label="Atención" value={atencion} />
           </div>
-        </div>
 
-        <div className="grid gap-8 px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 lg:px-8 lg:py-8">
+        <div className="mt-8 grid gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 dark:border-zinc-700">
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
               Detalle de la avería
@@ -240,7 +243,7 @@ export function FallaDetalleView({
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
               Vehículo
             </h2>
-            <div className="mt-4 rounded-2xl bg-zinc-200 p-5 dark:bg-zinc-900" data-morph-hover-scope>
+            <div className={cn("mt-4", GV_DETALLE_NESTED_CLASS)} data-morph-hover-scope>
               {falla.vehiculo ? (
                 <>
                   <div className="flex items-center gap-3">

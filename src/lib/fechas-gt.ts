@@ -199,52 +199,102 @@ function clampPar(value: string, min: number, max: number): string {
   return pad2(n);
 }
 
-function ensamblarFechaManual(
+function extraerSlotsFecha(
+  raw: string,
+  conHora: boolean,
+): {
+  day: string;
+  month: string;
+  year: string;
+  hour: string;
+  minute: string;
+} {
+  const max = conHora ? [2, 2, 4, 2, 2] : [2, 2, 4];
+  const slots = max.map(() => "");
+  let i = 0;
+
+  for (const ch of raw) {
+    if (ch >= "0" && ch <= "9") {
+      while (i < slots.length && slots[i].length >= max[i]) i += 1;
+      if (i >= slots.length) break;
+      slots[i] += ch;
+      continue;
+    }
+    if (ch === "/" || ch === ":" || ch === " ") {
+      if (i < slots.length - 1) i += 1;
+    }
+  }
+
+  return {
+    day: slots[0] ?? "",
+    month: slots[1] ?? "",
+    year: slots[2] ?? "",
+    hour: slots[3] ?? "",
+    minute: slots[4] ?? "",
+  };
+}
+
+function ensamblarFechaHoraSlots(
   day: string,
   month: string,
   year: string,
-  digitCount: number,
+  hour: string,
+  minute: string,
+  conHora: boolean,
 ): string {
-  if (digitCount <= 2) return digitCount === 2 ? `${day}/` : day;
-  if (digitCount <= 4) return digitCount === 4 ? `${day}/${month}/` : `${day}/${month}`;
-  return `${day}/${month}/${year}`;
+  const hayTrasDia = Boolean(month || year || hour || minute);
+  const hayTrasMes = Boolean(year || hour || minute);
+  const hayTrasAnio = Boolean(hour || minute);
+  const hayTrasHora = Boolean(minute);
+
+  if (!day && !hayTrasDia) return "";
+
+  let out = day;
+  if (day.length === 2 || hayTrasDia) out += "/";
+  out += month;
+  if (month.length === 2 || hayTrasMes) out += "/";
+  out += year;
+  if (!conHora) return out;
+  if (year.length === 4 || hayTrasAnio) out += " ";
+  out += hour;
+  if (hour.length === 2 || hayTrasHora) out += ":";
+  out += minute;
+  return out;
 }
 
 export function maskFechaManual(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 8);
-  if (!digits) return "";
-
-  let day = digits.slice(0, 2);
-  let month = digits.slice(2, 4);
-  const year = digits.slice(4, 8);
+  let { day, month, year } = extraerSlotsFecha(raw, false);
+  if (!day && !month && !year) return "";
 
   month = clampPar(month, 1, 12);
   day = clampDia(day, month, year);
 
-  return ensamblarFechaManual(day, month, year, digits.length);
+  return ensamblarFechaHoraSlots(day, month, year, "", "", false);
 }
 
 export function maskFechaHoraManual(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 12);
-  if (!digits) return "";
-
-  let day = digits.slice(0, 2);
-  let month = digits.slice(2, 4);
-  const year = digits.slice(4, 8);
-  let hour = digits.slice(8, 10);
-  let minute = digits.slice(10, 12);
+  let { day, month, year, hour, minute } = extraerSlotsFecha(raw, true);
+  if (!day && !month && !year && !hour && !minute) return "";
 
   month = clampPar(month, 1, 12);
   day = clampDia(day, month, year);
   hour = clampPar(hour, 0, 23);
   minute = clampPar(minute, 0, 59);
 
-  const fecha = ensamblarFechaManual(day, month, year, Math.min(digits.length, 8));
-  if (digits.length <= 8) return digits.length === 8 ? `${fecha} ` : fecha;
-  if (digits.length <= 10) {
-    return digits.length === 10 ? `${day}/${month}/${year} ${hour}:` : `${day}/${month}/${year} ${hour}`;
-  }
-  return `${day}/${month}/${year} ${hour}:${minute}`;
+  return ensamblarFechaHoraSlots(day, month, year, hour, minute, true);
+}
+
+export function aplicarMascaraEnInput(
+  input: HTMLInputElement,
+  mask: (raw: string) => string,
+): void {
+  const caret = input.selectionStart ?? input.value.length;
+  const raw = input.value;
+  const masked = mask(raw);
+  input.value = masked;
+  const inserted = masked.length - raw.length;
+  const next = Math.max(0, Math.min(masked.length, caret + Math.max(inserted, 0)));
+  input.setSelectionRange(next, next);
 }
 
 function esFechaCalendarioValida(y: number, m: number, d: number): boolean {

@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 
 import type { BitacoraRow } from "../bitacoras/lib/zod";
+import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
 import { esVehiculoDisponible, normalizeVehiculoRow } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
@@ -22,8 +23,6 @@ export async function fetchVehiculos(): Promise<VehiculoRow[]> {
   return (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
 }
 
-const ESTADOS_SOLICITUD_OCUPAN_VEHICULO = ["APROBADA", "EN_MISION"] as const;
-
 export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
   const client = db();
   const { data, error } = await client
@@ -33,26 +32,9 @@ export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
 
   if (error) throw new Error(error.message);
 
-  const { data: asignados, error: asignadosError } = await client
-    .from("ter_solicitudes")
-    .select("vehiculo_id")
-    .in("estado", [...ESTADOS_SOLICITUD_OCUPAN_VEHICULO])
-    .not("vehiculo_id", "is", null);
-
-  if (asignadosError) throw new Error(asignadosError.message);
-
-  const ocupados = new Set(
-    (asignados ?? [])
-      .map((row) => row.vehiculo_id)
-      .filter((id): id is string => Boolean(id)),
-  );
-
   return (data ?? [])
     .map((row) => normalizeVehiculoRow(row as VehiculoRow))
-    .filter((vehiculo) => {
-      if (!vehiculo.id || ocupados.has(vehiculo.id)) return false;
-      return esVehiculoDisponible(vehiculo);
-    });
+    .filter((vehiculo) => Boolean(vehiculo.id) && esVehiculoDisponible(vehiculo));
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
@@ -63,7 +45,7 @@ export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
-        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual)
+        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `,
     )
     .order("created_at", { ascending: false });
@@ -85,7 +67,7 @@ export async function fetchBitacoras(): Promise<BitacoraRow[]> {
     .order("fecha", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as BitacoraRow[];
+  return (data ?? []).map((row) => normalizeBitacoraRow(row as BitacoraRow));
 }
 
 export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
@@ -116,7 +98,13 @@ export async function fetchPerfilesNombre(): Promise<MecanicoOption[]> {
 }
 
 export async function fetchSolicitudesEnMision() {
-  const { data, error } = await db()
+  const client = db();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await client
     .from("ter_solicitudes")
     .select(
       `
@@ -127,7 +115,8 @@ export async function fetchSolicitudesEnMision() {
         vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
       `,
     )
-    .eq("estado", "EN_MISION");
+    .eq("estado", "EN_MISION")
+    .eq("solicitante_id", user.id);
 
   if (error) throw new Error(error.message);
 

@@ -80,5 +80,6 @@ export interface SolicitudRow {
     modelo: string;
     color?: string | null;
     kilometraje_actual?: number | null;
+    estado?: string | null;
   };
 }

@@ -4,6 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-geist-sans: ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --banner-height: 0px;
   --mobile-header-height: 3.5rem;
   --mobile-breadcrumb-height: 3.5rem;

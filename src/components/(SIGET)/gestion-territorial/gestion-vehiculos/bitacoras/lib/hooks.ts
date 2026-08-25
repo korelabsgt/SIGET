@@ -5,7 +5,6 @@ import { createBitacora } from "./actions";
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
 import {
   fetchBitacoras,
-  fetchPerfilesNombre,
   fetchSolicitudesEnMision,
 } from "../../lib/client-db";
 import { useVehiculos } from "../../flota/lib/hooks";
@@ -45,13 +44,13 @@ export function useMetricasBitacoras() {
 export function useBitacoraFormOptions(enabled: boolean) {
   const vehiculosQuery = useVehiculos();
   const extras = useQuery({
-    queryKey: [...BITACORAS_KEY, "form-options"],
+    queryKey: [...BITACORAS_KEY, "form-options", "misiones-propias"],
     queryFn: async () => {
-      const [conductores, misiones] = await Promise.all([
-        shareInflight("ter-perfiles-nombre", fetchPerfilesNombre),
-        shareInflight("ter-solicitudes-en-mision", fetchSolicitudesEnMision),
-      ]);
-      return { conductores, misiones };
+      const misiones = await shareInflight(
+        "ter-solicitudes-en-mision-propias",
+        fetchSolicitudesEnMision,
+      );
+      return { misiones };
     },
     enabled,
     ...GV_QUERY_OPTIONS,
@@ -61,7 +60,6 @@ export function useBitacoraFormOptions(enabled: boolean) {
     data:
       extras.data !== undefined
         ? {
-            conductores: extras.data.conductores,
             misiones: extras.data.misiones,
             vehiculos: vehiculosQuery.data ?? [],
           }

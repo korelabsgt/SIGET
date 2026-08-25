@@ -2,7 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow } from "./zod";
+import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
+import { normalizeBitacoraRow } from "./helpers";
 
 const TABLE = "ter_bitacoras";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/bitacoras";
@@ -27,7 +28,7 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
       .order("fecha", { ascending: false });
 
     if (error) throw error;
-    return data as any;
+    return (data ?? []).map((row) => normalizeBitacoraRow(row as BitacoraRow));
   } catch (error) {
     console.error("Error fetching bitacoras:", error);
     return [];
@@ -36,12 +37,40 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
 
 export async function createBitacora(input: BitacoraInput) {
   try {
-    const { supabase } = await requireAuth();
+    const { supabase, user } = await requireAuth();
     const parsed = bitacoraInputSchema.parse(input);
+    const comentarios = toComentariosJsonbPayload(parsed.comentarios);
+
+    if (parsed.solicitud_id) {
+      const { data: solicitud, error: solicitudError } = await supabase
+        .from("ter_solicitudes")
+        .select("id, solicitante_id, estado")
+        .eq("id", parsed.solicitud_id)
+        .maybeSingle();
+
+      if (solicitudError || !solicitud) {
+        return { success: false, error: "La misión vinculada no existe." };
+      }
+      if (solicitud.solicitante_id !== user.id) {
+        return { success: false, error: "Solo puedes registrar la bitácora de tus misiones." };
+      }
+      if (solicitud.estado !== "EN_MISION") {
+        return { success: false, error: "La misión ya no está en curso." };
+      }
+    }
 
     const { error } = await supabase.from(TABLE).insert({
-      ...parsed,
-      fecha: new Date().toISOString(), // Use current timestamp
+      solicitud_id: parsed.solicitud_id || null,
+      vehiculo_id: parsed.vehiculo_id,
+      conductor_id: user.id,
+      destino: parsed.destino,
+      km_inicial: parsed.km_inicial,
+      km_final: parsed.km_final,
+      km_recorrido: parsed.km_final - parsed.km_inicial,
+      vale_combustible: parsed.vale_combustible || null,
+      monto_combustible: parsed.monto_combustible,
+      comentarios,
+      fecha: new Date().toISOString(),
     });
 
     if (error) throw error;
@@ -111,7 +140,7 @@ export async function getConductores() {
 
 export async function getSolicitudesEnMision() {
   try {
-    const { supabase } = await requireAuth();
+    const { supabase, user } = await requireAuth();
     const { data, error } = await supabase
       .from("ter_solicitudes")
       .select(`
@@ -121,7 +150,8 @@ export async function getSolicitudesEnMision() {
         vehiculo_id,
         vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
       `)
-      .eq("estado", "EN_MISION");
+      .eq("estado", "EN_MISION")
+      .eq("solicitante_id", user.id);
 
     if (error) throw error;
 

@@ -22,11 +22,17 @@ import {
   Users,
   X,
 } from "lucide";
+import { Loader2 } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGt } from "@/lib/fechas-gt";
 import { type SolicitudRow } from "./lib/zod";
 import { estadoBadgeClass, formatDuracionMision, formatEstadoLabel } from "./lib/helpers";
 import { cn } from "@/lib/utils";
+import {
+  GV_DETALLE_CARD_CLASS,
+  GV_DETALLE_CHIP_CLASS,
+  GV_DETALLE_NESTED_CLASS,
+} from "../lib/detalle-ui";
 
 function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
@@ -47,7 +53,7 @@ function ChipDato({
 }) {
   return (
     <div
-      className="flex min-w-0 items-center gap-3 rounded-2xl bg-zinc-200/90 px-4 py-3 dark:bg-zinc-900"
+      className={GV_DETALLE_CHIP_CLASS}
       data-morph-hover-scope
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950">
@@ -97,11 +103,13 @@ function FilaSimple({ label, value }: { label: string; value: string }) {
 export function SolicitudDetalleView({
   solicitud,
   canManage,
+  misionPendiente = false,
   onBack,
   onAction,
 }: {
   solicitud: SolicitudRow;
   canManage: boolean;
+  misionPendiente?: boolean;
   onBack: () => void;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
 }) {
@@ -138,10 +146,15 @@ export function SolicitudDetalleView({
       return (
         <button
           type="button"
+          disabled={misionPendiente}
           onClick={() => onAction(solicitud, "INICIAR")}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-sky-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-sky-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <GvMorphIcon icon={Play} hoverIcon={CirclePlay} size={14} />
+          {misionPendiente ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <GvMorphIcon icon={Play} hoverIcon={CirclePlay} size={14} />
+          )}
           Iniciar misión
         </button>
       );
@@ -150,10 +163,15 @@ export function SolicitudDetalleView({
       return (
         <button
           type="button"
+          disabled={misionPendiente}
           onClick={() => onAction(solicitud, "FINALIZAR")}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-violet-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
+          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-violet-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <GvMorphIcon icon={Square} hoverIcon={CircleStop} size={14} />
+          {misionPendiente ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <GvMorphIcon icon={Square} hoverIcon={CircleStop} size={14} />
+          )}
           Finalizar misión
         </button>
       );
@@ -172,9 +190,8 @@ export function SolicitudDetalleView({
         Regresar
       </button>
 
-      <div className="mt-4 overflow-hidden rounded-2xl bg-zinc-50 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
-        <div className="border-b border-zinc-200 px-5 py-5 dark:border-zinc-700 sm:px-6 sm:py-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className={cn("mt-4", GV_DETALLE_CARD_CLASS)}>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -223,9 +240,8 @@ export function SolicitudDetalleView({
             />
             <ChipDato icon={Car} hoverIcon={CarFront} label="Vehículo" value={placa} />
           </div>
-        </div>
 
-        <div className="grid gap-8 px-5 py-6 sm:px-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 lg:px-8 lg:py-8">
+        <div className="mt-8 grid gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 dark:border-zinc-700">
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
               Detalle de la misión
@@ -254,7 +270,7 @@ export function SolicitudDetalleView({
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
               Vehículo asignado
             </h2>
-            <div className="mt-4 rounded-2xl bg-zinc-200 p-5 dark:bg-zinc-900" data-morph-hover-scope>
+            <div className={cn("mt-4", GV_DETALLE_NESTED_CLASS)} data-morph-hover-scope>
               {solicitud.vehiculo ? (
                 <>
                   <div className="flex items-center gap-3">

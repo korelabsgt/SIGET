@@ -27,6 +27,10 @@ import type { IconNode } from "lucide";
 import { toast } from "react-toastify";
 import { confirmDestructivo } from "@/lib/confirm-destructivo";
 import { GvMorphIcon } from "../lib/morph-icon";
+import {
+  GV_DETALLE_NESTED_CLASS,
+  GV_DETALLE_PANEL_CLASS,
+} from "../lib/detalle-ui";
 import { type VehiculoRow } from "./lib/zod";
 import {
   type AlertStatus,
@@ -127,7 +131,12 @@ function VehiculoFotoHero({
 
   return (
     <div className="flex h-auto min-h-0 min-w-0 w-full flex-col gap-2 lg:h-full sm:flex-row">
-      <div className="relative h-[min(52vh,26rem)] min-h-64 w-full min-w-0 overflow-hidden rounded-xl bg-card ring-1 ring-zinc-200 dark:ring-zinc-700 lg:h-full lg:min-h-0 lg:flex-1">
+      <div
+        className={cn(
+          "relative h-[min(52vh,26rem)] min-h-64 w-full min-w-0 overflow-hidden lg:h-full lg:min-h-0 lg:flex-1",
+          GV_DETALLE_PANEL_CLASS,
+        )}
+      >
         {firmandoFotos && fotos.length > 0 ? (
           <div className="flex size-full items-center justify-center text-celeste-trifinio">
             <span className="inline-flex animate-spin">
@@ -169,7 +178,7 @@ function VehiculoFotoHero({
         )}
       </div>
 
-      <div className="flex h-12 w-fit max-w-full shrink-0 flex-row gap-1 overflow-x-auto rounded-xl bg-zinc-100 p-1 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-700 lg:h-fit lg:w-12 lg:flex-col lg:self-start lg:overflow-hidden">
+      <div className="flex h-12 w-fit max-w-full shrink-0 flex-row gap-1 overflow-x-auto rounded-2xl border border-border/40 bg-sky-50/60 p-1 dark:border-zinc-700 dark:bg-sky-950/20 lg:h-fit lg:w-12 lg:flex-col lg:self-start lg:overflow-hidden">
         {fotosConSrc.map((item, index) => {
           const activa = index === indice && !fotoRota && mostrarFoto;
           return (
@@ -194,7 +203,7 @@ function VehiculoFotoHero({
         <button
           type="button"
           onClick={() => onEdit(vehiculo)}
-          className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-zinc-200 text-celeste-trifinio hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 sm:aspect-square sm:h-auto sm:w-full"
+          className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border/40 bg-sky-50/60 text-celeste-trifinio hover:bg-sky-100 dark:border-zinc-700 dark:bg-sky-950/20 dark:hover:bg-sky-950/40 sm:aspect-square sm:h-auto sm:w-full"
           aria-label="Agregar fotografías"
         >
           <GvMorphIcon icon={Plus} size={20} morphOnHover={false} />
@@ -214,7 +223,7 @@ function SpecStat({
   hint?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-xl bg-zinc-200 px-2 py-2 ring-1 ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-800 sm:px-3 sm:py-2.5">
+    <div className={cn("min-w-0", GV_DETALLE_NESTED_CLASS, "px-2 py-2 sm:px-3 sm:py-2.5")}>
       <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-celeste-trifinio sm:text-[9px] sm:tracking-[0.16em]">
         {label}
       </p>
@@ -267,7 +276,7 @@ function EstadoDoc({
   extra?: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl bg-zinc-200 px-2 py-2 ring-1 ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-800 sm:gap-3 sm:px-3 sm:py-3">
+    <div className={cn("flex min-w-0 items-center gap-2 sm:gap-3", GV_DETALLE_NESTED_CLASS, "px-2 py-2 sm:px-3 sm:py-3")}>
       <CelesteChip>
         <GvMorphIcon icon={icon} hoverIcon={hoverIcon} size={16} />
       </CelesteChip>
@@ -337,7 +346,12 @@ export function VehiculoDetalleView({
       <div className="grid h-auto gap-3 lg:h-full lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-2 lg:overflow-hidden">
         <VehiculoFotoHero vehiculo={vehiculo} onEdit={onEdit} />
 
-        <div className="relative flex h-auto w-full min-w-0 flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-zinc-200 dark:ring-zinc-700 lg:h-full lg:min-h-0">
+        <div
+          className={cn(
+            "relative flex h-auto w-full min-w-0 flex-col overflow-hidden lg:h-full lg:min-h-0",
+            GV_DETALLE_PANEL_CLASS,
+          )}
+        >
           <div className="flex h-full min-h-0 flex-col justify-start gap-3 p-4 pt-3 sm:gap-4 sm:p-5 sm:pt-4 lg:gap-5 lg:p-6 lg:pt-5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-celeste-trifinio">

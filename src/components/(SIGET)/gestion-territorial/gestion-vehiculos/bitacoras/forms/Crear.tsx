@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, type LabelHTMLAttributes } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useRef, useState, type LabelHTMLAttributes } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -11,24 +13,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
-  Loader2,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ArrowLeft,
   Car,
-  MapPin,
-  GaugeCircle,
-  Receipt,
-  User,
-  Link as LinkIcon,
-  Route,
-  Fuel,
-  ListChecks,
-  ClipboardCheck,
+  CarFront,
   ChevronLeft,
-} from "lucide-react";
+  CirclePlus,
+  EllipsisVertical,
+  FileText,
+  Fuel,
+  Gauge,
+  GaugeCircle,
+  Link,
+  MapPin,
+  MessageSquare,
+  MessageSquarePlus,
+  MoreVertical,
+  PenSquare,
+  Pencil,
+  Plus,
+  Receipt,
+  Route,
+  Trash,
+  Trash2,
+  Unlink,
+  User,
+  UserRound,
+} from "lucide";
+import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 
 import { cn } from "@/lib/utils";
+import { GvMorphIcon } from "../../lib/morph-icon";
+import { useUser } from "@/components/(base)/providers/UserProvider";
 import { type BitacoraInput, bitacoraInputSchema } from "../lib/zod";
 import { useBitacoraFormOptions, useCrearBitacora } from "../lib/hooks";
 import { type VehiculoRow } from "../../flota/lib/zod";
@@ -40,29 +63,6 @@ interface SolicitudActiva {
   vehiculo_id: string;
   ter_vehiculos: { kilometraje_actual: number } | { kilometraje_actual: number }[] | null;
 }
-
-const CHECKLIST_PRE = [
-  { id: "luces", label: "Luces funcionales" },
-  { id: "neumaticos", label: "Presión/Estado de neumáticos" },
-  { id: "liquidos", label: "Niveles de líquidos (aceite, agua)" },
-  { id: "emergencia", label: "Kit de emergencia completo" },
-  { id: "documentos", label: "Tarjeta de circulación y seguro" },
-];
-
-const CHECKLIST_POST = [
-  { id: "luces_post", label: "Luces funcionales post-viaje" },
-  { id: "limpieza", label: "Vehículo entregado limpio" },
-  { id: "danos", label: "Sin daños o novedades mecánicas" },
-];
-
-const defaultChecklistPre = CHECKLIST_PRE.reduce(
-  (acc, item) => ({ ...acc, [item.id]: true }),
-  {} as Record<string, boolean>,
-);
-const defaultChecklistPost = CHECKLIST_POST.reduce(
-  (acc, item) => ({ ...acc, [item.id]: true }),
-  {} as Record<string, boolean>,
-);
 
 const sectionTitleClass =
   "flex items-center gap-2 bg-azul-trifinio text-white px-4 py-2.5 rounded-t-xl text-sm font-bold tracking-tight";
@@ -81,6 +81,12 @@ const selectContentClass =
 
 const selectItemClass =
   "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
+
+const comentarioRowClass =
+  "rounded-xl border border-border bg-zinc-100 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950";
+
+const comentarioPillClass =
+  "inline-flex shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-celeste-trifinio dark:bg-sky-950";
 
 function FieldLabel({
   className,
@@ -107,8 +113,10 @@ export function Crear({
   onSaved: () => void;
 }) {
   const crear = useCrearBitacora();
+  const user = useUser();
+  const nombreResponsable =
+    (user?.user_metadata?.nombre as string | undefined)?.trim() || "Tu perfil";
   const { data: options, isLoading: loading } = useBitacoraFormOptions(true);
-  const conductores = (options?.conductores ?? []) as { id: string; nombre: string | null }[];
   const vehiculos = (options?.vehiculos ?? []) as VehiculoRow[];
   const misiones = (options?.misiones ?? []) as SolicitudActiva[];
 
@@ -131,31 +139,79 @@ export function Crear({
       km_final: 0,
       vale_combustible: "",
       monto_combustible: 0,
-      checklist_pre: defaultChecklistPre,
-      checklist_post: defaultChecklistPost,
+      comentarios: [],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "comentarios",
+  });
+
+  const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
+  const prevFieldsLen = useRef(0);
 
   const selectedMisionId = watch("solicitud_id");
   const selectedVehiculoId = watch("vehiculo_id");
   const kmInicial = watch("km_inicial");
   const kmFinal = watch("km_final");
   const recorrido = Math.max(0, kmFinal - kmInicial);
+  const comentariosValues = watch("comentarios");
+
+  useEffect(() => {
+    if (fields.length > prevFieldsLen.current) {
+      const newField = fields[fields.length - 1];
+      if (newField) {
+        setEditingIds((prev) => new Set(prev).add(newField.id));
+      }
+    }
+    prevFieldsLen.current = fields.length;
+  }, [fields]);
+
+  const startEdit = (id: string) => {
+    setEditingIds((prev) => new Set(prev).add(id));
+  };
+
+  const stopEdit = (id: string) => {
+    setEditingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleRemoveComentario = (index: number, id: string) => {
+    remove(index);
+    setEditingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleAppendComentario = () => {
+    append({ texto: "" });
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      setValue("conductor_id", user.id);
+    }
+  }, [user?.id, setValue]);
 
   useEffect(() => {
     reset({
       solicitud_id: "",
       vehiculo_id: "",
-      conductor_id: "",
+      conductor_id: user?.id ?? "",
       destino: "",
       km_inicial: 0,
       km_final: 0,
       vale_combustible: "",
       monto_combustible: 0,
-      checklist_pre: defaultChecklistPre,
-      checklist_post: defaultChecklistPost,
+      comentarios: [],
     });
-  }, [reset]);
+  }, [reset, user?.id]);
 
   useEffect(() => {
     if (selectedMisionId && misiones.length > 0) {
@@ -163,7 +219,6 @@ export function Crear({
       if (mision) {
         const kmActual = kmDeMision(mision.ter_vehiculos);
         setValue("vehiculo_id", mision.vehiculo_id, { shouldValidate: true });
-        setValue("conductor_id", mision.conductor_id, { shouldValidate: true });
         setValue("destino", mision.destino, { shouldValidate: true });
         setValue("km_inicial", kmActual, { shouldValidate: true });
         setValue("km_final", kmActual);
@@ -188,7 +243,7 @@ export function Crear({
         toast.success("Bitácora registrada con éxito");
         onSaved();
       } else {
-        toast.error("Hubo un error al guardar la bitácora");
+        toast.error(res.error || "Hubo un error al guardar la bitácora");
       }
     } catch {
       toast.error("Error inesperado");
@@ -210,8 +265,14 @@ export function Crear({
           type="button"
           onClick={onBack}
           className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-accent dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          data-morph-hover-scope
         >
-          <ChevronLeft className="size-5 text-muted-foreground dark:text-zinc-400" />
+          <GvMorphIcon
+            icon={ChevronLeft}
+            hoverIcon={ArrowLeft}
+            size={20}
+            className="text-muted-foreground dark:text-zinc-400"
+          />
         </button>
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-black leading-tight tracking-tight text-foreground dark:text-zinc-50">
@@ -225,8 +286,8 @@ export function Crear({
 
       <div className="space-y-6">
         <section className={formSectionClass}>
-          <div className={sectionTitleClass}>
-            <LinkIcon className="size-4" />
+          <div className={sectionTitleClass} data-morph-hover-scope>
+            <GvMorphIcon icon={Link} hoverIcon={Unlink} size={16} className="text-current" />
             Vinculación de misión en curso
           </div>
           <div className="grid gap-1.5 p-4">
@@ -267,13 +328,17 @@ export function Crear({
               <p className="text-[11px] leading-relaxed text-muted-foreground dark:text-zinc-500">
                 Vehículo, conductor y destino se completan desde la misión seleccionada.
               </p>
-            ) : null}
+            ) : (
+              <p className="text-[11px] leading-relaxed text-muted-foreground dark:text-zinc-500">
+                Solo se listan las misiones en curso que solicitaste.
+              </p>
+            )}
           </div>
         </section>
 
         <section className={formSectionClass}>
-          <div className={sectionTitleClass}>
-            <Car className="size-4" />
+          <div className={sectionTitleClass} data-morph-hover-scope>
+            <GvMorphIcon icon={Car} hoverIcon={CarFront} size={16} className="text-current" />
             Asignación del viaje
           </div>
           <div className="space-y-4 p-4">
@@ -321,40 +386,17 @@ export function Crear({
               </div>
 
               <div className="grid gap-1.5">
-                <FieldLabel>Conductor</FieldLabel>
-                <Controller
-                  name="conductor_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={!!selectedMisionId}
-                    >
-                      <SelectTrigger
-                        className={cn(formInputClass, "cursor-pointer shadow-none")}
-                        disabled={!!selectedMisionId}
-                      >
-                        <SelectValue placeholder="Seleccionar conductor" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className={selectContentClass}>
-                        {conductores.map((c) => (
-                          <SelectItem
-                            key={c.id}
-                            value={c.id}
-                            textValue={c.nombre ?? ""}
-                            className={selectItemClass}
-                          >
-                            {c.nombre ?? "Sin nombre"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <FieldLabel>Responsable del viaje</FieldLabel>
+                <input type="hidden" {...register("conductor_id")} />
+                <div
+                  className={cn(
+                    formInputClass,
+                    "flex items-center gap-2 opacity-90",
                   )}
-                />
-                {errors.conductor_id ? (
-                  <p className="text-xs text-red-500">{errors.conductor_id.message}</p>
-                ) : null}
+                >
+                  <GvMorphIcon icon={User} hoverIcon={UserRound} size={16} className="text-celeste-trifinio" />
+                  <span className="truncate font-semibold">{nombreResponsable}</span>
+                </div>
               </div>
             </div>
 
@@ -373,8 +415,8 @@ export function Crear({
         </section>
 
         <section className={formSectionClass}>
-          <div className={sectionTitleClass}>
-            <GaugeCircle className="size-4" />
+          <div className={sectionTitleClass} data-morph-hover-scope>
+            <GvMorphIcon icon={GaugeCircle} hoverIcon={Gauge} size={16} className="text-current" />
             Kilometraje
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
@@ -419,14 +461,14 @@ export function Crear({
         </section>
 
         <section className={formSectionClass}>
-          <div className={sectionTitleClass}>
-            <Fuel className="size-4" />
+          <div className={sectionTitleClass} data-morph-hover-scope>
+            <GvMorphIcon icon={Fuel} hoverIcon={Receipt} size={16} className="text-current" />
             Combustible
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
             <div className="grid gap-1.5">
-              <FieldLabel className="flex items-center gap-1.5">
-                <Receipt className="size-3.5" />
+              <FieldLabel className="flex items-center gap-1.5" data-morph-hover-scope>
+                <GvMorphIcon icon={Receipt} hoverIcon={FileText} size={14} className="text-current" />
                 Vale de combustible
               </FieldLabel>
               <Input
@@ -449,61 +491,133 @@ export function Crear({
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className={formSectionClass}>
-            <div className={sectionTitleClass}>
-              <ListChecks className="size-4" />
-              Checklist pre-viaje
-            </div>
-            <div className="space-y-2 p-4">
-              {CHECKLIST_PRE.map((item) => (
-                <Controller
-                  key={item.id}
-                  name={`checklist_pre.${item.id}`}
-                  control={control}
-                  render={({ field }) => (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950/60">
-                      <FieldLabel
-                        className="cursor-pointer normal-case tracking-normal text-xs font-medium text-foreground dark:text-zinc-200"
-                        onClick={() => field.onChange(!field.value)}
-                      >
-                        {item.label}
-                      </FieldLabel>
-                      <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
-                    </div>
-                  )}
-                />
-              ))}
-            </div>
-          </section>
+        <section className={formSectionClass}>
+          <div className={sectionTitleClass} data-morph-hover-scope>
+            <GvMorphIcon
+              icon={MessageSquarePlus}
+              hoverIcon={MessageSquare}
+              size={16}
+              className="text-current"
+            />
+            Comentarios del viaje
+          </div>
+          <div className="space-y-3 p-4">
+            <p className="text-[11px] leading-relaxed text-muted-foreground dark:text-zinc-500">
+              Agrega observaciones del recorrido. El autor queda registrado en la bitácora como responsable del viaje.
+            </p>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {fields.map((field, index) => {
+                const isEditing = editingIds.has(field.id);
+                const texto = comentariosValues?.[index]?.texto?.trim() ?? "";
 
-          <section className={formSectionClass}>
-            <div className={sectionTitleClass}>
-              <ClipboardCheck className="size-4" />
-              Checklist post-viaje
-            </div>
-            <div className="space-y-2 p-4">
-              {CHECKLIST_POST.map((item) => (
-                <Controller
-                  key={item.id}
-                  name={`checklist_post.${item.id}`}
-                  control={control}
-                  render={({ field }) => (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950/60">
-                      <FieldLabel
-                        className="cursor-pointer normal-case tracking-normal text-xs font-medium text-foreground dark:text-zinc-200"
-                        onClick={() => field.onChange(!field.value)}
-                      >
-                        {item.label}
-                      </FieldLabel>
-                      <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                return (
+                  <motion.div
+                    key={field.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                    transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                    className={comentarioRowClass}
+                  >
+                    <div className={cn("flex gap-2.5", isEditing ? "items-start" : "items-center")}>
+                      <span className={comentarioPillClass}>Comentario {index + 1}</span>
+
+                      <div className="min-w-0 flex-1">
+                        {isEditing ? (
+                          <Textarea
+                            {...register(`comentarios.${index}.texto`)}
+                            rows={2}
+                            autoFocus
+                            placeholder="Escribe la observación del recorrido..."
+                            className={cn(
+                              formInputClass,
+                              "min-h-14 resize-none py-2 shadow-none focus-visible:ring-2 focus-visible:ring-celeste-trifinio",
+                            )}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(field.id)}
+                            className="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-sm leading-tight text-foreground hover:opacity-80"
+                          >
+                            {texto || (
+                              <span className="text-muted-foreground dark:text-zinc-500">
+                                Sin texto — pulsa editar para escribir
+                              </span>
+                            )}
+                          </button>
+                        )}
+                        {errors.comentarios?.[index]?.texto ? (
+                          <p className="mt-1 text-xs text-red-500">
+                            {errors.comentarios[index]?.texto?.message}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-zinc-200/80 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            aria-label={`Acciones del comentario ${index + 1}`}
+                          >
+                            <GvMorphIcon
+                              icon={EllipsisVertical}
+                              hoverIcon={MoreVertical}
+                              size={18}
+                              className="text-current"
+                            />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
+                        >
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                            onSelect={() => startEdit(field.id)}
+                          >
+                            <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={14} className="text-current" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60"
+                            onSelect={() => handleRemoveComentario(index, field.id)}
+                          >
+                            <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
+                            Quitar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  )}
-                />
-              ))}
-            </div>
-          </section>
-        </div>
+
+                    {isEditing ? (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => stopEdit(field.id)}
+                          className="inline-flex h-7 cursor-pointer items-center rounded-lg border-0 bg-zinc-200 px-2.5 text-[10px] font-bold uppercase tracking-wider text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        >
+                          Listo
+                        </button>
+                      </div>
+                    ) : null}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            <button
+              type="button"
+              onClick={handleAppendComentario}
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-celeste-trifinio/50 bg-transparent text-xs font-bold uppercase tracking-widest text-celeste-trifinio transition-colors hover:bg-sky-50 dark:border-celeste-trifinio/40 dark:hover:bg-sky-950/30"
+              data-morph-hover-scope
+            >
+              <GvMorphIcon icon={Plus} hoverIcon={CirclePlus} size={16} className="text-current" />
+              Agregar comentario
+            </button>
+          </div>
+        </section>
 
         <div className="mt-2 flex flex-col-reverse items-stretch gap-3 border-t border-border pt-6 pb-8 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-center">
           <button
@@ -518,8 +632,13 @@ export function Crear({
             type="submit"
             disabled={crear.isPending}
             className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-emerald-200 px-6 text-[10px] font-bold uppercase tracking-widest text-emerald-900 transition-colors hover:bg-emerald-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-800/70 dark:text-emerald-50 dark:hover:bg-emerald-700/80"
+            data-morph-hover-scope
           >
-            {crear.isPending ? <Loader2 className="size-4 animate-spin" /> : <Route className="size-4" />}
+            {crear.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <GvMorphIcon icon={Route} hoverIcon={MapPin} size={16} className="text-current" />
+            )}
             Registrar bitácora
           </button>
         </div>

@@ -1,4 +1,12 @@
 import type { BitacoraRow } from "./zod";
+import { parseComentariosJsonb } from "./zod";
+
+export function normalizeBitacoraRow(row: BitacoraRow): BitacoraRow {
+  return {
+    ...row,
+    comentarios: parseComentariosJsonb(row.comentarios),
+  };
+}
 
 export function computeMetricasBitacorasMes(
   bitacoras: BitacoraRow[],

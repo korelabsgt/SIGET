@@ -1,10 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/proxy";
-import { safeGetUser, safeSupabaseQuery } from "@/utils/supabase/auth";
+import {
+  checkAuth,
+  hasSupabaseAuthCookies,
+  safeSupabaseQuery,
+} from "@/utils/supabase/auth";
 
 export async function proxy(request: NextRequest) {
   const { supabase, response } = createClient(request);
-  const user = await safeGetUser(supabase);
+  const auth = await checkAuth(supabase);
+  const user = auth.ok ? auth.user : null;
 
   const hostname = request.headers.get("host") || "";
   let pathname = request.nextUrl.pathname;
@@ -23,6 +28,14 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!user && pathname.startsWith("/siget")) {
+    const sessionCookiePresent = hasSupabaseAuthCookies(request);
+    const authUnavailable =
+      !auth.ok && auth.reason === "network" && sessionCookiePresent;
+
+    if (authUnavailable) {
+      return response;
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

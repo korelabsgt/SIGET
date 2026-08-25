@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BitacorasList } from "./BitacorasList";
+import { BitacorasPanel } from "./BitacorasPanel";
 import { BitacoraStatsCards } from "./BitacoraStatsCards";
 import { Crear } from "./forms/Crear";
 import { useBitacoras } from "./lib/hooks";
@@ -45,6 +45,7 @@ export function Bitacoras() {
   const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
+  const [inDetailView, setInDetailView] = useState(false);
   const loading = loadingBitacoras;
 
   const vehiculoSeleccionado = vehiculoFilter !== TODOS_VEHICULOS;
@@ -116,11 +117,18 @@ export function Bitacoras() {
   }
 
   return (
-    <div className={GV_MODULO_PAGE_CLASS}>
+    <div
+      className={cn(
+        GV_MODULO_PAGE_CLASS,
+        inDetailView &&
+          "min-h-0 flex-1 overflow-y-auto pt-16 pb-10 lg:h-full lg:overflow-hidden lg:pt-10 lg:pb-10",
+      )}
+    >
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
 
-      <SubmodulosNav />
+      {!inDetailView ? <SubmodulosNav /> : null}
 
+      {!inDetailView ? (
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <button
@@ -163,12 +171,21 @@ export function Bitacoras() {
           </button>
         </div>
       </div>
+      ) : null}
 
-      <BitacoraStatsCards metrics={metricas} filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS} />
+      {!inDetailView ? (
+        <BitacoraStatsCards metrics={metricas} filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS} />
+      ) : null}
 
-      <div className="mt-2">
+      <div className={cn("mt-2", inDetailView && "mt-0 flex h-full min-h-0 flex-1 flex-col")}>
         <GestionVehiculosTableShell
+          className={
+            inDetailView
+              ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-transparent dark:bg-transparent"
+              : undefined
+          }
           toolbar={
+            !inDetailView ? (
             <>
               <div className="relative min-w-0 w-full lg:min-w-0">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-celeste-trifinio" />
@@ -211,6 +228,7 @@ export function Bitacoras() {
                 </SelectContent>
               </Select>
             </>
+            ) : undefined
           }
         >
           {loading ? (
@@ -230,7 +248,11 @@ export function Bitacoras() {
               </p>
             </div>
           ) : (
-            <BitacorasList bitacoras={bitacorasFiltradas} />
+            <BitacorasPanel
+              bitacoras={bitacorasFiltradas}
+              onDetailViewChange={setInDetailView}
+              fillHeight={inDetailView}
+            />
           )}
         </GestionVehiculosTableShell>
       </div>

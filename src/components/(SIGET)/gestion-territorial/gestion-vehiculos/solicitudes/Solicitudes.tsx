@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Loader2, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 import { SubmodulosNav } from "../../SubmodulosNav";
 import { SolicitudesPanel } from "./SolicitudesPanel";
@@ -12,12 +13,14 @@ import { GestionVehiculosTableShell } from "../lib/table-ui";
 import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
 
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
+import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 type TabSolicitud = (typeof TABS)[number];
+type AccionSolicitud = "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR";
 
 const TAB_LABELS: Record<TabSolicitud, string> = {
   TODAS: "Todas",
@@ -38,9 +41,30 @@ export function Solicitudes() {
   const [formOpen, setFormOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudRow | null>(null);
-  const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR" | null>(null);
+  const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | null>(null);
+  const [misionPendiente, setMisionPendiente] = useState(false);
 
-  const handleAction = (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => {
+  const handleAction = async (solicitud: SolicitudRow, action: AccionSolicitud) => {
+    if (action === "INICIAR" || action === "FINALIZAR") {
+      if (misionPendiente) return;
+      setMisionPendiente(true);
+      try {
+        const nuevoEstado = action === "INICIAR" ? "EN_MISION" : "FINALIZADA";
+        const res = await cambiarEstadoSolicitud(solicitud.id, nuevoEstado);
+        if (!res.success) {
+          toast.error(res.error || "No se pudo actualizar la misión.");
+          return;
+        }
+        toast.success(action === "INICIAR" ? "Misión iniciada." : "Misión finalizada.");
+        invalidate();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "No se pudo actualizar la misión.");
+      } finally {
+        setMisionPendiente(false);
+      }
+      return;
+    }
+
     setSelectedSolicitud(solicitud);
     setActionType(action);
     setActionModalOpen(true);
@@ -122,6 +146,7 @@ export function Solicitudes() {
               solicitudes={filtradas}
               canManage={canManage}
               onAction={handleAction}
+              misionPendiente={misionPendiente}
               onDetailViewChange={setInDetailView}
             />
           )}

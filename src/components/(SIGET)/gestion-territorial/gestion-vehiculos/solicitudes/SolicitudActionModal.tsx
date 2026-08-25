@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import {
   CheckCircle,
   XCircle,
-  PlayCircle,
-  StopCircle,
   Loader2,
-  MapPin,
-  User,
-  CalendarRange,
   Car,
   AlertTriangle,
 } from "lucide-react";
@@ -31,14 +26,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { formatFechaCortaGt, formatHoraGt } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { ESTADOS_SOLICITUD, type SolicitudRow } from "./lib/zod";
 import { useVehiculosParaSolicitud } from "./lib/hooks";
-import { formatVehiculoOpcion } from "../flota/lib/helpers";
+import { esVehiculoDisponible, formatVehiculoOpcion } from "../flota/lib/helpers";
+import type { VehiculoRow } from "../flota/lib/zod";
 
-type ActionType = "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR";
+type ActionType = "APROBAR" | "RECHAZAR";
+
+const ESTADO_VEHICULO_LABELS: Record<string, string> = {
+  LIBRE: "Libre",
+  DISPONIBLE: "Disponible",
+  RESERVADO: "Reservado",
+  EN_MANTENIMIENTO: "En mantenimiento",
+};
 
 const ACTION_META: Record<
   ActionType,
@@ -74,68 +76,7 @@ const ACTION_META: Record<
     iconColor: "text-red-600 dark:text-red-400",
     confirmBtn: "bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500",
   },
-  INICIAR: {
-    title: "Iniciar misión",
-    description: "El vehículo pasará a estado en misión según la programación aprobada.",
-    confirmLabel: "Iniciar misión",
-    icon: PlayCircle,
-    accentBar: "bg-sky-500",
-    iconWrap: "bg-sky-100 dark:bg-sky-950",
-    iconColor: "text-sky-600 dark:text-sky-400",
-    confirmBtn: "bg-azul-trifinio text-white hover:opacity-90",
-  },
-  FINALIZAR: {
-    title: "Finalizar misión",
-    description: "Confirme que el vehículo ha retornado y la misión ha concluido.",
-    confirmLabel: "Finalizar misión",
-    icon: StopCircle,
-    accentBar: "bg-sky-500",
-    iconWrap: "bg-sky-100 dark:bg-sky-950",
-    iconColor: "text-sky-600 dark:text-sky-400",
-    confirmBtn: "bg-azul-trifinio text-white hover:opacity-90",
-  },
 };
-
-function ResumenItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof MapPin;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-        <p className="truncate text-sm font-semibold text-foreground">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function ResumenFechaHoraItem({
-  icon: Icon,
-  label,
-  fechaIso,
-}: {
-  icon: typeof CalendarRange;
-  label: string;
-  fechaIso: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-        <p className="tabular-nums text-sm font-bold text-foreground">{formatFechaCortaGt(fechaIso)}</p>
-        <p className="tabular-nums text-sm font-semibold text-celeste-trifinio">{formatHoraGt(fechaIso)}</p>
-      </div>
-    </div>
-  );
-}
 
 export function SolicitudActionModal({
   open,
@@ -159,8 +100,48 @@ export function SolicitudActionModal({
   useEffect(() => {
     if (!cargarLibres) {
       setSelectedVehiculo("");
+      return;
     }
-  }, [cargarLibres]);
+
+    if (!solicitud?.vehiculo_id || loadingVehiculos) return;
+    setSelectedVehiculo(solicitud.vehiculo_id);
+  }, [cargarLibres, solicitud?.vehiculo_id, loadingVehiculos]);
+
+  const vehiculoPreferido = solicitud?.vehiculo ?? null;
+
+  const vehiculosParaAprobar = useMemo(() => {
+    const libres = vehiculosLibres.filter((v): v is VehiculoRow & { id: string } => Boolean(v.id));
+    if (!vehiculoPreferido?.id) return libres;
+    if (libres.some((v) => v.id === vehiculoPreferido.id)) return libres;
+
+    const preferidoComoOpcion: VehiculoRow = {
+      id: vehiculoPreferido.id,
+      placa: vehiculoPreferido.placa,
+      marca: vehiculoPreferido.marca,
+      modelo: vehiculoPreferido.modelo,
+      color: vehiculoPreferido.color?.trim() || "—",
+      estado:
+        vehiculoPreferido.estado === "LIBRE" ||
+        vehiculoPreferido.estado === "RESERVADO" ||
+        vehiculoPreferido.estado === "EN_MANTENIMIENTO"
+          ? vehiculoPreferido.estado
+          : "LIBRE",
+      kilometraje_actual: vehiculoPreferido.kilometraje_actual ?? 0,
+      imagen_url: [],
+    };
+
+    return [preferidoComoOpcion, ...libres];
+  }, [vehiculosLibres, vehiculoPreferido]);
+
+  const preferidoFueraDeDisponibles = Boolean(
+    vehiculoPreferido?.id &&
+      !vehiculosLibres.some((v) => v.id === vehiculoPreferido.id) &&
+      !esVehiculoDisponible({ estado: vehiculoPreferido.estado ?? "" }),
+  );
+
+  const estadoPreferidoLabel = vehiculoPreferido?.estado
+    ? ESTADO_VEHICULO_LABELS[vehiculoPreferido.estado] ?? vehiculoPreferido.estado
+    : null;
 
   const meta = actionType ? ACTION_META[actionType] : null;
   const Icon = meta?.icon ?? CheckCircle;
@@ -174,11 +155,8 @@ export function SolicitudActionModal({
     }
 
     startTransition(async () => {
-      let nuevoEstado: (typeof ESTADOS_SOLICITUD)[number];
-      if (actionType === "APROBAR") nuevoEstado = "APROBADA";
-      else if (actionType === "RECHAZAR") nuevoEstado = "RECHAZADA";
-      else if (actionType === "INICIAR") nuevoEstado = "EN_MISION";
-      else nuevoEstado = "FINALIZADA";
+      const nuevoEstado: (typeof ESTADOS_SOLICITUD)[number] =
+        actionType === "APROBAR" ? "APROBADA" : "RECHAZADA";
 
       const payload =
         actionType === "APROBAR" ? { vehiculo_id: selectedVehiculo } : undefined;
@@ -198,7 +176,7 @@ export function SolicitudActionModal({
   const confirmDisabled =
     isPending ||
     (actionType === "APROBAR" &&
-      (loadingVehiculos || vehiculosLibres.length === 0 || !selectedVehiculo));
+      (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,43 +209,49 @@ export function SolicitudActionModal({
             </div>
           </DialogHeader>
 
-          {solicitud && (
-            <div className="rounded-2xl border border-border bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio">
-                Resumen de la solicitud
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ResumenItem icon={MapPin} label="Destino" value={solicitud.destino} />
-                <ResumenItem
-                  icon={User}
-                  label="Solicitante"
-                  value={solicitud.solicitante?.nombre ?? "—"}
-                />
-                <ResumenFechaHoraItem
-                  icon={CalendarRange}
-                  label="Inicio"
-                  fechaIso={solicitud.fecha_inicio}
-                />
-                <ResumenFechaHoraItem
-                  icon={CalendarRange}
-                  label="Fin estimado"
-                  fechaIso={solicitud.fecha_fin_estimada}
-                />
-              </div>
-            </div>
-          )}
-
           {actionType === "APROBAR" && (
-            <div className="space-y-2.5">
-              <Label className="text-xs font-bold uppercase tracking-widest text-foreground">
-                Vehículo asignado
-              </Label>
+            <div className="space-y-4">
+              {vehiculoPreferido ? (
+                <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/40">
+                  <Car className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-sky-800 dark:text-sky-300">
+                      Vehículo preferido del solicitante
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatVehiculoOpcion(vehiculoPreferido)}
+                    </p>
+                    {vehiculoPreferido.kilometraje_actual != null ? (
+                      <p className="text-xs text-muted-foreground dark:text-zinc-400">
+                        Odómetro:{" "}
+                        {vehiculoPreferido.kilometraje_actual.toLocaleString("es-GT")} km
+                      </p>
+                    ) : null}
+                    {estadoPreferidoLabel &&
+                    vehiculoPreferido &&
+                    !esVehiculoDisponible(vehiculoPreferido) ? (
+                      <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                        Estado en flota: {estadoPreferidoLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <p className="rounded-xl border border-border bg-zinc-50 px-4 py-3 text-xs leading-relaxed text-muted-foreground dark:bg-zinc-800 dark:text-zinc-400">
+                  El solicitante no indicó vehículo preferido.
+                </p>
+              )}
+
+              <div className="space-y-2.5">
+                <Label className="text-xs font-bold uppercase tracking-widest text-foreground">
+                  Confirmar vehículo asignado
+                </Label>
               {loadingVehiculos ? (
                 <div className="flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-zinc-50 text-sm text-muted-foreground dark:bg-zinc-800">
                   <Loader2 className="size-4 animate-spin" />
                   Cargando vehículos disponibles…
                 </div>
-              ) : vehiculosLibres.length === 0 ? (
+              ) : vehiculosParaAprobar.length === 0 ? (
                 <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
                   <Car className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                   <p className="text-sm text-amber-800 dark:text-amber-300">
@@ -276,30 +260,46 @@ export function SolicitudActionModal({
                   </p>
                 </div>
               ) : (
-                <Select value={selectedVehiculo} onValueChange={setSelectedVehiculo}>
-                  <SelectTrigger className="h-11 w-full cursor-pointer rounded-xl border border-celeste-trifinio/30 bg-white shadow-none dark:border-zinc-600 dark:bg-zinc-800">
-                    <SelectValue placeholder="Seleccione un vehículo disponible" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    className="z-[200] max-h-60 w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
-                  >
-                    {vehiculosLibres.filter((v) => v.id).map((v) => {
-                      const label = formatVehiculoOpcion(v);
-                      return (
-                        <SelectItem
-                          key={v.id}
-                          value={v.id as string}
-                          textValue={label}
-                          className="cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800"
-                        >
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <>
+                  <Select value={selectedVehiculo} onValueChange={setSelectedVehiculo}>
+                    <SelectTrigger className="h-11 w-full cursor-pointer rounded-xl border border-celeste-trifinio/30 bg-white shadow-none dark:border-zinc-600 dark:bg-zinc-800">
+                      <SelectValue placeholder="Seleccione un vehículo disponible" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      className="z-[200] max-h-60 w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
+                    >
+                      {vehiculosParaAprobar.map((v) => {
+                        const esPreferido = v.id === vehiculoPreferido?.id;
+                        const fueraDeLibres = esPreferido && preferidoFueraDeDisponibles;
+                        const label = formatVehiculoOpcion(v);
+                        const itemLabel = fueraDeLibres
+                          ? `${label} · solicitado (no libre)`
+                          : label;
+                        return (
+                          <SelectItem
+                            key={v.id}
+                            value={v.id}
+                            textValue={itemLabel}
+                            className="cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800"
+                          >
+                            {itemLabel}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {preferidoFueraDeDisponibles &&
+                  selectedVehiculo === vehiculoPreferido?.id ? (
+                    <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                      Este vehículo no está libre en flota
+                      {estadoPreferidoLabel ? ` (${estadoPreferidoLabel.toLowerCase()})` : ""}. Puede
+                      elegir otro disponible o resolver el estado antes de aprobar.
+                    </p>
+                  ) : null}
+                </>
               )}
+              </div>
             </div>
           )}
 

@@ -11,11 +11,13 @@ export function SolicitudesPanel({
   solicitudes,
   canManage,
   onAction,
+  misionPendiente = false,
   onDetailViewChange,
 }: {
   solicitudes: SolicitudRow[];
   canManage: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
+  misionPendiente?: boolean;
   onDetailViewChange?: (active: boolean) => void;
 }) {
   const prefersReducedMotion = useReducedMotion();
@@ -53,6 +55,7 @@ export function SolicitudesPanel({
             <SolicitudDetalleView
               solicitud={selectedSolicitud}
               canManage={canManage}
+              misionPendiente={misionPendiente}
               onBack={() => setSelectedSolicitud(null)}
               onAction={onAction}
             />

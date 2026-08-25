@@ -8,6 +8,9 @@ import type { BitacoraRow } from "./zod";
 
 const COLUMN_COUNT = 9;
 const MIN_DATA_ROWS = 18;
+const LOGO_COL = 2;
+const TITLE_START_COL = 3;
+const TITLE_END_COL = 8;
 const TITLE_ROW_1 = "PLAN TRIFINIO/ DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
 const TITLE_ROW_2 = "FORMULARIO DE CONTROL DE USO DE VEHICULO - BITACORA";
 
@@ -92,6 +95,25 @@ function formatPeriodoReporte(mesLabel: string, anio: string): string {
   return `${mesLabel.toUpperCase()} ${anio}`;
 }
 
+function responsableBitacoraNombre(bitacora: BitacoraRow): string {
+  return bitacora.profiles?.nombre?.trim() ?? "";
+}
+
+function setCellUnderlineValue(
+  sheet: ExcelJS.Worksheet,
+  row: number,
+  col: number,
+  value: string,
+  options?: { font?: Partial<ExcelJS.Font>; alignment?: Partial<ExcelJS.Alignment> },
+) {
+  const cell = sheet.getCell(row, col);
+  cell.value = value;
+  cell.font = { size: 10, underline: true, ...options?.font };
+  if (options?.alignment) {
+    cell.alignment = options.alignment;
+  }
+}
+
 function applyBorderRange(
   sheet: ExcelJS.Worksheet,
   startRow: number,
@@ -148,19 +170,19 @@ function buildBitacoraSheet(
   });
 
   sheet.columns = [
-    { width: 11 },
-    { width: 28 },
-    { width: 24 },
-    { width: 14 },
-    { width: 14 },
-    { width: 11 },
-    { width: 10 },
     { width: 12 },
     { width: 26 },
+    { width: 22 },
+    { width: 14 },
+    { width: 14 },
+    { width: 11 },
+    { width: 11 },
+    { width: 12 },
+    { width: 28 },
   ];
 
-  sheet.mergeCells(1, 1, 3, 1);
-  sheet.getCell(1, 1).alignment = { vertical: "middle", horizontal: "center" };
+  sheet.mergeCells(1, LOGO_COL, 3, LOGO_COL);
+  sheet.getCell(1, LOGO_COL).alignment = { vertical: "middle", horizontal: "center" };
 
   if (logoBuffer) {
     const imageId = workbook.addImage({
@@ -168,16 +190,16 @@ function buildBitacoraSheet(
       extension: "png",
     });
     sheet.addImage(imageId, {
-      tl: { col: 0.15, row: 0.1 },
-      ext: { width: 88, height: 72 },
+      tl: { col: 1.12, row: 0.12 },
+      ext: { width: 84, height: 68 },
     });
   }
 
-  setMergedValue(sheet, 1, 2, COLUMN_COUNT, TITLE_ROW_1, {
+  setMergedValue(sheet, 1, TITLE_START_COL, TITLE_END_COL, TITLE_ROW_1, {
     font: { bold: true, size: 11 },
     alignment: { horizontal: "center", vertical: "middle", wrapText: true },
   });
-  setMergedValue(sheet, 2, 2, COLUMN_COUNT, TITLE_ROW_2, {
+  setMergedValue(sheet, 2, TITLE_START_COL, TITLE_END_COL, TITLE_ROW_2, {
     font: { bold: true, size: 11 },
     alignment: { horizontal: "center", vertical: "middle", wrapText: true },
   });
@@ -190,27 +212,25 @@ function buildBitacoraSheet(
   const placa = grupo.vehiculo ? formatPlacaReporte(grupo.vehiculo.placa) : "—";
   const periodo = formatPeriodoReporte(grupo.mesLabel, grupo.anio);
 
-  sheet.getCell(4, 1).value = "Descripción del Vehículo:";
-  sheet.getCell(4, 1).font = { bold: true, size: 10 };
+  sheet.getCell(4, LOGO_COL).value = "Descripción del Vehículo:";
+  sheet.getCell(4, LOGO_COL).font = { bold: true, size: 10 };
 
-  setMergedValue(sheet, 4, 2, 3, descripcion, {
+  setMergedValue(sheet, 4, 3, 4, descripcion, {
     font: { underline: true, size: 10 },
     alignment: { horizontal: "left", vertical: "middle" },
   });
 
-  sheet.getCell(4, 4).value = "PLACA:";
-  sheet.getCell(4, 4).font = { bold: true, size: 10 };
+  sheet.getCell(4, 5).value = "PLACAS:";
+  sheet.getCell(4, 5).font = { bold: true, size: 10 };
 
-  setMergedValue(sheet, 4, 5, 6, placa, {
-    font: { underline: true, size: 10 },
+  setCellUnderlineValue(sheet, 4, 6, placa, {
     alignment: { horizontal: "left", vertical: "middle" },
   });
 
   sheet.getCell(4, 7).value = "MES:";
   sheet.getCell(4, 7).font = { bold: true, size: 10 };
 
-  setMergedValue(sheet, 4, 8, COLUMN_COUNT, periodo, {
-    font: { underline: true, size: 10 },
+  setCellUnderlineValue(sheet, 4, 8, periodo, {
     alignment: { horizontal: "left", vertical: "middle" },
   });
 
@@ -248,17 +268,20 @@ function buildBitacoraSheet(
     const bitacora = sorted[offset];
 
     const values: (string | number | null)[] = bitacora
-      ? [
-          format(new Date(bitacora.fecha), "dd/MM/yyyy"),
-          bitacora.destino,
-          bitacora.profiles?.nombre ?? "",
-          bitacora.km_inicial,
-          bitacora.km_final,
-          bitacora.km_recorrido,
-          bitacora.vale_combustible ?? "",
-          Number(bitacora.monto_combustible) || 0,
-          "",
-        ]
+      ? (() => {
+          const responsable = responsableBitacoraNombre(bitacora);
+          return [
+            format(new Date(bitacora.fecha), "dd/MM/yyyy"),
+            bitacora.destino,
+            responsable,
+            bitacora.km_inicial,
+            bitacora.km_final,
+            bitacora.km_recorrido,
+            bitacora.vale_combustible ?? "",
+            Number(bitacora.monto_combustible) || 0,
+            responsable,
+          ];
+        })()
       : ["", "", "", "", "", "", "", "", ""];
 
     values.forEach((value, colIndex) => {

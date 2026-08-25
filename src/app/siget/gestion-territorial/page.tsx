@@ -4,13 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import AnimatedIcon from "@/components/ui/AnimatedIcon";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useUser,
-  useUserContext,
-} from "@/components/(base)/providers/UserProvider";
 import { AuroraText } from "@/components/ui/aurora-text";
+import { useUser } from "@/components/(base)/providers/UserProvider";
 import { createClient } from "@/utils/supabase/client";
 
 const FRASES_BIENVENIDA = [
@@ -24,15 +19,13 @@ export default function GestionTerritorialPage() {
   const user = useUser();
   const metadata = user?.user_metadata || {};
 
-  const [loading, setLoading] = useState(true);
   const [genero, setGenero] = useState<string | null>(null);
   const [typedText, setTypedText] = useState("");
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user?.id) return;
+
+    let cancelled = false;
     const fetchProfile = async () => {
       try {
         const supabase = createClient();
@@ -40,18 +33,20 @@ export default function GestionTerritorialPage() {
           .from("profiles")
           .select("genero")
           .eq("id", user.id)
-          .single();
-        if (data && !error) {
+          .maybeSingle();
+        if (!cancelled && data && !error) {
           setGenero(data.genero);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
-      } finally {
-        setLoading(false);
       }
     };
-    fetchProfile();
-  }, [user]);
+
+    void fetchProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     const fraseAleatoria =
@@ -67,14 +62,6 @@ export default function GestionTerritorialPage() {
     }, 600);
     return () => clearTimeout(timeout);
   }, []);
-
-  if (loading) {
-    return (
-      <div className="flex-1 w-full px-6 lg:px-12 space-y-10 max-w-550 mx-auto pb-10 pt-20">
-        <Skeleton className="h-[400px] w-full rounded-[2.5rem]" />
-      </div>
-    );
-  }
 
   const welcomeText =
     genero === "Femenino"
