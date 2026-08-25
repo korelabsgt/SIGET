@@ -76,6 +76,67 @@ export function formatFechaHoraGt(
   }).format(date);
 }
 
+function formatAmPmGt(dayPeriod: string): string {
+  const letter = dayPeriod.replace(/[^ap]/gi, "").toUpperCase();
+  return letter === "P" ? "P.M." : "A.M.";
+}
+
+function formatDiaSemanaCortoGt(weekday: string): string {
+  const limpio = weekday.replace(/\./g, "").trim();
+  if (!limpio) return "";
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1, 3).toLowerCase();
+}
+
+function partesFechaHoraTablaGt(value: string | null | undefined): {
+  fecha: string;
+  hora: string;
+} | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
+
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
+  const dayPeriod = parts.find((p) => p.type === "dayPeriod")?.value ?? "";
+
+  return {
+    fecha: `${formatDiaSemanaCortoGt(weekday)} ${day}/${month}/${year}`,
+    hora: `${hour}:${minute} ${formatAmPmGt(dayPeriod)}`,
+  };
+}
+
+export function formatFechaTablaGt(value: string | null | undefined): string {
+  return partesFechaHoraTablaGt(value)?.fecha ?? "—";
+}
+
+export function formatHoraTablaGt(value: string | null | undefined): string {
+  return partesFechaHoraTablaGt(value)?.hora ?? "—";
+}
+
+export function formatFechaHoraTablaGt(
+  value: string | null | undefined,
+): string {
+  const partes = partesFechaHoraTablaGt(value);
+  if (!partes) return "—";
+  return `${partes.fecha}, ${partes.hora}`;
+}
+
 export function mesCalendarioToTimestamptz(mes: string): string {
   const normalizado = normalizarMesCalendario(mes);
   if (!normalizado) throw new Error("INVALID_MONTH");

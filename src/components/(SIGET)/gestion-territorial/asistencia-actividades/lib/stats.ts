@@ -1,4 +1,5 @@
 import type { RegistroAsistenciaRecord } from "./zod";
+import { INSTITUCION_PLAN_TRIFINIO, INSTITUCION_SIN } from "./zod";
 
 export type StatSegment = {
   name: string;
@@ -51,15 +52,24 @@ function contarPorCampo(
     .sort((a, b) => b.value - a.value);
 }
 
-export function statsPorTrifinio(
+export function statsPorInstitucion(
   registros: RegistroAsistenciaRecord[],
 ): StatSegment[] {
-  const si = registros.filter((r) => r.es_trifinio).length;
-  const no = registros.length - si;
-  return [
-    { name: "Plan Trifinio", value: si, color: "#0ea5e9" },
-    { name: "Externo", value: no, color: "#a855f7" },
-  ].filter((s) => s.value > 0);
+  const map = new Map<string, number>();
+  for (const r of registros) {
+    const name = r.institucion?.trim() || INSTITUCION_SIN;
+    map.set(name, (map.get(name) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([name, value], i) => ({
+      name,
+      value,
+      color:
+        name === INSTITUCION_PLAN_TRIFINIO
+          ? "#0ea5e9"
+          : DEPTO_COLORS[i % DEPTO_COLORS.length],
+    }))
+    .sort((a, b) => b.value - a.value);
 }
 
 export function statsPorGenero(

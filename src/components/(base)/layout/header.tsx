@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useUser } from "@/components/(base)/providers/UserProvider";
 import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
-import { Menu as MenuIcon, X, RefreshCw } from "lucide-react";
+import { EllipsisVertical, X } from "lucide";
+import { RefreshCw } from "lucide-react";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import Menu from "./Menu";
 import { getPendingDevicesCount } from "@/components/(SIGET)/admin/lib/actions";
 import { createPortal } from "react-dom";
-import AnimacionLogoTrifinio from "@/components/(SIGET)/logo/AnimacionLogoTrifinio";
+import AnimacionLogoSiget from "@/components/(SIGET)/logo/AnimacionLogoSiget";
 
 export default function Header() {
   const user = useUser();
@@ -19,10 +20,16 @@ export default function Header() {
   const [pendingDevices, setPendingDevices] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [refreshSpinning, setRefreshSpinning] = useState(false);
+  const [refreshRotation, setRefreshRotation] = useState(0);
+  const [breadcrumbInline, setBreadcrumbInline] = useState(false);
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
   const showBreadcrumb = Boolean(user) && !isLoginPage;
   const showHamburger = Boolean(user);
+
+  const inlineSlotRef = useRef<HTMLDivElement | null>(null);
+  const breadcrumbMeasureRef = useRef<HTMLDivElement | null>(null);
 
   const metadata = user?.user_metadata || {};
   const role = metadata.rol || user?.role || "user";
@@ -34,102 +41,142 @@ export default function Header() {
     getPendingDevicesCount().then((c) => setPendingDevices(c ?? 0));
   }, [canManage]);
 
-  const handleLogoClick = (e: React.MouseEvent) => {
-    // Prevent default navigation to show the animation instead
-    e.preventDefault();
-    setIsFullScreen(true);
+  const measureBreadcrumbFit = useCallback(() => {
+    const slot = inlineSlotRef.current;
+    const measure = breadcrumbMeasureRef.current;
+    if (!slot || !measure) return;
+    const available = slot.clientWidth;
+    const needed = measure.scrollWidth;
+    setBreadcrumbInline(needed <= available);
+  }, []);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (!showBreadcrumb) {
+      delete root.dataset.breadcrumb;
+      setBreadcrumbInline(false);
+      return () => {
+        delete root.dataset.breadcrumb;
+      };
+    }
+    root.dataset.breadcrumb = breadcrumbInline ? "inline" : "on";
+    return () => {
+      delete root.dataset.breadcrumb;
+    };
+  }, [showBreadcrumb, breadcrumbInline]);
+
+  useLayoutEffect(() => {
+    if (!showBreadcrumb) return;
+    measureBreadcrumbFit();
+    const slot = inlineSlotRef.current;
+    const measure = breadcrumbMeasureRef.current;
+    if (!slot || !measure) return;
+    const observer = new ResizeObserver(() => measureBreadcrumbFit());
+    observer.observe(slot);
+    observer.observe(measure);
+    return () => observer.disconnect();
+  }, [showBreadcrumb, pathname, measureBreadcrumbFit]);
+
+  const handleRefresh = () => {
+    if (refreshSpinning) return;
+    setRefreshSpinning(true);
+    setRefreshRotation((rotation) => rotation + 360);
+  };
+
+  const handleRefreshHover = (hovered: boolean) => {
+    if (refreshSpinning) return;
+    setRefreshRotation(hovered ? 90 : 0);
   };
 
   return (
     <>
       <div
         aria-hidden
-        className={`shrink-0 pointer-events-none transition-[height] duration-200 md:h-16 ${
-          showBreadcrumb ? "h-28" : "h-14"
-        }`}
+        className="pointer-events-none shrink-0 transition-[height] duration-200 h-[calc(var(--header-row-height)+var(--breadcrumb-row-height))]"
       />
-      <header className="w-full fixed left-0 transition-all bg-zinc-100 dark:bg-zinc-800 border-b border-border/40 z-[100] shadow-sm">
-        <div className="mx-auto flex h-14 md:h-16 items-center justify-between px-3 md:px-8 gap-2 md:gap-4">
-          <div className="flex min-w-0 flex-1 items-center h-full overflow-hidden pr-1">
-            <div className="flex min-w-0 items-center shrink">
-              <Link
-                href={user ? "/siget" : "/"}
-                onClick={handleLogoClick}
-                id="observatorio-header-brand"
-                className="flex min-w-0 max-w-full flex-row items-center gap-1.5 md:gap-3 cursor-pointer group overflow-hidden"
-              >
-                <motion.h1
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="shrink-0 text-lg sm:text-xl md:text-4xl font-extrabold tracking-tighter leading-none text-azul-trifinio dark:text-white transition-transform duration-300 group-hover:scale-105 origin-left"
-                >
-                  SIGET
-                </motion.h1>
-                <motion.div
-                  initial={{ opacity: 0, clipPath: "inset(0 100% 0 0)" }}
-                  animate={{ opacity: 1, clipPath: "inset(0 0 0 0)" }}
-                  transition={{
-                    duration: 0.8,
-                    delay: 0.2,
-                    ease: [0.25, 1, 0.5, 1],
-                  }}
-                  className="min-w-0 text-[7px] sm:text-[10px] md:text-sm font-black uppercase tracking-[0.08em] sm:tracking-[0.12em] md:tracking-widest leading-[1.05] md:leading-[1.15] text-celeste-trifinio border-l border-border/60 pl-1.5 md:pl-3 transition-transform duration-300 group-hover:scale-[1.02] origin-left group-hover:text-azul-trifinio dark:group-hover:text-[#FFFDD0]"
-                >
-                  SISTEMA INTEGRAL DE
-                  <br />
-                  GESTIÓN ESTRATÉGICA TRIFINIO
-                </motion.div>
-              </Link>
+      <header className="fixed left-0 z-[100] w-full border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800">
+        <div className="mx-auto flex h-[var(--header-row-height)] items-center justify-between gap-2 pl-3 pr-1 md:gap-4 md:pl-8 md:pr-2.5">
+          <button
+            type="button"
+            id="observatorio-header-brand"
+            onClick={() => setIsFullScreen(true)}
+            className="flex cursor-pointer items-center gap-1.5 md:gap-3"
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="shrink-0 cursor-pointer text-lg leading-none font-extrabold tracking-tighter text-azul-trifinio sm:text-xl md:text-4xl dark:text-white"
+            >
+              SIGET
+            </motion.h1>
+            <motion.div
+              initial={{ opacity: 0, clipPath: "inset(0 100% 0 0)" }}
+              animate={{ opacity: 1, clipPath: "inset(0 0 0 0)" }}
+              transition={{
+                duration: 0.8,
+                delay: 0.2,
+                ease: [0.25, 1, 0.5, 1],
+              }}
+              className="cursor-pointer border-l border-border/60 pl-1.5 text-left text-[7px] leading-[1.05] font-black tracking-[0.08em] text-celeste-trifinio uppercase sm:text-[10px] sm:tracking-[0.12em] md:pl-3 md:text-sm md:leading-[1.15] md:tracking-widest"
+            >
+              SISTEMA INTEGRAL DE
+              <br />
+              GESTIÓN ESTRATÉGICA TRIFINIO
+            </motion.div>
+          </button>
+
+          {showBreadcrumb && (
+            <div
+              ref={inlineSlotRef}
+              className="flex min-w-0 flex-1 items-center overflow-hidden"
+            >
+              {breadcrumbInline && <BreadcrumbNav />}
             </div>
-            {showBreadcrumb && (
-              <div className="hidden md:flex ml-4 md:ml-6 border-l border-border/30 h-10 items-center pl-4 md:pl-6">
-                <BreadcrumbNav />
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="flex shrink-0 items-center gap-2.5 md:gap-4">
             <AnimatedThemeToggler />
             <button
               id="refresh-btn"
-              onClick={() => window.location.reload()}
-              className="flex items-center justify-center text-azul-trifinio hover:text-celeste-trifinio dark:text-white dark:hover:text-white/80 cursor-pointer transition-all hover:rotate-180 duration-500 active:scale-95"
+              type="button"
+              onClick={handleRefresh}
+              onMouseEnter={() => handleRefreshHover(true)}
+              onMouseLeave={() => handleRefreshHover(false)}
+              className="flex cursor-pointer items-center justify-center text-azul-trifinio hover:text-celeste-trifinio dark:text-white dark:hover:text-white/80"
             >
-              <RefreshCw className="size-6 md:size-6" />
+              <motion.span
+                animate={{ rotate: refreshRotation }}
+                transition={{
+                  duration: refreshSpinning ? 0.55 : 0.25,
+                  ease: refreshSpinning ? "easeInOut" : "easeOut",
+                }}
+                onAnimationComplete={() => {
+                  if (refreshSpinning) window.location.reload();
+                }}
+                className="inline-flex"
+              >
+                <RefreshCw size={24} strokeWidth={2.25} />
+              </motion.span>
             </button>
             {showHamburger && (
               <div className="relative">
                 <button
                   onClick={() => setIsOpen(!isOpen)}
-                  className="flex items-center justify-center text-foreground hover:text-foreground/80 cursor-pointer transition-all active:scale-95"
+                  className="flex cursor-pointer items-center justify-center text-foreground transition-colors active:scale-95 hover:text-foreground/80"
                 >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {isOpen ? (
-                      <motion.div
-                        key="close"
-                        initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
-                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                        exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <X className="size-6 md:size-8" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="menu"
-                        initial={{ opacity: 0, rotate: 90, scale: 0.8 }}
-                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                        exit={{ opacity: 0, rotate: -90, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <MenuIcon className="size-6 md:size-8" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <MorphHoverIcon
+                    from={EllipsisVertical}
+                    to={X}
+                    hovered={isOpen}
+                    size={28}
+                    color="currentColor"
+                    spring="snappy"
+                    className="md:scale-[1.14]"
+                  />
                 </button>
                 {!isOpen && canManage && pendingDevices > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-[10px] font-bold text-white animate-pulse pointer-events-none">
+                  <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-[18px] min-w-[18px] animate-pulse items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
                     {pendingDevices}
                   </span>
                 )}
@@ -137,14 +184,22 @@ export default function Header() {
             )}
           </div>
         </div>
+
+        {showBreadcrumb && !breadcrumbInline && (
+          <div className="flex min-w-0 w-full items-start pt-0 pb-2 pl-2 pr-3 md:pl-4 md:pr-8">
+            <BreadcrumbNav />
+          </div>
+        )}
       </header>
 
       {showBreadcrumb && (
         <div
-          style={{ top: "calc(var(--banner-height, 0px) + 56px)" }}
-          className="fixed left-0 md:hidden w-full px-6 h-[var(--mobile-breadcrumb-height)] flex items-center bg-zinc-100 dark:bg-zinc-800 z-[105]"
+          aria-hidden
+          className="pointer-events-none fixed -top-[9999px] left-0 flex w-max items-center whitespace-nowrap"
         >
-          <BreadcrumbNav />
+          <div ref={breadcrumbMeasureRef} className="flex w-max items-center">
+            <BreadcrumbNav />
+          </div>
         </div>
       )}
 
@@ -154,7 +209,7 @@ export default function Header() {
 
       {mounted &&
         createPortal(
-          <AnimacionLogoTrifinio
+          <AnimacionLogoSiget
             isOpen={isFullScreen}
             onClose={() => setIsFullScreen(false)}
           />,

@@ -61,10 +61,10 @@ export function PublicHome() {
       {/* Hero desktop — spacer + contenido con parallax */}
       <section className="relative z-10 hidden h-screen w-full shrink-0 md:block">
         <motion.div
-          className="absolute inset-0 flex justify-center items-center z-5 pt-16 px-4 lg:px-8"
-          style={{ y: logoY, opacity: logoOpacity, zoom: 0.75 }}
+          className="absolute inset-0 z-5 flex items-center justify-center px-4 pt-16 lg:px-8"
+          style={{ y: logoY, opacity: logoOpacity }}
         >
-          <div className="relative w-full max-w-5xl">
+          <div className="w-full max-w-5xl origin-center scale-[0.85] lg:scale-90">
             <HeroVideoLayout
               videoOpen={videoOpen}
               onOpen={() => setVideoOpen(true)}
@@ -92,7 +92,6 @@ export function PublicHome() {
               paddingTop: headerOffset + 8,
               y: logoY,
               opacity: logoOpacity,
-              zoom: 1 / 0.9,
             }}
           >
             <HeroVideoLayout

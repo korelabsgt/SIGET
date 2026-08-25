@@ -46,9 +46,9 @@ export function ConoceMasButton({
         className,
       )}
     >
-      <div className="absolute inset-0 bg-white/55 backdrop-blur-md border border-white/50 rounded-lg" />
-      <Play className="relative size-4 shrink-0 fill-azul-trifinio text-azul-trifinio" />
-      <span className="relative text-sm md:text-base font-semibold tracking-wide text-azul-trifinio whitespace-nowrap">
+      <div className="absolute inset-0 rounded-lg border border-white/50 bg-white/55 backdrop-blur-md" />
+      <Play className="relative size-4 shrink-0 fill-azul-trifinio-hero text-azul-trifinio-hero" />
+      <span className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-azul-trifinio-hero md:text-base">
         Conoce más
       </span>
     </motion.button>
@@ -145,35 +145,31 @@ export function HeroVideoLayout({
   if (videoOpen) return null;
 
   return (
-    <div
-      className={cn(
-        "relative z-[6] w-full mx-auto max-w-2xl px-2",
-      )}
-    >
+    <div className="relative z-[6] mx-auto w-full max-w-2xl px-2">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={fadeTransition}
-        className="flex flex-col items-center w-full"
+        className="flex w-full flex-col items-center"
       >
         <div className="relative isolate w-full">
           {mobile ? (
             <LogoTrifinioMobile backgroundEffect="blur" forceAzulColors />
           ) : (
-            <LogoTrifinio forceAzulColors />
+            <LogoTrifinio backgroundEffect="blur" forceAzulColors />
           )}
         </div>
-        <div className="mt-4 md:mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 md:mt-8">
           <ConoceMasButton onClick={onOpen} />
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/observatorio-web"
-              className="relative flex items-center gap-2.5 px-4 py-2 md:px-5 md:py-2.5 rounded-lg overflow-hidden"
+              className="relative flex cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg px-4 py-2 md:px-5 md:py-2.5"
             >
-              <div className="absolute inset-0 bg-white/55 backdrop-blur-md border border-white/50 rounded-lg" />
-              <Globe className="relative size-4 shrink-0 text-azul-trifinio" />
-              <span className="relative text-sm md:text-base font-semibold tracking-wide text-azul-trifinio whitespace-nowrap">
+              <div className="absolute inset-0 rounded-lg border border-white/50 bg-white/55 backdrop-blur-md" />
+              <Globe className="relative size-4 shrink-0 text-azul-trifinio-hero" />
+              <span className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-azul-trifinio-hero md:text-base">
                 Observatorio Web
               </span>
             </Link>

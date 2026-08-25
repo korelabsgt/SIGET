@@ -5,8 +5,18 @@
 
 :root {
   --banner-height: 0px;
-  --mobile-header-height: 3.5rem;
-  --mobile-breadcrumb-height: 3.5rem;
+  --header-row-height: 3.5rem;
+  --breadcrumb-row-height: 0px;
+  --mobile-header-height: var(--header-row-height);
+  --mobile-breadcrumb-height: var(--breadcrumb-row-height);
+
+  &[data-breadcrumb="on"] {
+    --breadcrumb-row-height: 2.25rem;
+  }
+
+  &[data-breadcrumb="inline"] {
+    --breadcrumb-row-height: 0px;
+  }
 
   &[data-connection="offline"], 
   &[data-connection="slow"] {
@@ -37,6 +47,7 @@
   --ring: oklch(0.705 0.015 286);
   --radius: 0.625rem;
   --azul-trifinio: #2c5f9b;
+  --azul-trifinio-hero: #2c5f9b;
   --estructura-card-surface: #f4f4f5;
   --modal-surface: #f4f4f5;
 
@@ -90,6 +101,7 @@
 
 @theme inline {
   --color-azul-trifinio: var(--azul-trifinio);
+  --color-azul-trifinio-hero: var(--azul-trifinio-hero);
   --color-celeste-trifinio: #1a95d3;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -156,8 +168,7 @@
 
   @media (min-width: 768px) {
     :root {
-      --mobile-header-height: 0px;
-      --mobile-breadcrumb-height: 0px;
+      --header-row-height: 4rem;
     }
   }
   

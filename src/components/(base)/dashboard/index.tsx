@@ -10,6 +10,8 @@ import {
 } from "framer-motion";
 import { useRouter } from "next/navigation";
 import AnimatedIcon from "@/components/ui/AnimatedIcon";
+import { MorphCycleIcon } from "@/components/ui/morph-cycle-icon";
+import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import LogoTrifinio from "@/components/(SIGET)/logo/LogoTrifinio";
 import LogoTrifinioMobile from "@/components/(SIGET)/logo/LogoTrifinio-mobile";
@@ -32,7 +34,7 @@ const DASHBOARD_ICON_PLATE_CLASS =
   "flex items-center justify-center dark:rounded-2xl dark:bg-white";
 
 const DASHBOARD_DOTTED_BG_CLASS =
-  "pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-60";
+  "pointer-events-none [background-size:12px_12px] bg-[radial-gradient(#71717a_1px,transparent_1px)] opacity-50 dark:bg-[radial-gradient(oklch(72%_0_0)_1px,transparent_1px)] dark:opacity-40 [mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)] [-webkit-mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)]";
 
 export function Dashboard() {
   const { user, effectiveRole } = useUserContext();
@@ -43,12 +45,12 @@ export function Dashboard() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPasskeysOpen, setIsPasskeysOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const router = useRouter();
 
   const { scrollY } = useScroll();
   const logoY = useTransform(scrollY, [0, 600], [0, -300]);
   const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
-  // Zoom sutil y suavizado
   const bgScaleRaw = useTransform(scrollY, [0, 800], [1, 1.05]);
   const bgScale = useSpring(bgScaleRaw, {
     stiffness: 100,
@@ -215,40 +217,36 @@ export function Dashboard() {
             ) : (
               <div
                 onClick={() => handleCardClick(mod.id, mod.href)}
-                className="group flex flex-col border border-border dark:border-white/10 overflow-hidden h-full w-full rounded-2xl transition-[border-color] duration-500 cursor-pointer bg-card"
-                style={{
-                  borderColor: isActive ? "#2c5f9b" : undefined,
-                }}
+                onMouseEnter={() => setHoveredCard(mod.id)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className={cn(
+                  "group flex flex-col border border-border dark:border-white/10 overflow-hidden h-full w-full rounded-2xl transition-[border-color] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] cursor-pointer bg-card group-hover:border-[var(--card-hover-border)]",
+                  isActive && "border-[var(--card-hover-border)]",
+                )}
+                style={
+                  {
+                    "--card-accent": mod.accentColor ?? "#1a95d3",
+                    "--card-hover-border": mod.hoverBorderColor ?? "#2c5f9b",
+                  } as React.CSSProperties
+                }
               >
                 <div className="w-full h-full min-h-[300px] flex flex-col justify-center items-center p-6 outline-none relative z-10 rounded-[inherit] overflow-hidden">
-                  <motion.div
-                    variants={{
-                      idle: { scaleY: 0 },
-                      hover: { scaleY: 1 },
-                      active: { scaleY: 1 },
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 w-full h-[calc(100%-70px)] origin-bottom scale-y-0 transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:scale-y-100 pointer-events-none z-0 rounded-t-[inherit]",
+                      isActive && "scale-y-100",
+                    )}
+                    style={{
+                      backgroundImage: `linear-gradient(to top, ${mod.hoverGradientFrom ?? "#2c5f9b"}, ${mod.hoverGradientTo ?? "#1a95d3"})`,
                     }}
-                    transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
-                    className="absolute top-0 left-0 w-full h-[calc(100%-70px)] origin-bottom bg-gradient-to-t from-azul-trifinio to-celeste-trifinio pointer-events-none z-0 rounded-t-[inherit]"
                   />
                   <div className="absolute inset-0 rounded-[inherit] border border-border dark:border-white/10 pointer-events-none z-20" />
-                  <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-10">
-                    <motion.span
-                      variants={{
-                        idle: { opacity: 0, y: 16 },
-                        hover: { opacity: 1, y: 0 },
-                        active: { opacity: 1, y: 0 },
-                      }}
-                      className={[
-                        "flex items-center gap-2 font-black uppercase text-xs tracking-[0.25em] transition-colors duration-500",
-                        isActive
-                          ? "text-celeste-trifinio"
-                          : "text-celeste-trifinio dark:text-foreground",
-                      ].join(" ")}
-                    >
+                  <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-10 pointer-events-none">
+                    <span className="flex items-center gap-2 font-black uppercase text-xs tracking-[0.25em] text-[var(--card-accent)]">
                       {isActive
                         ? "Toca de nuevo para entrar"
                         : "Haz click para entrar"}
-                    </motion.span>
+                    </span>
                   </div>
                   <motion.div
                     className="w-full h-full flex flex-col justify-center items-center relative z-10 pb-[40px]"
@@ -263,66 +261,89 @@ export function Dashboard() {
                       ease: "easeInOut",
                     }}
                   >
-                    <div className="relative z-10 w-full flex justify-center mb-4">
-                      <motion.div
-                        variants={{
-                          idle: { y: 0 },
-                          hover: { y: -16 },
-                          active: { y: -16 },
-                        }}
-                        className={cn(
-                          "size-[90px] flex items-center justify-center transition-transform duration-700",
-                          DASHBOARD_ICON_PLATE_CLASS,
-                        )}
-                      >
-                        <AnimatedIcon
-                          iconKey={mod.animatedIcon}
-                          target={`#${mod.id}-card`}
-                          size={90}
-                          speed={1.5}
-                        />
-                      </motion.div>
+                    <div className="relative z-10 w-full flex justify-center mb-4 -translate-y-3">
+                      {mod.morphIconCycle ? (
+                        <div
+                          className={cn(
+                            "flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-4",
+                            isActive && "-translate-y-4",
+                            mod.morphIconBg,
+                          )}
+                        >
+                          <MorphCycleIcon
+                            icons={mod.morphIconCycle}
+                            hovered={hoveredCard === mod.id || isActive}
+                            size={48}
+                            color={mod.morphIconColor ?? "#1a95d3"}
+                            spring="snappy"
+                          />
+                        </div>
+                      ) : mod.morphIconFrom && mod.morphIconTo ? (
+                        <div
+                          className={cn(
+                            "flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-4",
+                            isActive && "-translate-y-4",
+                            mod.morphIconBg,
+                          )}
+                        >
+                          <MorphHoverIcon
+                            from={mod.morphIconFrom}
+                            to={mod.morphIconTo}
+                            hovered={hoveredCard === mod.id || isActive}
+                            size={48}
+                            color={mod.morphIconColor ?? "#1a95d3"}
+                            spring="snappy"
+                          />
+                        </div>
+                      ) : (
+                        <motion.div
+                          variants={{
+                            idle: { y: 0 },
+                            hover: { y: -16 },
+                            active: { y: -16 },
+                          }}
+                          className={cn(
+                            "size-[90px] flex items-center justify-center transition-transform duration-700",
+                            DASHBOARD_ICON_PLATE_CLASS,
+                          )}
+                        >
+                          <AnimatedIcon
+                            iconKey={mod.animatedIcon}
+                            target={`#${mod.id}-card`}
+                            size={90}
+                            speed={1.5}
+                          />
+                        </motion.div>
+                      )}
                     </div>
-                    <div className="relative z-10 w-full flex flex-col items-start text-left space-y-4">
-                      <motion.h3
-                        variants={{
-                          idle: { y: 0 },
-                          hover: { y: -8 },
-                          active: { y: -8 },
-                        }}
-                        className="text-[1.6rem] lg:text-[1.85rem] font-black tracking-tighter uppercase leading-none w-full break-words transition-colors duration-500"
+                    <div className="relative z-10 w-full flex flex-col items-start text-left space-y-4 transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-2">
+                      <h3
+                        className="text-[1.25rem] lg:text-[1.4rem] font-black tracking-tight uppercase leading-[1.05] w-full break-words transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]"
                       >
                         <span
-                          className="text-foreground group-hover:text-white transition-colors duration-500"
+                          className="text-foreground transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white"
                           style={{ color: isActive ? "#ffffff" : undefined }}
                         >
                           {mod.title}
                         </span>
                         <br />
                         <span
-                          className="text-celeste-trifinio group-hover:text-white/90 transition-colors duration-500"
-                          style={{
-                            color: isActive
-                              ? "rgba(255,255,255,0.9)"
-                              : undefined,
-                          }}
+                          className={cn(
+                            "text-[var(--card-accent)] transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white/90",
+                            isActive && "text-white/90",
+                          )}
                         >
                           {mod.subtitle}
                         </span>
-                      </motion.h3>
-                      <motion.p
-                        variants={{
-                          idle: { y: 0 },
-                          hover: { y: -8 },
-                          active: { y: -8 },
-                        }}
-                        className="text-[14px] lg:text-[15px] text-muted-foreground group-hover:text-white/80 font-bold italic leading-tight pr-2 transition-colors duration-500"
+                      </h3>
+                      <p
+                        className="text-[12px] lg:text-[13px] text-muted-foreground font-bold italic leading-snug pr-2 transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white/80"
                         style={{
                           color: isActive ? "rgba(255,255,255,0.8)" : undefined,
                         }}
                       >
                         {mod.desc}
-                      </motion.p>
+                      </p>
                     </div>
                   </motion.div>
                 </div>
@@ -335,8 +356,7 @@ export function Dashboard() {
   );
 
   return (
-    <div className="relative w-full">
-      {/* MODALES */}
+    <div className="relative flex w-full flex-1 flex-col min-h-0">
       <VerPerfil
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
@@ -373,8 +393,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="hidden md:block relative w-full">
-        <div className="fixed top-0 left-0 w-full h-[75vh] z-0 bg-[#0a1628] overflow-hidden">
+      <div className="hidden md:flex flex-1 flex-col relative w-full min-h-0 bg-muted dark:bg-zinc-950">
+        <div className="fixed top-0 left-0 w-full h-[62vh] z-0 bg-[#0a1628] overflow-hidden">
           <motion.div
             className="absolute inset-0 bg-cover bg-center origin-center"
             style={{
@@ -385,7 +405,7 @@ export function Dashboard() {
         </div>
 
         <motion.div
-          className="fixed top-0 left-0 w-full h-[65vh] flex justify-center items-center z-[5] pt-16 pb-[140px]"
+          className="fixed top-0 left-0 w-full h-[52vh] flex justify-center items-center z-[5] pt-12 pb-24"
           style={{ y: logoY, opacity: logoOpacity }}
         >
           <div className="relative flex justify-center items-center px-8">
@@ -393,10 +413,15 @@ export function Dashboard() {
           </div>
         </motion.div>
 
-        <div className="relative z-10 w-full mt-[65vh]">
-          <div className="relative w-full bg-muted dark:bg-muted rounded-t-[3rem] px-8 lg:px-12 pt-10 pb-20">
-            <div className={cn("absolute inset-0 rounded-t-[3rem]", DASHBOARD_DOTTED_BG_CLASS)} />
-            <div className="relative z-20 w-full max-w-[min(100%,1600px)] mx-auto -mt-[140px] pb-2">
+        <div className="relative z-10 flex flex-1 flex-col w-full mt-[44vh] min-h-[calc(100dvh-4rem-4rem-44vh)] bg-muted dark:bg-zinc-950 rounded-t-[3rem]">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 rounded-t-[3rem] overflow-hidden",
+              DASHBOARD_DOTTED_BG_CLASS,
+            )}
+          />
+          <div className="relative z-20 w-full px-8 lg:px-12 pt-10 pb-6">
+            <div className="w-full max-w-[min(100%,1600px)] mx-auto -mt-[160px]">
               <CardsGrid />
             </div>
           </div>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { cn } from "@/lib/utils";
 import {
   ModalShell,
   ModalInput,
@@ -13,6 +12,8 @@ import {
 } from "@/components/ui/general-modal";
 import { actionErrorMessage } from "@/components/ui/modal-toast";
 import { CamposInstitucionPuesto } from "./CamposInstitucionPuesto";
+import { FechaNacimientoCampos } from "./FechaNacimientoCampos";
+import { GeneroSwitch } from "./GeneroSwitch";
 import { useEditarRegistro } from "../lib/hooks";
 import {
   institucionDesdeRegistro,
@@ -42,7 +43,7 @@ export function EditarRegistro({
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [genero, setGenero] = useState<"masculino" | "femenino" | "">("");
+  const [genero, setGenero] = useState<"masculino" | "femenino">("masculino");
   const [tipoInstitucion, setTipoInstitucion] = useState<
     "sin" | "plan_trifinio" | "otras"
   >("sin");
@@ -174,34 +175,23 @@ export function EditarRegistro({
 
         <div className="space-y-2">
           <ModalLabel htmlFor="edit-fecha-nac">Fecha de nacimiento</ModalLabel>
-          <ModalInput
-            id="edit-fecha-nac"
-            type="date"
+          <FechaNacimientoCampos
             value={fechaNacimiento}
-            onChange={(e) => setFechaNacimiento(e.target.value)}
+            onChange={setFechaNacimiento}
             required
+            diaId="edit-fecha-nac-dia"
+            mesId="edit-fecha-nac-mes"
+            anioId="edit-fecha-nac-anio"
           />
         </div>
 
         <div className="space-y-2">
-          <ModalLabel>Género</ModalLabel>
-          <div className="grid grid-cols-2 gap-2">
-            {(["masculino", "femenino"] as const).map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGenero(g)}
-                className={cn(
-                  "h-10 cursor-pointer rounded-lg border-2 text-sm font-bold transition-colors",
-                  genero === g
-                    ? "border-celeste-trifinio bg-celeste-trifinio/10 text-foreground"
-                    : "border-celeste-trifinio/40 bg-transparent text-muted-foreground hover:border-celeste-trifinio",
-                )}
-              >
-                {g === "masculino" ? "Masculino" : "Femenino"}
-              </button>
-            ))}
-          </div>
+          <ModalLabel htmlFor="genero-switch-edit">Género</ModalLabel>
+          <GeneroSwitch
+            id="genero-switch-edit"
+            value={genero}
+            onChange={setGenero}
+          />
         </div>
 
         <ModalFooter>
@@ -213,7 +203,7 @@ export function EditarRegistro({
           >
             Cancelar
           </button>
-          <ModalSubmit disabled={editar.isPending || !genero}>
+          <ModalSubmit disabled={editar.isPending || !fechaNacimiento}>
             {editar.isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

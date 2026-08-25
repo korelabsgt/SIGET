@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@/components/(base)/providers/UserProvider";
 
@@ -12,19 +12,19 @@ const crumbIconLink =
   "group flex items-center justify-center text-foreground hover:text-celeste-trifinio dark:text-white dark:hover:text-celeste-trifinio transition-colors duration-300 cursor-pointer active:scale-95";
 
 const crumbTextLink =
-  "capitalize text-foreground hover:text-celeste-trifinio dark:text-white dark:hover:text-celeste-trifinio transition-all duration-300 truncate group/link hover:underline underline-offset-4";
+  "capitalize whitespace-nowrap text-foreground hover:text-celeste-trifinio dark:text-white dark:hover:text-celeste-trifinio transition-all duration-300 group/link hover:underline underline-offset-4";
 
 const crumbActive =
   "text-celeste-trifinio";
 
 const sigetCrumbLink =
-  "group flex items-center gap-1.5 shrink-0 normal-case text-azul-trifinio hover:text-celeste-trifinio dark:text-azul-trifinio dark:hover:text-celeste-trifinio transition-all duration-300";
+  "group shrink-0 normal-case text-azul-trifinio hover:text-celeste-trifinio dark:text-azul-trifinio dark:hover:text-celeste-trifinio transition-all duration-300";
 
 const sigetCrumbText =
-  "truncate group-hover:underline underline-offset-4";
+  "whitespace-nowrap group-hover:underline underline-offset-4";
 
 const sigetCrumbActive =
-  "flex items-center gap-1.5 shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-xs md:text-lg";
+  "shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-xs md:text-lg";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,21 +37,20 @@ function formatBreadcrumbLabel(segment: string): string {
 const iconMotion =
   "transition-transform duration-500 ease-out group-hover:scale-125";
 
+const crumbRow =
+  "flex min-w-0 w-full items-center gap-1.5 overflow-x-auto text-[9px] font-medium text-muted-foreground md:pt-1 md:text-base";
+
 function SigetCrumb({ active = false }: { active?: boolean }) {
   if (active) {
     return (
       <span className={sigetCrumbActive} title="Panel">
-        <LayoutDashboard className="size-4 md:size-5 shrink-0" />
-        <span>SIGET</span>
+        SIGET
       </span>
     );
   }
 
   return (
     <Link href="/siget" className={sigetCrumbLink} title="Ir al panel">
-      <LayoutDashboard
-        className="size-4 md:size-5 shrink-0 transition-transform duration-300 ease-out group-hover:-translate-y-0.5"
-      />
       <span className={sigetCrumbText}>SIGET</span>
     </Link>
   );
@@ -66,11 +65,8 @@ export function BreadcrumbNav() {
 
     return (
       <LayoutGroup id="breadcrumb">
-        <motion.div
-          layout
-          className="flex items-center gap-2 text-[9px] md:text-base font-medium text-muted-foreground overflow-hidden md:pt-1"
-        >
-          <motion.div layout="position">
+        <motion.div layout className={crumbRow}>
+          <motion.div layout="position" className="shrink-0">
             <SigetCrumb />
           </motion.div>
         </motion.div>
@@ -81,11 +77,8 @@ export function BreadcrumbNav() {
   if (pathname === "/siget") {
     return (
       <LayoutGroup id="breadcrumb">
-        <motion.div
-          layout
-          className="flex items-center gap-2 text-[9px] md:text-base font-medium text-muted-foreground overflow-hidden md:pt-1"
-        >
-          <motion.div layout="position" className="flex items-center">
+        <motion.div layout className={crumbRow}>
+          <motion.div layout="position" className="flex shrink-0 items-center">
             <SigetCrumb active />
           </motion.div>
         </motion.div>
@@ -104,25 +97,22 @@ export function BreadcrumbNav() {
 
   return (
     <LayoutGroup id="breadcrumb">
-      <motion.div
-        layout
-        className="flex items-center gap-2 text-[9px] md:text-base font-medium text-muted-foreground overflow-hidden md:pt-1"
-      >
-        <motion.div layout="position">
+      <motion.div layout className={crumbRow}>
+        <motion.div layout="position" className="shrink-0">
           <Link
             href={parentPath}
-            className={cn(crumbIconLink, "mr-1")}
+            className={cn(crumbIconLink, "mr-0.5")}
             title="Atrás"
           >
             <ArrowLeft className={cn("size-4 md:size-5", iconMotion, "group-hover:-translate-x-1")} />
           </Link>
         </motion.div>
 
-        <motion.div layout="position" className="flex items-center">
+        <motion.div layout="position" className="flex shrink-0 items-center">
           <SigetCrumb />
         </motion.div>
 
-        <div className="flex items-center gap-1 overflow-hidden mask-gradient">
+        <div className="flex shrink-0 items-center gap-1">
           <AnimatePresence mode="popLayout" initial={false}>
             {segments.map((segment, index) => {
               if (segment === "siget") return null;
@@ -154,7 +144,7 @@ export function BreadcrumbNav() {
                     href={href}
                     className={cn(
                       isLast
-                        ? cn(crumbActive, "capitalize underline underline-offset-4 pointer-events-none text-xs md:text-lg")
+                        ? cn(crumbActive, "capitalize whitespace-nowrap underline underline-offset-4 pointer-events-none text-xs md:text-lg")
                         : crumbTextLink,
                     )}
                   >

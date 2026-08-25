@@ -24,7 +24,7 @@ export function CrearActividad({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated?: (id: string) => void;
+  onCreated?: (slug: string) => void;
 }) {
   const crear = useCrearActividad();
   const [nombre, setNombre] = useState("");
@@ -67,7 +67,12 @@ export function CrearActividad({
       return;
     }
     const res = await crear.mutateAsync(parsed.data);
-    if (res.success && res.id) {
+    if (res.success && res.slug) {
+      toast.success("Actividad creada correctamente.");
+      resetForm();
+      onCreated?.(res.slug);
+      onClose();
+    } else if (res.success && res.id) {
       toast.success("Actividad creada correctamente.");
       resetForm();
       onCreated?.(res.id);

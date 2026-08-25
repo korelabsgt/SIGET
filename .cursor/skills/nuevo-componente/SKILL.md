@@ -39,6 +39,7 @@ Solo cuando el módulo lo necesite (no forman parte de la estructura base):
 | Archivo | Cuándo | Skill |
 |---------|--------|-------|
 | `lib/helpers.ts` | Funciones de dominio reutilizadas en 2+ archivos del módulo | — |
+| `lib/*-excel.ts` | Exportación/descarga `.xlsx` | `exportacion-excel` |
 | `lib/swal.ts` | Varias confirmaciones SweetAlert fuera de modal | `ui-sweetalert` |
 
 **`helpers.ts`:** funciones puras sin `"use server"`. Importar tipos desde `zod.ts`, no redefinirlos.
@@ -74,6 +75,7 @@ Plantillas: [plantillas.md](plantillas.md).
 | Filas que se agregan/quitan | `ui-animaciones-listas` |
 | Layout sticky/fullscreen, estado de red | `ui-offline-banner` |
 | Fechas y timestamps | `componente-fechas-gt` |
+| Exportar Excel | `exportacion-excel` |
 | Entrada en menú lateral | `menu-lateral` |
 
 ## Reglas de código

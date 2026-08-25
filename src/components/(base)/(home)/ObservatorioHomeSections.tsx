@@ -1723,7 +1723,7 @@ function ModulosObservatorioSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.4 }}
           transition={{ duration: 0.8, delay: 0.1 }}
-          className="mt-4 text-4xl font-black leading-[0.92] tracking-[-0.025em] text-azul-trifinio md:text-6xl lg:text-7xl xl:text-8xl"
+          className="mt-4 text-4xl font-black leading-[0.92] tracking-[-0.025em] text-azul-trifinio-hero md:text-6xl lg:text-7xl xl:text-8xl"
         >
           de Plan Trifinio
         </motion.h2>

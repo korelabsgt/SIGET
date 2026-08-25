@@ -1,6 +1,6 @@
 {
   "add_col.ts": {
-    "mtime": 1776093303.343128,
+    "mtime": 1776093303.343127,
     "ast_hash": "3e83f4181303b941cf7e1f3ec66ad639",
     "semantic_hash": "3e83f4181303b941cf7e1f3ec66ad639"
   },
@@ -10,9 +10,9 @@
     "semantic_hash": "f3a494b35b46839e5b570f35192c0f2d"
   },
   "db/asist_actividades.sql": {
-    "mtime": 1783544639.8293076,
-    "ast_hash": "fc4fa6077032bc34be76d5df88a8d3f3",
-    "semantic_hash": "fc4fa6077032bc34be76d5df88a8d3f3"
+    "mtime": 1787176901.6358366,
+    "ast_hash": "3dffc449a5ae5251fa6c8f364869bf04",
+    "semantic_hash": ""
   },
   "db/asist_actividades_migracion.sql": {
     "mtime": 1783544672.5019176,
@@ -40,17 +40,17 @@
     "semantic_hash": "3c88fdc6853c5abfa7048d48225ad6b8"
   },
   "db/organizacion_jerarquica.sql": {
-    "mtime": 1785711483.9619396,
+    "mtime": 1787325095.1945837,
     "ast_hash": "361317b210fb85f87aaa875c56335d50",
     "semantic_hash": "361317b210fb85f87aaa875c56335d50"
   },
   "db/organizacion_jerarquica_migracion.sql": {
-    "mtime": 1785711483.974133,
+    "mtime": 1787325095.1955714,
     "ast_hash": "bb263048b679d6970f7cee48009bacf2",
     "semantic_hash": "bb263048b679d6970f7cee48009bacf2"
   },
   "db/puestos_quitar_es_jefatura.sql": {
-    "mtime": 1785711483.992368,
+    "mtime": 1787325095.1955428,
     "ast_hash": "7bd4b1ae95f1bf4468f4a4206edafe49",
     "semantic_hash": "7bd4b1ae95f1bf4468f4a4206edafe49"
   },
@@ -65,9 +65,9 @@
     "semantic_hash": "845bb3700ccedc3e91111e757387dcce"
   },
   "package.json": {
-    "mtime": 1785711483.9746823,
-    "ast_hash": "c637cd147330b298ef9be555dee6bd72",
-    "semantic_hash": "c637cd147330b298ef9be555dee6bd72"
+    "mtime": 1787173845.3483105,
+    "ast_hash": "4b9a598b367812c4df0baf8c2259cd64",
+    "semantic_hash": ""
   },
   "postcss.config.mjs": {
     "mtime": 1776093302.3447716,
@@ -95,17 +95,17 @@
     "semantic_hash": "59dcb1b71573fd27d52377ec19ce8fab"
   },
   "src/app/actividades/[id]/page.tsx": {
-    "mtime": 1783534309.7137315,
-    "ast_hash": "f294ba173f05ae82a97ab208918a0f3e",
-    "semantic_hash": "f294ba173f05ae82a97ab208918a0f3e"
+    "mtime": 1787326126.0779958,
+    "ast_hash": "78c75934a6656d95b22281588f6c4122",
+    "semantic_hash": ""
   },
   "src/app/api/push/route.ts": {
-    "mtime": 1776093303.348179,
+    "mtime": 1776093303.348176,
     "ast_hash": "6fcfc0bf176a46ed9e03e95cdb8b5349",
     "semantic_hash": "6fcfc0bf176a46ed9e03e95cdb8b5349"
   },
   "src/app/api/push/subscribe/route.ts": {
-    "mtime": 1776093303.348352,
+    "mtime": 1776093303.348351,
     "ast_hash": "bbf9f5830b8da8823d1cc1641fa39e58",
     "semantic_hash": "bbf9f5830b8da8823d1cc1641fa39e58"
   },
@@ -165,14 +165,14 @@
     "semantic_hash": "55ab2512a2ebb5c860d482b0b1f5c1d3"
   },
   "src/app/siget/actividades/[id]/page.tsx": {
-    "mtime": 1783534306.3230653,
-    "ast_hash": "04a456e61f2e6c612f66e05355107095",
-    "semantic_hash": "04a456e61f2e6c612f66e05355107095"
+    "mtime": 1787187463.2500262,
+    "ast_hash": "61861da9b8773fb737eaae2a73dae32c",
+    "semantic_hash": ""
   },
   "src/app/siget/actividades/page.tsx": {
-    "mtime": 1783534303.7483342,
-    "ast_hash": "e3d92c0b725157f5ecf8c08a918d9ab9",
-    "semantic_hash": "e3d92c0b725157f5ecf8c08a918d9ab9"
+    "mtime": 1787176593.842322,
+    "ast_hash": "4b5ea9822c0df1f268e3c4f03ac756b5",
+    "semantic_hash": ""
   },
   "src/app/siget/admin/(users)/usuarios/page.tsx": {
     "mtime": 1776093302.3487303,
@@ -204,11 +204,6 @@
     "ast_hash": "e423f5278b7ff1552844f4df2c0b6c7c",
     "semantic_hash": "e423f5278b7ff1552844f4df2c0b6c7c"
   },
-  "src/app/siget/memoria-labores/page.tsx": {
-    "mtime": 1785711483.974147,
-    "ast_hash": "9193fbe064a05e24dd4dcc1f0985cdef",
-    "semantic_hash": "9193fbe064a05e24dd4dcc1f0985cdef"
-  },
   "src/app/siget/observatorio/formularios/page.tsx": {
     "mtime": 1781034733.9153621,
     "ast_hash": "7d1dc7bbc45285aa6cb1e1f0f30f9786",
@@ -230,9 +225,9 @@
     "semantic_hash": "e953d71cd736be71f2f4268b429b3551"
   },
   "src/app/siget/page.tsx": {
-    "mtime": 1776093302.3502712,
-    "ast_hash": "d88cf28e68c86ef261924ab9aee44b31",
-    "semantic_hash": "d88cf28e68c86ef261924ab9aee44b31"
+    "mtime": 1787191576.1997144,
+    "ast_hash": "46296544df9132f235dbdce09d15c4c9",
+    "semantic_hash": ""
   },
   "src/app/siget/siget/page.tsx": {
     "mtime": 1777344770.723664,
@@ -260,72 +255,27 @@
     "semantic_hash": "218cabeb1f62eed86a36c61d940affe0"
   },
   "src/components/(SIGET)/logo/LogoTrifinio-mobile.tsx": {
-    "mtime": 1779512537.5806143,
-    "ast_hash": "27957ab1d8232b6c04707a7ba9925e08",
-    "semantic_hash": "27957ab1d8232b6c04707a7ba9925e08"
+    "mtime": 1787172456.6283154,
+    "ast_hash": "b777a14b5cf27eb5ef809068ecbc1651",
+    "semantic_hash": ""
   },
   "src/components/(SIGET)/logo/LogoTrifinio.tsx": {
-    "mtime": 1779512546.277909,
-    "ast_hash": "7090db41d73ece86368190225625795e",
-    "semantic_hash": "7090db41d73ece86368190225625795e"
+    "mtime": 1787172455.5107732,
+    "ast_hash": "95d09bbc3efc56b723ca0bdbc3c5a81c",
+    "semantic_hash": ""
   },
   "src/components/(SIGET)/logo/LogoTrifinioLogin.tsx": {
     "mtime": 1779685801.978373,
     "ast_hash": "7d291ddb77b94009efed9f9a15d0e9dd",
     "semantic_hash": "7d291ddb77b94009efed9f9a15d0e9dd"
   },
-  "src/components/(SIGET)/memoria-labores/InformeMemoriaVista.tsx": {
-    "mtime": 1785718711.3131485,
-    "ast_hash": "ab20e2e51c7474fe2697b6f0284391b3",
-    "semantic_hash": "ab20e2e51c7474fe2697b6f0284391b3"
-  },
-  "src/components/(SIGET)/memoria-labores/MemoriaPeriodoFiltro.tsx": {
-    "mtime": 1785718712.7086668,
-    "ast_hash": "14a3f05a6e30073a9bf3e8a43b5c8ca3",
-    "semantic_hash": "14a3f05a6e30073a9bf3e8a43b5c8ca3"
-  },
-  "src/components/(SIGET)/memoria-labores/ProyectosMemoriaList.tsx": {
-    "mtime": 1785718712.0319724,
-    "ast_hash": "f1ae709abf262a730215527c4186617b",
-    "semantic_hash": "f1ae709abf262a730215527c4186617b"
-  },
-  "src/components/(SIGET)/memoria-labores/form/ProyectosMemoriaForm.tsx": {
-    "mtime": 1785718710.618749,
-    "ast_hash": "ec8164d6dac6d11414a7909801ae57ca",
-    "semantic_hash": "ec8164d6dac6d11414a7909801ae57ca"
-  },
-  "src/components/(SIGET)/memoria-labores/index.tsx": {
-    "mtime": 1785711483.9619188,
-    "ast_hash": "0faf9f09eda3baa85cecd33a1b70e55c",
-    "semantic_hash": "0faf9f09eda3baa85cecd33a1b70e55c"
-  },
-  "src/components/(SIGET)/memoria-labores/lib/actions.ts": {
-    "mtime": 1785718709.5295706,
-    "ast_hash": "4a010e35a63861bbe95c567598bd5856",
-    "semantic_hash": "4a010e35a63861bbe95c567598bd5856"
-  },
-  "src/components/(SIGET)/memoria-labores/lib/hooks.ts": {
-    "mtime": 1783143816.0238986,
-    "ast_hash": "1862c3f3d865856043550770787fea1a",
-    "semantic_hash": "1862c3f3d865856043550770787fea1a"
-  },
-  "src/components/(SIGET)/memoria-labores/lib/memoria-excel.ts": {
-    "mtime": 1785718709.829968,
-    "ast_hash": "ccd319952e84784a2c8d9864a844c439",
-    "semantic_hash": "ccd319952e84784a2c8d9864a844c439"
-  },
-  "src/components/(SIGET)/memoria-labores/lib/swal.ts": {
-    "mtime": 1785718663.2395165,
-    "ast_hash": "6088520377ed25259f5c776212c6d77c",
-    "semantic_hash": "6088520377ed25259f5c776212c6d77c"
-  },
   "src/components/(SIGET)/observatorio/ObservatorioWeb.tsx": {
-    "mtime": 1780420835.946129,
+    "mtime": 1780420835.946125,
     "ast_hash": "a5b6beae503422d962463f6c21407d5a",
     "semantic_hash": "a5b6beae503422d962463f6c21407d5a"
   },
   "src/components/(SIGET)/observatorio/OrganizacionesLogoCintillo.tsx": {
-    "mtime": 1779778056.348452,
+    "mtime": 1779778056.348448,
     "ast_hash": "83a4f313a99988848e25fd1590f32b79",
     "semantic_hash": "83a4f313a99988848e25fd1590f32b79"
   },
@@ -350,7 +300,7 @@
     "semantic_hash": "bcaf3dacd3f766b4790e71c1a7868565"
   },
   "src/components/(SIGET)/observatorio/forms/GestionOrgsSectores.tsx": {
-    "mtime": 1779767047.272419,
+    "mtime": 1779767047.272418,
     "ast_hash": "6c288837c249fa486c9e755177d94162",
     "semantic_hash": "6c288837c249fa486c9e755177d94162"
   },
@@ -360,7 +310,7 @@
     "semantic_hash": "71da7abb80523f7e8e76eb9c18c8f24b"
   },
   "src/components/(SIGET)/observatorio/forms/ObsToastContainer.tsx": {
-    "mtime": 1785711483.9746711,
+    "mtime": 1787325095.1947746,
     "ast_hash": "421576d303fb4104ab80a67ea0f16062",
     "semantic_hash": "421576d303fb4104ab80a67ea0f16062"
   },
@@ -375,12 +325,12 @@
     "semantic_hash": "72ef86d795e7c0ed85113560c58c781f"
   },
   "src/components/(SIGET)/observatorio/forms/lib/actions.ts": {
-    "mtime": 1785718663.276224,
-    "ast_hash": "31c3d4e993d3a95158449cb29df57e79",
-    "semantic_hash": "31c3d4e993d3a95158449cb29df57e79"
+    "mtime": 1785719157.835093,
+    "ast_hash": "3ad3d1d1aad8def98ad86edfd46cd939",
+    "semantic_hash": ""
   },
   "src/components/(SIGET)/observatorio/forms/lib/hooks.ts": {
-    "mtime": 1785718663.2904105,
+    "mtime": 1785718664.290406,
     "ast_hash": "20cd82459b85c214048c8252e4d520d6",
     "semantic_hash": "20cd82459b85c214048c8252e4d520d6"
   },
@@ -405,7 +355,7 @@
     "semantic_hash": "60da751da0cebe933adae4fd633fc695"
   },
   "src/components/(SIGET)/observatorio/reportes/Reportes.tsx": {
-    "mtime": 1785718663.0993526,
+    "mtime": 1785718664.099352,
     "ast_hash": "4a34ed60291ace5dbd39a640bf164782",
     "semantic_hash": "4a34ed60291ace5dbd39a640bf164782"
   },
@@ -480,12 +430,12 @@
     "semantic_hash": "a9482323cb6f32f51daf291f6567c691"
   },
   "src/components/(base)/(auth)/signup/SignUp.tsx": {
-    "mtime": 1785718663.123408,
+    "mtime": 1785718664.123404,
     "ast_hash": "d6bef96152d151abb3b294244ba98b4f",
     "semantic_hash": "d6bef96152d151abb3b294244ba98b4f"
   },
   "src/components/(base)/(auth)/signup/actions.ts": {
-    "mtime": 1785718663.1419597,
+    "mtime": 1785718664.141957,
     "ast_hash": "9fa06b9dd4529532ad2cda369f32f012",
     "semantic_hash": "9fa06b9dd4529532ad2cda369f32f012"
   },
@@ -495,14 +445,14 @@
     "semantic_hash": "c290cf8453b02e4ecb8959b772107fa5"
   },
   "src/components/(base)/(home)/ConoceMasVideo.tsx": {
-    "mtime": 1779895531.5918734,
-    "ast_hash": "73c6ac118da5b425944e30cfaef46615",
-    "semantic_hash": "73c6ac118da5b425944e30cfaef46615"
+    "mtime": 1787172459.0345106,
+    "ast_hash": "c5997ff93b2e139f943a163e2e607a02",
+    "semantic_hash": ""
   },
   "src/components/(base)/(home)/ObservatorioHomeSections.tsx": {
-    "mtime": 1783523140.8380473,
-    "ast_hash": "88c199cdef8c91657b2ec537592442c0",
-    "semantic_hash": "88c199cdef8c91657b2ec537592442c0"
+    "mtime": 1787172624.6011775,
+    "ast_hash": "b9a0a50638fb77f76f809fd9c5f44f20",
+    "semantic_hash": ""
   },
   "src/components/(base)/(home)/ObservatorioWebPublico.tsx": {
     "mtime": 1779848375.701281,
@@ -510,9 +460,9 @@
     "semantic_hash": "94aaf25ef3922e01e1ca55bf2e9d9083"
   },
   "src/components/(base)/(home)/PublicHome.tsx": {
-    "mtime": 1779895527.4160419,
-    "ast_hash": "03ef208ff01e172392541c2247c679c4",
-    "semantic_hash": "03ef208ff01e172392541c2247c679c4"
+    "mtime": 1787172293.3589005,
+    "ast_hash": "605f941c3c721d95a9ac65f3e8104408",
+    "semantic_hash": ""
   },
   "src/components/(base)/(home)/TrifinioDottedMapSection.tsx": {
     "mtime": 1779689431.9146364,
@@ -565,12 +515,12 @@
     "semantic_hash": "93d10558751fa7097881487328ac2b75"
   },
   "src/components/(base)/(users)/profile/forms/InfoUser.tsx": {
-    "mtime": 1785718663.1622863,
+    "mtime": 1785718664.162282,
     "ast_hash": "6324d633f897f7f4362d89a59189b921",
     "semantic_hash": "6324d633f897f7f4362d89a59189b921"
   },
   "src/components/(base)/(users)/profile/lib/actions.ts": {
-    "mtime": 1785718663.1738098,
+    "mtime": 1785718664.173809,
     "ast_hash": "0c9c913d89e83c33cd1e97318ee57590",
     "semantic_hash": "0c9c913d89e83c33cd1e97318ee57590"
   },
@@ -585,7 +535,7 @@
     "semantic_hash": "475e2765599c504505f1878fdbe5a6e0"
   },
   "src/components/(base)/(users)/usuarios/lib/actions.ts": {
-    "mtime": 1785718663.1835902,
+    "mtime": 1785718664.18359,
     "ast_hash": "75808abee6db6769a95bb3c5005337e1",
     "semantic_hash": "75808abee6db6769a95bb3c5005337e1"
   },
@@ -595,7 +545,7 @@
     "semantic_hash": "0330082035ad2851ff4708e3ef94d4da"
   },
   "src/components/(base)/(users)/usuarios/lib/permissions.ts": {
-    "mtime": 1785711483.992736,
+    "mtime": 1787325095.1955934,
     "ast_hash": "7799786e86a2bc020fcd14aa44722e2d",
     "semantic_hash": "7799786e86a2bc020fcd14aa44722e2d"
   },
@@ -610,14 +560,14 @@
     "semantic_hash": "a6e1eedb013a6ae8c4ec0ac01d2e1ede"
   },
   "src/components/(base)/dashboard/index.tsx": {
-    "mtime": 1779844785.2022612,
-    "ast_hash": "048df1a6ae3617bef7371803f505b67e",
-    "semantic_hash": "048df1a6ae3617bef7371803f505b67e"
+    "mtime": 1787325539.832415,
+    "ast_hash": "bb35f3ec41d1e9da29c830c1302ff669",
+    "semantic_hash": ""
   },
   "src/components/(base)/dashboard/modules.ts": {
-    "mtime": 1783535389.880882,
-    "ast_hash": "6a37a400872bfdb8ab3f9240997e8763",
-    "semantic_hash": "6a37a400872bfdb8ab3f9240997e8763"
+    "mtime": 1787326107.3501124,
+    "ast_hash": "6786a26c61fcf0de516ffb72ce7286f5",
+    "semantic_hash": ""
   },
   "src/components/(base)/imgs/ImagenBatchCropperModal.tsx": {
     "mtime": 1783189665.5437188,
@@ -670,14 +620,14 @@
     "semantic_hash": "9292152edc2b5563f5d4a38e548cbef9"
   },
   "src/components/(base)/layout/ConditionalFooter.tsx": {
-    "mtime": 1785711483.9747248,
-    "ast_hash": "22c914c73214eab1d95c427c7b3f874d",
-    "semantic_hash": "22c914c73214eab1d95c427c7b3f874d"
+    "mtime": 1787191569.9048202,
+    "ast_hash": "d8404b1b348e8090b6ce51734bca05e1",
+    "semantic_hash": ""
   },
   "src/components/(base)/layout/Menu.tsx": {
-    "mtime": 1783534352.3217597,
-    "ast_hash": "5aced65fbdda605d1320791acd977473",
-    "semantic_hash": "5aced65fbdda605d1320791acd977473"
+    "mtime": 1787327655.6694672,
+    "ast_hash": "837ee6f47d172ed981b409b083e25fb7",
+    "semantic_hash": ""
   },
   "src/components/(base)/layout/RoleSimulator.tsx": {
     "mtime": 1776204374.4210818,
@@ -685,9 +635,9 @@
     "semantic_hash": "9de8fa89568adac22bd76666b185e6e4"
   },
   "src/components/(base)/layout/header.tsx": {
-    "mtime": 1783543685.1746337,
-    "ast_hash": "ba3ba9c3376e58f39400ce9da6861f24",
-    "semantic_hash": "ba3ba9c3376e58f39400ce9da6861f24"
+    "mtime": 1787328891.9157982,
+    "ast_hash": "7d387da86b9e8792409560094ccb0711",
+    "semantic_hash": ""
   },
   "src/components/(base)/layout/modals/ManualPdfMobileViewer.tsx": {
     "mtime": 1780498190.6808252,
@@ -705,7 +655,7 @@
     "semantic_hash": "c9c23386a18db3fbd5a8b5720230139b"
   },
   "src/components/(base)/layout/modals/manual-toast.ts": {
-    "mtime": 1785711483.9927607,
+    "mtime": 1787325095.2001762,
     "ast_hash": "a2c9f34ae457fd25a65e5fe31b901ecf",
     "semantic_hash": "a2c9f34ae457fd25a65e5fe31b901ecf"
   },
@@ -720,7 +670,7 @@
     "semantic_hash": "f1219ffa9eb34397e3e812dd643e70ab"
   },
   "src/components/(base)/providers/UserProvider.tsx": {
-    "mtime": 1779997208.273042,
+    "mtime": 1779997208.273041,
     "ast_hash": "06883e8b1b058874ddbe8556770f83fb",
     "semantic_hash": "06883e8b1b058874ddbe8556770f83fb"
   },
@@ -755,7 +705,7 @@
     "semantic_hash": "141881f0b4ae5b04095ec4815ecb85fa"
   },
   "src/components/(uploads)/imgs/org-logo-actions.ts": {
-    "mtime": 1779740254.82177,
+    "mtime": 1779740254.821768,
     "ast_hash": "1efd3d038daa974bc4be74dc84438aad",
     "semantic_hash": "1efd3d038daa974bc4be74dc84438aad"
   },
@@ -774,116 +724,6 @@
     "ast_hash": "e733ae65606dddc683dc4afca66846fa",
     "semantic_hash": "e733ae65606dddc683dc4afca66846fa"
   },
-  "src/components/actividades/ActividadDetalle.tsx": {
-    "mtime": 1783542521.2759387,
-    "ast_hash": "cfc9b68b97b45f0e5734759b0829140a",
-    "semantic_hash": "cfc9b68b97b45f0e5734759b0829140a"
-  },
-  "src/components/actividades/ActividadesList.tsx": {
-    "mtime": 1783537257.4880927,
-    "ast_hash": "0c6415ba233d4cf25936d3d407bcc862",
-    "semantic_hash": "0c6415ba233d4cf25936d3d407bcc862"
-  },
-  "src/components/actividades/ActividadesPanel.tsx": {
-    "mtime": 1783534171.4399226,
-    "ast_hash": "f014b4250681ea7c56914ec7f5953226",
-    "semantic_hash": "f014b4250681ea7c56914ec7f5953226"
-  },
-  "src/components/actividades/BusquedaDpi.tsx": {
-    "mtime": 1783541714.2341387,
-    "ast_hash": "327e7cdb567d248b2eb32dbfe21b823c",
-    "semantic_hash": "327e7cdb567d248b2eb32dbfe21b823c"
-  },
-  "src/components/actividades/BusquedaSelect.tsx": {
-    "mtime": 1783543226.3608365,
-    "ast_hash": "7a2db07978e695787d443a5f71e4fb00",
-    "semantic_hash": "7a2db07978e695787d443a5f71e4fb00"
-  },
-  "src/components/actividades/GraficasAsistencia.tsx": {
-    "mtime": 1783542540.8057606,
-    "ast_hash": "1a5a1756eb9ddcd60fd7fe17a57ae543",
-    "semantic_hash": "1a5a1756eb9ddcd60fd7fe17a57ae543"
-  },
-  "src/components/actividades/QrActividad.tsx": {
-    "mtime": 1783540368.5571494,
-    "ast_hash": "477fbcf750da4e29e8b8a187ab089320",
-    "semantic_hash": "477fbcf750da4e29e8b8a187ab089320"
-  },
-  "src/components/actividades/RegistroPublico.tsx": {
-    "mtime": 1783546653.0697324,
-    "ast_hash": "f8d479b8f72250d6ec534abab7b183cd",
-    "semantic_hash": "f8d479b8f72250d6ec534abab7b183cd"
-  },
-  "src/components/actividades/TablaRegistros.tsx": {
-    "mtime": 1783544681.624813,
-    "ast_hash": "bb0ddae659782f8f584e5ccda1d4e9da",
-    "semantic_hash": "bb0ddae659782f8f584e5ccda1d4e9da"
-  },
-  "src/components/actividades/forms/CamposInstitucionPuesto.tsx": {
-    "mtime": 1783544092.2003937,
-    "ast_hash": "eff1ccd1ae117576fff709ee81f654a9",
-    "semantic_hash": "eff1ccd1ae117576fff709ee81f654a9"
-  },
-  "src/components/actividades/forms/CamposUbicacionActividad.tsx": {
-    "mtime": 1783542942.7703235,
-    "ast_hash": "b36046596ceb4b87212bb6eff1bd26cf",
-    "semantic_hash": "b36046596ceb4b87212bb6eff1bd26cf"
-  },
-  "src/components/actividades/forms/Crear.tsx": {
-    "mtime": 1783543099.3274882,
-    "ast_hash": "857a565811420390974a1fe6801c3b4a",
-    "semantic_hash": "857a565811420390974a1fe6801c3b4a"
-  },
-  "src/components/actividades/forms/EditarRegistro.tsx": {
-    "mtime": 1783546657.0749404,
-    "ast_hash": "84d1f634cd0cd38df52340a626f58f49",
-    "semantic_hash": "84d1f634cd0cd38df52340a626f58f49"
-  },
-  "src/components/actividades/forms/VerEditar.tsx": {
-    "mtime": 1783543101.49182,
-    "ast_hash": "0e96fbd73146b7eb96624ab2cfa94437",
-    "semantic_hash": "0e96fbd73146b7eb96624ab2cfa94437"
-  },
-  "src/components/actividades/lib/actions.ts": {
-    "mtime": 1783544667.1087124,
-    "ast_hash": "a47c09a4a65f7d4ba35053ca3abbb548",
-    "semantic_hash": "a47c09a4a65f7d4ba35053ca3abbb548"
-  },
-  "src/components/actividades/lib/asistencia-excel.ts": {
-    "mtime": 1783544685.1499176,
-    "ast_hash": "971fcaaf0d87893a14ec6c9ba69e4506",
-    "semantic_hash": "971fcaaf0d87893a14ec6c9ba69e4506"
-  },
-  "src/components/actividades/lib/guatemala-departamentos.json": {
-    "mtime": 1783533476.9506385,
-    "ast_hash": "5a800816dc50f93a7a0f4fc9f8f022f9",
-    "semantic_hash": "5a800816dc50f93a7a0f4fc9f8f022f9"
-  },
-  "src/components/actividades/lib/guatemala-locations.ts": {
-    "mtime": 1785711483.9924016,
-    "ast_hash": "1ba58432d82262b7d5b934d6ec2931ab",
-    "semantic_hash": "1ba58432d82262b7d5b934d6ec2931ab"
-  },
-  "src/components/actividades/lib/hooks.ts": {
-    "mtime": 1783542449.7323616,
-    "ast_hash": "40d189ba36b2dee2b8f2ee4c13abf0c0",
-    "semantic_hash": "40d189ba36b2dee2b8f2ee4c13abf0c0"
-  },
-  "src/components/actividades/lib/stats.ts": {
-    "mtime": 1783544705.0297863,
-    "ast_hash": "20abb65e50664cfc1e4b8d937e8fdd3d",
-    "semantic_hash": "20abb65e50664cfc1e4b8d937e8fdd3d"
-  },
-  "src/components/actividades/lib/swal.ts": {
-    "mtime": 1785718663.2476053,
-    "ast_hash": "02f33186ce7d458c6866314ca6a7662a",
-    "semantic_hash": "02f33186ce7d458c6866314ca6a7662a"
-  },
-  "src/components/actividades/lib/zod.ts": {
-    "mtime": 1783544649.9256797,
-    "ast_hash": "96fd60e306796893225c244605625955",
-    "semantic_hash": "96fd60e306796893225c244605625955"
-  },
   "src/components/organizacion-jerarquica/OrganigramaExportMenu.tsx": {
     "mtime": 1783143815.9502916,
     "ast_hash": "11edac1463329c7d69323ad8d289c878",
@@ -895,12 +735,12 @@
     "semantic_hash": "a6e1c7252fd80468032e721502c4fcbe"
   },
   "src/components/organizacion-jerarquica/OrganigramaVertical.tsx": {
-    "mtime": 1783531669.5214689,
-    "ast_hash": "4dc8feae7d5f7b9756ba0b19d6ea5c5d",
-    "semantic_hash": "4dc8feae7d5f7b9756ba0b19d6ea5c5d"
+    "mtime": 1787327657.0427842,
+    "ast_hash": "cf929fff27244f2e07aaeb0b0f8971d4",
+    "semantic_hash": ""
   },
   "src/components/organizacion-jerarquica/OrganizacionJerarquica.tsx": {
-    "mtime": 1785711483.966916,
+    "mtime": 1786487626.93365,
     "ast_hash": "cb805d7edf5e8c5922276ddddacf7b23",
     "semantic_hash": "cb805d7edf5e8c5922276ddddacf7b23"
   },
@@ -910,7 +750,7 @@
     "semantic_hash": "e848c6fe91c936111df791dbfe7c9aee"
   },
   "src/components/organizacion-jerarquica/OrganizacionTree.tsx": {
-    "mtime": 1785711483.9977176,
+    "mtime": 1786487626.933754,
     "ast_hash": "deb7fda7e0d59f7802fc1776b77ef0b5",
     "semantic_hash": "deb7fda7e0d59f7802fc1776b77ef0b5"
   },
@@ -925,7 +765,7 @@
     "semantic_hash": "c44a79a13c765b6b95f7494da89a84f2"
   },
   "src/components/organizacion-jerarquica/forms/EstructuraFormShell.tsx": {
-    "mtime": 1785711483.9619322,
+    "mtime": 1787325095.194322,
     "ast_hash": "c4afb203d81c26db2193449c698ea253",
     "semantic_hash": "c4afb203d81c26db2193449c698ea253"
   },
@@ -945,7 +785,7 @@
     "semantic_hash": "d039676e18d925858592dc6a74999fec"
   },
   "src/components/organizacion-jerarquica/lib/actions.ts": {
-    "mtime": 1785711483.9924314,
+    "mtime": 1786487626.9337268,
     "ast_hash": "90edaedb1fea378b5777e4a3089fbb8c",
     "semantic_hash": "90edaedb1fea378b5777e4a3089fbb8c"
   },
@@ -955,7 +795,7 @@
     "semantic_hash": "940631388bb0ffc57e9069df8432783e"
   },
   "src/components/organizacion-jerarquica/lib/hooks.ts": {
-    "mtime": 1785711483.99768,
+    "mtime": 1787325095.2002196,
     "ast_hash": "c03d46f6e1d5cecfcb436452f25ae21c",
     "semantic_hash": "c03d46f6e1d5cecfcb436452f25ae21c"
   },
@@ -975,7 +815,7 @@
     "semantic_hash": "8b484dbf41ddc9ba6ab3871b1b8bdd6f"
   },
   "src/components/organizacion-jerarquica/lib/zod.ts": {
-    "mtime": 1785711483.9977026,
+    "mtime": 1787325095.2003617,
     "ast_hash": "4467d06c49182bffc0a1d2112ac25ce8",
     "semantic_hash": "4467d06c49182bffc0a1d2112ac25ce8"
   },
@@ -985,7 +825,7 @@
     "semantic_hash": "1431a81aebd4484600249de2a62da637"
   },
   "src/components/ui/PushNotificationToggle.tsx": {
-    "mtime": 1779775105.728119,
+    "mtime": 1779775105.728116,
     "ast_hash": "070a97067065d14917689d1c72674339",
     "semantic_hash": "070a97067065d14917689d1c72674339"
   },
@@ -995,9 +835,9 @@
     "semantic_hash": "35190b47c0fd331652a9e47c09f16f4f"
   },
   "src/components/ui/animated-theme-toggler.tsx": {
-    "mtime": 1779846776.9957254,
-    "ast_hash": "480feb31dcfa41355ab0f98b1ee61a46",
-    "semantic_hash": "480feb31dcfa41355ab0f98b1ee61a46"
+    "mtime": 1787194755.992468,
+    "ast_hash": "12bc25daf5b66e7e12dbfa48a46cc3de",
+    "semantic_hash": ""
   },
   "src/components/ui/aurora-text.tsx": {
     "mtime": 1776093302.3649416,
@@ -1025,12 +865,12 @@
     "semantic_hash": "3145c3127ea48eac16907442a48c31a7"
   },
   "src/components/ui/breadcrumb-nav.tsx": {
-    "mtime": 1783536018.0200255,
-    "ast_hash": "168896e1ac656b35b2ea28c397d0b91b",
-    "semantic_hash": "168896e1ac656b35b2ea28c397d0b91b"
+    "mtime": 1787327800.1598809,
+    "ast_hash": "a01ecf76c8e7de998b8f1218d2b09bff",
+    "semantic_hash": ""
   },
   "src/components/ui/button.tsx": {
-    "mtime": 1785711483.974105,
+    "mtime": 1787325095.1942925,
     "ast_hash": "c2905fcee8fd2dbf312e12b557ada06e",
     "semantic_hash": "c2905fcee8fd2dbf312e12b557ada06e"
   },
@@ -1075,9 +915,9 @@
     "semantic_hash": "f9800f8497cb2a79de210c460cbbe6c7"
   },
   "src/components/ui/general-modal.tsx": {
-    "mtime": 1783543099.1755373,
-    "ast_hash": "3f462483cc8c82e0f375b1de67bfceb1",
-    "semantic_hash": "3f462483cc8c82e0f375b1de67bfceb1"
+    "mtime": 1787181802.7033327,
+    "ast_hash": "13f667e69ff1437a1ac72b6d997b8602",
+    "semantic_hash": ""
   },
   "src/components/ui/input.tsx": {
     "mtime": 1776093302.3664773,
@@ -1175,9 +1015,9 @@
     "semantic_hash": "7ff08ad10c631633dc0de80aef5992d7"
   },
   "src/proxy.ts": {
-    "mtime": 1783534356.1066313,
-    "ast_hash": "432026d2f52ade1b52e49b60f1ab4ae9",
-    "semantic_hash": "432026d2f52ade1b52e49b60f1ab4ae9"
+    "mtime": 1786488225.1324806,
+    "ast_hash": "c9c5c35de7afae0a9041e109679c34be",
+    "semantic_hash": ""
   },
   "src/utils/general/password-generator.ts": {
     "mtime": 1777347048.7474103,
@@ -1185,7 +1025,7 @@
     "semantic_hash": "4828954f6f59c76b2878ffbfbfb10444"
   },
   "src/utils/push-utils.ts": {
-    "mtime": 1776093303.369357,
+    "mtime": 1776093303.369354,
     "ast_hash": "e76704874fdfddecc86d7f28a4bf8c28",
     "semantic_hash": "e76704874fdfddecc86d7f28a4bf8c28"
   },
@@ -1224,16 +1064,6 @@
     "ast_hash": "ee17fd1c97c735e9f3564e3f5251f125",
     "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
   },
-  "src/components/(SIGET)/memoria-labores/lib/helpers.ts": {
-    "mtime": 1785718706.1645648,
-    "ast_hash": "4377018e4080a54cb857c9a62f41de43",
-    "semantic_hash": "4377018e4080a54cb857c9a62f41de43"
-  },
-  "src/components/(SIGET)/memoria-labores/lib/zod.ts": {
-    "mtime": 1785718695.5443716,
-    "ast_hash": "9d854129674c88f4178495ecec66ed34",
-    "semantic_hash": "9d854129674c88f4178495ecec66ed34"
-  },
   "src/components/(SIGET)/observatorio/forms/lib/zod.ts": {
     "mtime": 1785718663.2659492,
     "ast_hash": "bd1578590b8d744d1db2a748a8f75c11",
@@ -1260,8 +1090,603 @@
     "semantic_hash": "00a914cb1cd247b76f964f05303a031f"
   },
   "src/lib/fechas-gt.ts": {
-    "mtime": 1785718662.9465783,
-    "ast_hash": "6419c9d654cc8a99e6666a97db34e18e",
-    "semantic_hash": "6419c9d654cc8a99e6666a97db34e18e"
+    "mtime": 1787328800.0732377,
+    "ast_hash": "c4902186062d894854fc50ba73a6ac5d",
+    "semantic_hash": ""
+  },
+  "db/asist_actividades_slug.sql": {
+    "mtime": 1787176821.908055,
+    "ast_hash": "8717a0b694bb6bb68cadbc4de6a62728",
+    "semantic_hash": ""
+  },
+  "src/app/siget/asistencia-actividades/[id]/page.tsx": {
+    "mtime": 1787187466.4340513,
+    "ast_hash": "f1766e74d9edc0c95bfcfce645b1bf1f",
+    "semantic_hash": ""
+  },
+  "src/app/siget/asistencia-actividades/page.tsx": {
+    "mtime": 1787176593.8861573,
+    "ast_hash": "3e5acbc0e41ed31d4d68380bfc9a6b4c",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/asistencia-actividades/[slug]/page.tsx": {
+    "mtime": 1787326108.0232472,
+    "ast_hash": "9f3cd245c8b6187727f7d20c6eb68aea",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/asistencia-actividades/page.tsx": {
+    "mtime": 1787172066.3727064,
+    "ast_hash": "6b5e9736898b1f673b6518bd7162bfe5",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/gestion-vehiculos/bitacoras/page.tsx": {
+    "mtime": 1787172066.372929,
+    "ast_hash": "e9e73de9d0aeb13298f7140e192f5982",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/gestion-vehiculos/flota/page.tsx": {
+    "mtime": 1787172066.3730884,
+    "ast_hash": "7bd0867bec17a47053ee5ec1b3e88eb9",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/gestion-vehiculos/mantenimiento/page.tsx": {
+    "mtime": 1787172066.3732176,
+    "ast_hash": "90e1153cf0b9984fe4522cc9764f7022",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/gestion-vehiculos/page.tsx": {
+    "mtime": 1787172066.3733,
+    "ast_hash": "1a413349b1596e5abbbbc7833db1198e",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/gestion-vehiculos/solicitudes/page.tsx": {
+    "mtime": 1787172066.3734438,
+    "ast_hash": "c1612599878f90864c945fb38fda7c0f",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/memoria-labores/page.tsx": {
+    "mtime": 1787172066.3735774,
+    "ast_hash": "f39607678fd8d07e74324aceee890a1b",
+    "semantic_hash": ""
+  },
+  "src/app/siget/gestion-territorial/page.tsx": {
+    "mtime": 1787326357.0451386,
+    "ast_hash": "317f33480ccd502c545d4636fb08652d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/SubmodulosNav.tsx": {
+    "mtime": 1787172066.3738844,
+    "ast_hash": "4d7d23f460126160860acb357260b44c",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/ActividadDetalle.tsx": {
+    "mtime": 1787180173.4550273,
+    "ast_hash": "48eb9aac8fe8070f0c60b7c9af5dd27d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/AsistenciaActividades.tsx": {
+    "mtime": 1787172066.3741834,
+    "ast_hash": "50a061dbed84fbae5757668171c70dc1",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/AsistenciaActividadesList.tsx": {
+    "mtime": 1787327262.8282354,
+    "ast_hash": "bd0841040ba6fc0055c49964202f8673",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/BusquedaDpi.tsx": {
+    "mtime": 1787182613.923245,
+    "ast_hash": "94799db041ef6da57eb5cdaec536c96d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/BusquedaSelect.tsx": {
+    "mtime": 1787178553.158345,
+    "ast_hash": "c760c094b63d004e14381638d21c76e1",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/GraficasAsistencia.tsx": {
+    "mtime": 1787328496.8728192,
+    "ast_hash": "b7fe7676ffbf7b6e8b7964f69ae29b60",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/QrActividad.tsx": {
+    "mtime": 1787182228.3039448,
+    "ast_hash": "f826d6eae2ca2c1acd8bab816eca20ba",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/RegistroPublico.tsx": {
+    "mtime": 1787182613.3998168,
+    "ast_hash": "e877e6a0647c067bdda7e60aaa02dd15",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/TablaRegistros.tsx": {
+    "mtime": 1787328914.8070087,
+    "ast_hash": "f1fc3b3c05172b5fcfa00a04f3d60e1b",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/CamposInstitucionPuesto.tsx": {
+    "mtime": 1787182606.0434484,
+    "ast_hash": "f4d3c32d805e59cd12a3c969fdffb17f",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/CamposUbicacionActividad.tsx": {
+    "mtime": 1787178559.82711,
+    "ast_hash": "5f763d8df442577f6857cdf5e5290cee",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/Crear.tsx": {
+    "mtime": 1787176891.9164145,
+    "ast_hash": "d0d4400835410b9d45271b49b1db4ebd",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/EditarRegistro.tsx": {
+    "mtime": 1787172066.383225,
+    "ast_hash": "84d1f634cd0cd38df52340a626f58f49",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/VerEditar.tsx": {
+    "mtime": 1787178571.6192853,
+    "ast_hash": "6c62b8da36f6a8664eb7cb52a5d99ce5",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/forms/modal-field-class.ts": {
+    "mtime": 1787182599.2168412,
+    "ast_hash": "8168c962316a8fcfb0533f346f8f4428",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/actions.ts": {
+    "mtime": 1787177990.9155943,
+    "ast_hash": "fb1cc98e073b5cfcb712b1674e870362",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/asistencia-excel.ts": {
+    "mtime": 1787172066.3859096,
+    "ast_hash": "971fcaaf0d87893a14ec6c9ba69e4506",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/guatemala-departamentos.json": {
+    "mtime": 1787172066.3863075,
+    "ast_hash": "5a800816dc50f93a7a0f4fc9f8f022f9",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/guatemala-locations.ts": {
+    "mtime": 1787172066.387255,
+    "ast_hash": "1ba58432d82262b7d5b934d6ec2931ab",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/helpers.ts": {
+    "mtime": 1787177986.3718247,
+    "ast_hash": "e98e15b1d7b5ea5d052ae10c4aee0d99",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/hooks.ts": {
+    "mtime": 1787172066.3875241,
+    "ast_hash": "40d189ba36b2dee2b8f2ee4c13abf0c0",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/stats.ts": {
+    "mtime": 1787172066.3876436,
+    "ast_hash": "0307ea5d5c4fe8e261667d311414f66d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/swal.ts": {
+    "mtime": 1787172066.3877542,
+    "ast_hash": "02f33186ce7d458c6866314ca6a7662a",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/asistencia-actividades/lib/zod.ts": {
+    "mtime": 1787180481.745507,
+    "ast_hash": "952c124468d893787a797adeb2c7679f",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/BitacoraFormModal.tsx": {
+    "mtime": 1787172067.389127,
+    "ast_hash": "8e137b3d0ce6a9d34e0245bfea884b97",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/BitacoraStatsCards.tsx": {
+    "mtime": 1787172066.3894815,
+    "ast_hash": "7a155960eb31e621a2997a8eb2e6b876",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/BitacorasList.tsx": {
+    "mtime": 1787172066.3898969,
+    "ast_hash": "f5ae9ecd81f90050dffce24c917cc403",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/BitacorasPanel.tsx": {
+    "mtime": 1787172066.3903093,
+    "ast_hash": "013cf696bacf74f594d5390c2f19307c",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/ExportarReporteModal.tsx": {
+    "mtime": 1787172067.390811,
+    "ast_hash": "36eb52a5a4302c4b08d96840d7dcd881",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/lib/actions.ts": {
+    "mtime": 1787172067.39159,
+    "ast_hash": "ede57cfb5be3d8557754ec06b2df3c2f",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/lib/reports.ts": {
+    "mtime": 1787172067.391764,
+    "ast_hash": "b62e380b8cc9f83e7af7b2bac8cfd84a",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/bitacoras/lib/zod.ts": {
+    "mtime": 1787172066.392718,
+    "ast_hash": "1966d9b4ae16ba56f9b1a69142d03022",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/VehiculoCard.tsx": {
+    "mtime": 1787172066.3929768,
+    "ast_hash": "414d57ec529ba1c1ba6e8053b7b0b1e4",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/VehiculoFormModal.tsx": {
+    "mtime": 1787172066.3950675,
+    "ast_hash": "37882b45a2261b96080f30fdc95afba1",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/VehiculosCards.tsx": {
+    "mtime": 1787172066.3957436,
+    "ast_hash": "7f2d7c2a29d29533bdcefabfd904c193",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/VehiculosList.tsx": {
+    "mtime": 1787172066.3964257,
+    "ast_hash": "fc4bf02e58dadc7b0422a2c30aa024b6",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/VehiculosPanel.tsx": {
+    "mtime": 1787172066.397041,
+    "ast_hash": "e92c7820f0f21afe5c812b021b43fc2e",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/lib/actions.ts": {
+    "mtime": 1787172066.3975997,
+    "ast_hash": "dff23b820135732d37951871b84e75c3",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/lib/alerts.ts": {
+    "mtime": 1787172066.3979082,
+    "ast_hash": "a39ef5f82ca76b98aedbe4a5bd4bf88d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/flota/lib/zod.ts": {
+    "mtime": 1787172066.3985462,
+    "ast_hash": "446276cffbe574e740b748ef121d5b21",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/PasajerosSelect.tsx": {
+    "mtime": 1787172067.399133,
+    "ast_hash": "71b19313d31f3219e0d16ed51e167364",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/SolicitudActionModal.tsx": {
+    "mtime": 1787172066.4001827,
+    "ast_hash": "35ab450b92f85ac619bd787b22099b89",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/SolicitudFormModal.tsx": {
+    "mtime": 1787172066.4032078,
+    "ast_hash": "bcd89c58ed7a0bb196339f1af9e6d5d8",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/SolicitudesList.tsx": {
+    "mtime": 1787172066.4045742,
+    "ast_hash": "6e361c22679c480c98e31644b9a74857",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/SolicitudesPanel.tsx": {
+    "mtime": 1787172066.4058533,
+    "ast_hash": "ec44ad40284feade8069f8245917374d",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/lib/actions.ts": {
+    "mtime": 1787172067.406217,
+    "ast_hash": "752eb5c0d5cd2b25990408252cc5b108",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/gestion-vehiculos/solicitudes/lib/zod.ts": {
+    "mtime": 1787172066.4065716,
+    "ast_hash": "d4ce16ed1913f2d399134bcf5229a172",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/lib/saludos.ts": {
+    "mtime": 1787175064.75035,
+    "ast_hash": "01cdff00d29c746d89bb5991fca671b6",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/DiagnosticoModal.tsx": {
+    "mtime": 1787172066.40681,
+    "ast_hash": "54cb0810038a5e64d1f3698cedca63de",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/FallaFormModal.tsx": {
+    "mtime": 1787172066.4071457,
+    "ast_hash": "9a09be24c297732ad726b13a1f811121",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/MantenimientoList.tsx": {
+    "mtime": 1787172066.407299,
+    "ast_hash": "718a2672a9f51b7708304309c78b0952",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/MantenimientoPanel.tsx": {
+    "mtime": 1787172066.4074402,
+    "ast_hash": "b4f86edc5f2ec38a45589bc39466a0f4",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/lib/actions.ts": {
+    "mtime": 1787172066.407617,
+    "ast_hash": "abd3b10733899ca282f08728a1c892fa",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/mantenimiento/lib/zod.ts": {
+    "mtime": 1787172066.4080157,
+    "ast_hash": "35bc18c73ec4241bd76769bf2f878419",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/InformeMemoriaVista.tsx": {
+    "mtime": 1787172066.4085693,
+    "ast_hash": "ab20e2e51c7474fe2697b6f0284391b3",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/MemoriaPeriodoFiltro.tsx": {
+    "mtime": 1787172066.4089584,
+    "ast_hash": "14a3f05a6e30073a9bf3e8a43b5c8ca3",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/ProyectosMemoriaList.tsx": {
+    "mtime": 1787172066.4092677,
+    "ast_hash": "f1ae709abf262a730215527c4186617b",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/form/ProyectosMemoriaForm.tsx": {
+    "mtime": 1787172066.4102368,
+    "ast_hash": "ec8164d6dac6d11414a7909801ae57ca",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/index.tsx": {
+    "mtime": 1787172066.410725,
+    "ast_hash": "0faf9f09eda3baa85cecd33a1b70e55c",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/actions.ts": {
+    "mtime": 1787172066.4112527,
+    "ast_hash": "4a010e35a63861bbe95c567598bd5856",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/helpers.ts": {
+    "mtime": 1787172066.4121456,
+    "ast_hash": "4377018e4080a54cb857c9a62f41de43",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/hooks.ts": {
+    "mtime": 1787172066.4129083,
+    "ast_hash": "1862c3f3d865856043550770787fea1a",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/memoria-excel.ts": {
+    "mtime": 1787172066.4132798,
+    "ast_hash": "ccd319952e84784a2c8d9864a844c439",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/swal.ts": {
+    "mtime": 1787172066.4136183,
+    "ast_hash": "6088520377ed25259f5c776212c6d77c",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/gestion-territorial/memoria-labores/lib/zod.ts": {
+    "mtime": 1787172066.4140995,
+    "ast_hash": "9d854129674c88f4178495ecec66ed34",
+    "semantic_hash": ""
+  },
+  "src/components/(SIGET)/logo/AnimacionLogoSiget.tsx": {
+    "mtime": 1787327648.6989756,
+    "ast_hash": "4f744100226346f31d5b4c8dd7036d79",
+    "semantic_hash": ""
+  },
+  "src/components/ui/calendar-date-picker.tsx": {
+    "mtime": 1787178548.5573537,
+    "ast_hash": "8b36cd96e972335cad6f066bb1e5ef74",
+    "semantic_hash": ""
+  },
+  "src/components/ui/calendar.tsx": {
+    "mtime": 1787172066.4163868,
+    "ast_hash": "2b9abaff6b23a4a0965bc3adb5b448f6",
+    "semantic_hash": ""
+  },
+  "src/components/ui/date-picker.tsx": {
+    "mtime": 1787172066.4168167,
+    "ast_hash": "766d03ed6be9191b1b5b68de767e0d6c",
+    "semantic_hash": ""
+  },
+  "src/components/ui/datetime-picker.tsx": {
+    "mtime": 1787172066.416979,
+    "ast_hash": "99fa719a3843eabc334527672d2d084c",
+    "semantic_hash": ""
+  },
+  "src/components/ui/morph-cycle-icon.tsx": {
+    "mtime": 1787190405.265825,
+    "ast_hash": "b28f8b437be484205281626aeba37e8c",
+    "semantic_hash": ""
+  },
+  "src/components/ui/morph-hover-icon.tsx": {
+    "mtime": 1787189092.3151183,
+    "ast_hash": "6fbfae8e09757a56b31c82770524c803",
+    "semantic_hash": ""
+  },
+  "src/components/ui/morph-switch.tsx": {
+    "mtime": 1787179198.7792132,
+    "ast_hash": "df9d9f5c74a369217f6d44a176f8e3e4",
+    "semantic_hash": ""
+  },
+  "src/components/ui/switch.tsx": {
+    "mtime": 1787172066.4172175,
+    "ast_hash": "bf0598ce90aaee824ec8669c93522779",
+    "semantic_hash": ""
+  },
+  "src/components/ui/tabs.tsx": {
+    "mtime": 1787172066.4176586,
+    "ast_hash": "a418d65355b5e64178f04c2981bcf819",
+    "semantic_hash": ""
+  },
+  "src/components/ui/tooltip.tsx": {
+    "mtime": 1787172066.4229312,
+    "ast_hash": "58bf08fbec1c62be152ccd127824e28c",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/componente-fechas-gt/SKILL.md": {
+    "mtime": 1785718663.052574,
+    "ast_hash": "133e83f32784ee66ade7ffacf7ec8704",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/menu-lateral/SKILL.md": {
+    "mtime": 1785718663.2193735,
+    "ast_hash": "4f8c0cb0b6e2dee13c4d866ed2250ca9",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/nuevo-componente/SKILL.md": {
+    "mtime": 1785718720.3682287,
+    "ast_hash": "e2dfc80d920b7932c59500bfb3c18ed1",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/nuevo-componente/plantillas.md": {
+    "mtime": 1785718741.5245364,
+    "ast_hash": "aff2e9980d1ce16ea9e74ecbcbc1f9b0",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-animaciones-listas/SKILL.md": {
+    "mtime": 1785718663.0331714,
+    "ast_hash": "dc1af4d714c59409beba6e14ec812565",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-graficos/SKILL.md": {
+    "mtime": 1786488225.4552677,
+    "ast_hash": "e77ab527766cf3307e91968e9e42835b",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-modales/SKILL.md": {
+    "mtime": 1785718663.00606,
+    "ast_hash": "bbd6c1d262850c080662acd92391eff7",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-offline-banner/SKILL.md": {
+    "mtime": 1785718663.0430956,
+    "ast_hash": "3c4606135025190c21903f16e9e5aea7",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-sweetalert/SKILL.md": {
+    "mtime": 1785718663.024494,
+    "ast_hash": "9c08f77dd1fc73cebad4a23cdc9dab54",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-tema-botones/SKILL.md": {
+    "mtime": 1786491712.8918214,
+    "ast_hash": "e5becc79895e63916738c29bfcab48d1",
+    "semantic_hash": ""
+  },
+  ".cursor/skills/ui-toastify/SKILL.md": {
+    "mtime": 1785718663.0133832,
+    "ast_hash": "5485be8f664d983fafeae6d61b2a6807",
+    "semantic_hash": ""
+  },
+  "GIT.md": {
+    "mtime": 1787171737.2802856,
+    "ast_hash": "f5074ac81cd49e9b1410a7ed3e06d879",
+    "semantic_hash": ""
+  },
+  "PROMPTS.md": {
+    "mtime": 1776093302.3428586,
+    "ast_hash": "c3cc84d5f90e7a395d42a52648f33d6a",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1776093302.3429728,
+    "ast_hash": "6dc7e9a361b131b2f3f7e879859148c8",
+    "semantic_hash": ""
+  },
+  "install-graphify.md": {
+    "mtime": 1785175195.4281225,
+    "ast_hash": "59d806fcf501c96fd5b9e14780c47a88",
+    "semantic_hash": ""
+  },
+  "notificaciones_resumen.md": {
+    "mtime": 1776093302.3438518,
+    "ast_hash": "3beb0fb4cb1e83671e5a55c0ca22c86f",
+    "semantic_hash": ""
+  },
+  "pnpm-workspace.yaml": {
+    "mtime": 1787172066.372019,
+    "ast_hash": "d37c1d374604c029cecf1ab0dd12e4ed",
+    "semantic_hash": ""
+  },
+  "src/components/(uploads)/imgs/sql/Implementacion.md": {
+    "mtime": 1779744795.9883373,
+    "ast_hash": "fb1616d9d5cfe49381cbefd5fc0db338",
+    "semantic_hash": ""
+  },
+  "public/apple-touch-icon.png": {
+    "mtime": 1779847929.7001162,
+    "ast_hash": "5426b3cc048578e4017fe5d3d527adbb",
+    "semantic_hash": ""
+  },
+  "public/kore/kore-light.png": {
+    "mtime": 1776093302.3454723,
+    "ast_hash": "01a27900bc2c855a9c6af4cbcff90800",
+    "semantic_hash": ""
+  },
+  "public/kore/logo.png": {
+    "mtime": 1776093302.3456607,
+    "ast_hash": "9ce53f1270b851c46aa9be4dcb338c2f",
+    "semantic_hash": ""
+  },
+  "public/logos/LaArada.png": {
+    "mtime": 1776093302.3461292,
+    "ast_hash": "eb62b00f12b9540b4bfb48449388aa7b",
+    "semantic_hash": ""
+  },
+  "public/logos/favicon.png": {
+    "mtime": 1776093302.3463159,
+    "ast_hash": "37930e8c43526ec2839fa76f97f982b3",
+    "semantic_hash": ""
+  },
+  "public/maskable-icon-512x512.png": {
+    "mtime": 1779847929.7149723,
+    "ast_hash": "dfefbb13bf0896e3a71e83b3f07d52fb",
+    "semantic_hash": ""
+  },
+  "public/pwa-192x192.png": {
+    "mtime": 1779847929.7180855,
+    "ast_hash": "5f47ef7d87cc101439eda370af34e66d",
+    "semantic_hash": ""
+  },
+  "public/pwa-512x512.png": {
+    "mtime": 1779847929.7316446,
+    "ast_hash": "dfefbb13bf0896e3a71e83b3f07d52fb",
+    "semantic_hash": ""
+  },
+  "public/pwa-64x64.png": {
+    "mtime": 1779847929.7331285,
+    "ast_hash": "48fd793079000237af20394372f70034",
+    "semantic_hash": ""
+  },
+  "public/trifinio/hero-background2.jpg": {
+    "mtime": 1776185399.405055,
+    "ast_hash": "af9111509c4facef4cfc65bd209c83ba",
+    "semantic_hash": ""
+  },
+  "public/trifinio/logo-vertical.png": {
+    "mtime": 1776119205.0,
+    "ast_hash": "e65dca159e0c6553509ab87de06d4eec",
+    "semantic_hash": ""
+  },
+  "public/trifinio/logo.png": {
+    "mtime": 1776119990.3993993,
+    "ast_hash": "24e1d949d9c1cea34b33fcfee7ad1f1a",
+    "semantic_hash": ""
   }
 }

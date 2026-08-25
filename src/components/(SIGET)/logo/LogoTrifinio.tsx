@@ -97,11 +97,18 @@ export default function LogoTrifinio({
     },
   };
 
-  const textClass = cn("text-azul-trifinio", !forceAzulColors && "dark:text-white");
-  const lineClass = cn("bg-azul-trifinio", !forceAzulColors && "dark:bg-white");
+  const textClass = forceAzulColors
+    ? "text-azul-trifinio-hero"
+    : cn("text-azul-trifinio", "dark:text-white");
+  const lineClass = forceAzulColors
+    ? "bg-azul-trifinio-hero"
+    : cn("bg-azul-trifinio", "dark:bg-white");
   const blurBgClass = forceAzulColors
-    ? "bg-white/55 backdrop-blur-md border border-white/50"
-    : "bg-white/55 dark:bg-white/10 backdrop-blur-md border border-white/50 dark:border-white/10";
+    ? "border border-white/50 bg-white/55 backdrop-blur-md"
+    : "border border-white/50 bg-white/55 backdrop-blur-md dark:border-white/10 dark:bg-white/10";
+  const glowBgClass = forceAzulColors
+    ? "bg-white/50"
+    : "bg-white/50 dark:bg-transparent";
 
   return (
     <>
@@ -109,17 +116,27 @@ export default function LogoTrifinio({
         onMouseEnter={handleHover}
         onClick={handleClick}
         whileTap={{ scale: 0.96 }}
-        className="relative select-none cursor-pointer flex items-center justify-center p-2 w-full"
+        className="relative flex w-full cursor-pointer select-none items-center justify-center p-2"
         style={{ scale: scaleValue }}
         initial="hidden"
         animate="visible"
       >
         {backgroundEffect === "blur" && (
-          <div className={cn("absolute inset-x-[-25px] lg:inset-x-[-40px] inset-y-[-15px] lg:inset-y-[-25px] rounded-2xl -z-10 shadow-xl", blurBgClass)} />
+          <div
+            className={cn(
+              "absolute inset-x-[-25px] inset-y-[-15px] -z-10 rounded-2xl shadow-xl lg:inset-x-[-40px] lg:inset-y-[-25px]",
+              blurBgClass,
+            )}
+          />
         )}
-        
+
         {backgroundEffect === "glow" && (
-          <div className="absolute inset-x-[-20%] inset-y-[-10%] bg-white/50 dark:bg-transparent blur-[60px] -z-10 rounded-[100px]" />
+          <div
+            className={cn(
+              "absolute inset-x-[-20%] inset-y-[-10%] -z-10 rounded-[100px] blur-[60px]",
+              glowBgClass,
+            )}
+          />
         )}
 
         <div className="flex flex-row items-center justify-center gap-6 lg:gap-10 w-full px-4 lg:px-8">

@@ -17,7 +17,9 @@ import {
 } from "./zod";
 import {
   canEliminarActividadAsistencia,
+  esUuidActividad,
   isPrivilegedAsistenciaRole,
+  slugifyNombreActividad,
 } from "./helpers";
 
 type ActionResult = {
@@ -30,7 +32,7 @@ export type DpiSugerencia = {
   dpi: string;
   nombre: string;
 };
-type ActionResultWithId = ActionResult & { id?: string };
+type ActionResultWithId = ActionResult & { id?: string; slug?: string };
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -205,10 +207,14 @@ function normalizarActividad(
     typeof row.created_by === "string" && row.created_by
       ? row.created_by
       : null;
+  const nombre = String(row.nombre ?? "");
+  const slugGuardado =
+    typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
 
   return {
     id: String(row.id),
-    nombre: String(row.nombre ?? ""),
+    slug: slugGuardado || slugifyNombreActividad(nombre) || "actividad",
+    nombre,
     descripcion: (row.descripcion as string | null) ?? null,
     fecha_realizacion: String(
       row.fecha_realizacion ?? row.created_at ?? "",
@@ -225,6 +231,113 @@ function normalizarActividad(
     creador_nombre: creador?.nombre?.trim() || null,
     creador_oficina: creador?.oficina?.trim() || null,
   };
+}
+
+async function generarSlugUnico(
+  supabase: SupabaseServerClient,
+  nombre: string,
+  excludeId?: string,
+): Promise<string> {
+  const base = slugifyNombreActividad(nombre) || "actividad";
+  let candidato = base;
+  let n = 2;
+
+  while (true) {
+    let query = supabase
+      .from("asist_actividades")
+      .select("id")
+      .eq("slug", candidato)
+      .limit(1);
+    if (excludeId) query = query.neq("id", excludeId);
+    const { data } = await query.maybeSingle();
+    if (!data) return candidato;
+    candidato = `${base}-${n}`;
+    n += 1;
+  }
+}
+
+async function persistirSlugSiFalta(
+  supabase: SupabaseServerClient,
+  row: Record<string, unknown>,
+): Promise<string> {
+  const id = String(row.id);
+  const nombre = String(row.nombre ?? "");
+  const actual =
+    typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
+  if (actual) return actual;
+
+  const slug = await generarSlugUnico(supabase, nombre, id);
+  const { error } = await supabase
+    .from("asist_actividades")
+    .update({ slug })
+    .eq("id", id);
+  if (error?.message?.includes("slug")) return slug;
+  return slug;
+}
+
+async function puedeVerActividad(
+  user: { id: string; user_metadata?: { rol?: string }; role?: string },
+  createdBy: string | null,
+): Promise<boolean> {
+  const role = roleFromUser(user);
+  return isPrivilegedAsistenciaRole(role) || createdBy === user.id;
+}
+
+async function fetchActividadRowByRef(
+  supabase: SupabaseServerClient,
+  user: { id: string; user_metadata?: { rol?: string }; role?: string },
+  ref: string,
+): Promise<Record<string, unknown> | null> {
+  const privileged = isPrivilegedAsistenciaRole(roleFromUser(user));
+
+  const resolverFila = async (
+    row: Record<string, unknown> | null,
+  ): Promise<Record<string, unknown> | null> => {
+    if (!row) return null;
+    const createdBy =
+      typeof row.created_by === "string" ? row.created_by : null;
+    if (!(await puedeVerActividad(user, createdBy))) return null;
+    const slug = await persistirSlugSiFalta(supabase, row);
+    return { ...row, slug };
+  };
+
+  if (esUuidActividad(ref)) {
+    const { data } = await supabase
+      .from("asist_actividades")
+      .select("*")
+      .eq("id", ref)
+      .maybeSingle();
+    return resolverFila(data as Record<string, unknown> | null);
+  }
+
+  const { data: porSlug } = await supabase
+    .from("asist_actividades")
+    .select("*")
+    .eq("slug", ref)
+    .maybeSingle();
+
+  const filaSlug = await resolverFila(porSlug as Record<string, unknown> | null);
+  if (filaSlug) return filaSlug;
+
+  let query = supabase.from("asist_actividades").select("*");
+  if (!privileged) query = query.eq("created_by", user.id);
+  const { data: filas } = await query;
+
+  const coincidencia = (filas ?? []).find((row) => {
+    const nombre = String(row.nombre ?? "");
+    const slugRow =
+      typeof row.slug === "string" && row.slug.trim()
+        ? row.slug.trim()
+        : slugifyNombreActividad(nombre);
+    return slugRow === ref;
+  });
+
+  if (!coincidencia) return null;
+  const slug = await persistirSlugSiFalta(
+    supabase,
+    coincidencia as Record<string, unknown>,
+  );
+  return { ...(coincidencia as Record<string, unknown>), slug };
 }
 
 function normalizarParticipante(row: Record<string, unknown>): ParticipanteRecord {
@@ -309,45 +422,68 @@ export async function getActividades(): Promise<ActividadRecord[]> {
 }
 
 export async function getActividadPublica(
-  id: string,
+  ref: string,
 ): Promise<ActividadRecord | null> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase
+
+  const resolverFila = async (
+    row: Record<string, unknown> | null,
+  ): Promise<ActividadRecord | null> => {
+    if (!row || row.activo !== true) return null;
+    return normalizarActividad(row);
+  };
+
+  if (esUuidActividad(ref)) {
+    const { data, error } = await supabase
+      .from("asist_actividades")
+      .select("*")
+      .eq("id", ref)
+      .eq("activo", true)
+      .maybeSingle();
+    if (error || !data) return null;
+    return resolverFila(data as Record<string, unknown>);
+  }
+
+  const { data: porSlug } = await supabase
     .from("asist_actividades")
     .select("*")
-    .eq("id", id)
+    .eq("slug", ref)
     .eq("activo", true)
     .maybeSingle();
 
-  if (error || !data) return null;
-  return normalizarActividad(data);
+  const filaSlug = await resolverFila(porSlug as Record<string, unknown> | null);
+  if (filaSlug) return filaSlug;
+
+  const { data: filas } = await supabase
+    .from("asist_actividades")
+    .select("*")
+    .eq("activo", true);
+
+  const coincidencia = (filas ?? []).find((row) => {
+    const nombre = String(row.nombre ?? "");
+    const slugRow =
+      typeof row.slug === "string" && row.slug.trim()
+        ? row.slug.trim()
+        : slugifyNombreActividad(nombre);
+    return slugRow === ref;
+  });
+
+  if (!coincidencia) return null;
+  return resolverFila(coincidencia as Record<string, unknown>);
 }
 
-export async function getActividad(id: string): Promise<ActividadRecord | null> {
+export async function getActividad(ref: string): Promise<ActividadRecord | null> {
   const auth = await requireAuth();
   if (!auth.supabase || !auth.user) return null;
 
-  const { data, error } = await auth.supabase
-    .from("asist_actividades")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const row = await fetchActividadRowByRef(auth.supabase, auth.user, ref);
+  if (!row) return null;
 
-  if (error || !data) return null;
-
-  const role = roleFromUser(auth.user);
   const createdBy =
-    typeof data.created_by === "string" ? data.created_by : null;
-  if (
-    !isPrivilegedAsistenciaRole(role) &&
-    createdBy !== auth.user.id
-  ) {
-    return null;
-  }
-
+    typeof row.created_by === "string" ? row.created_by : null;
   const creadores = await resolveCreadores(auth.supabase, [createdBy]);
   return normalizarActividad(
-    data,
+    row,
     createdBy ? creadores.get(createdBy) : null,
   );
 }
@@ -407,18 +543,18 @@ export async function buscarDpisRegistrados(
 }
 
 export async function getRegistrosActividad(
-  actividadId: string,
+  ref: string,
 ): Promise<RegistroAsistenciaRecord[]> {
   const auth = await requireAuth();
   if (!auth.supabase || !auth.user) return [];
 
-  const actividad = await getActividad(actividadId);
+  const actividad = await getActividad(ref);
   if (!actividad) return [];
 
   const { data, error } = await auth.supabase
     .from("asist_registros")
     .select("*")
-    .eq("actividad_id", actividadId)
+    .eq("actividad_id", actividad.id)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
@@ -434,23 +570,40 @@ export async function createActividad(
   const parsed = actividadFormSchema.safeParse(values);
   if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
 
-  const { data, error } = await auth.supabase
+  const slug = await generarSlugUnico(auth.supabase, parsed.data.nombre);
+
+  const basePayload = {
+    nombre: parsed.data.nombre,
+    descripcion: parsed.data.descripcion || null,
+    fecha_realizacion: parsed.data.fecha_realizacion,
+    direccion: parsed.data.direccion,
+    departamento: parsed.data.departamento,
+    municipio: parsed.data.municipio,
+    activo: parsed.data.activo,
+    created_by: auth.user!.id,
+  };
+
+  let { data, error } = await auth.supabase
     .from("asist_actividades")
-    .insert({
-      nombre: parsed.data.nombre,
-      descripcion: parsed.data.descripcion || null,
-      fecha_realizacion: parsed.data.fecha_realizacion,
-      direccion: parsed.data.direccion,
-      departamento: parsed.data.departamento,
-      municipio: parsed.data.municipio,
-      activo: parsed.data.activo,
-      created_by: auth.user!.id,
-    })
-    .select("id")
+    .insert({ ...basePayload, slug })
+    .select("id, slug")
     .single();
 
+  if (error?.message?.includes("slug")) {
+    ({ data, error } = await auth.supabase
+      .from("asist_actividades")
+      .insert(basePayload)
+      .select("id")
+      .single());
+  }
+
   if (error) return mapDbError(error);
-  return { success: true, error: null, id: data.id };
+  return {
+    success: true,
+    error: null,
+    id: data.id,
+    slug: String((data as { slug?: string }).slug ?? slug),
+  };
 }
 
 async function assertPuedeMutarActividad(
@@ -494,10 +647,17 @@ export async function updateActividad(
   );
   if (denied) return denied;
 
+  const slug = await generarSlugUnico(
+    auth.supabase,
+    parsed.data.nombre,
+    id,
+  );
+
   const { error } = await auth.supabase
     .from("asist_actividades")
     .update({
       nombre: parsed.data.nombre,
+      slug,
       descripcion: parsed.data.descripcion || null,
       fecha_realizacion: parsed.data.fecha_realizacion,
       direccion: parsed.data.direccion,
@@ -507,6 +667,24 @@ export async function updateActividad(
       updated_by: auth.user.id,
     })
     .eq("id", id);
+
+  if (error?.message?.includes("slug")) {
+    const retry = await auth.supabase
+      .from("asist_actividades")
+      .update({
+        nombre: parsed.data.nombre,
+        descripcion: parsed.data.descripcion || null,
+        fecha_realizacion: parsed.data.fecha_realizacion,
+        direccion: parsed.data.direccion,
+        departamento: parsed.data.departamento,
+        municipio: parsed.data.municipio,
+        activo: parsed.data.activo,
+        updated_by: auth.user.id,
+      })
+      .eq("id", id);
+    if (retry.error) return mapDbError(retry.error);
+    return { success: true, error: null };
+  }
 
   if (error) return mapDbError(error);
   return { success: true, error: null };

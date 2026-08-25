@@ -23,6 +23,7 @@ export function BusquedaSelect({
   placeholder = "Seleccione…",
   disabled = false,
   emptyMessage = "Sin resultados",
+  triggerClassName,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -30,6 +31,7 @@ export function BusquedaSelect({
   placeholder?: string;
   disabled?: boolean;
   emptyMessage?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -62,6 +64,7 @@ export function BusquedaSelect({
           className={cn(
             "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-2 border-celeste-trifinio bg-transparent px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-celeste-trifinio/30 disabled:cursor-not-allowed disabled:opacity-50",
             !value && "text-muted-foreground",
+            triggerClassName,
           )}
         >
           <span className="truncate">{value || placeholder}</span>

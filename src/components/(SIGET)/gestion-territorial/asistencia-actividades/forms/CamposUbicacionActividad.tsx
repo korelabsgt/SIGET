@@ -22,6 +22,7 @@ export function CamposUbicacionActividad({
   onDepartamentoChange,
   onMunicipioChange,
   idPrefix,
+  fieldClassName,
 }: {
   direccion: string;
   departamento: string;
@@ -30,6 +31,7 @@ export function CamposUbicacionActividad({
   onDepartamentoChange: (value: string) => void;
   onMunicipioChange: (value: string) => void;
   idPrefix: string;
+  fieldClassName?: string;
 }) {
   const municipios = useMemo(
     () => getMunicipiosPorDepartamento(departamento),
@@ -61,6 +63,7 @@ export function CamposUbicacionActividad({
           onChange={handleDepartamento}
           options={departamentosOpciones}
           placeholder="Buscar departamento…"
+          triggerClassName={fieldClassName}
         />
       </div>
 
@@ -81,6 +84,7 @@ export function CamposUbicacionActividad({
               options={municipios}
               placeholder="Buscar municipio…"
               emptyMessage="Sin municipios coincidentes"
+              triggerClassName={fieldClassName}
             />
           </motion.div>
         ) : null}
@@ -102,6 +106,7 @@ export function CamposUbicacionActividad({
               value={direccion}
               onChange={(e) => onDireccionChange(e.target.value)}
               required
+              className={fieldClassName}
             />
           </motion.div>
         ) : null}

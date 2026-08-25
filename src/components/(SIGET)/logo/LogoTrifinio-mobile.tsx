@@ -76,27 +76,44 @@ export default function LogoTrifinioMobile({
     },
   };
 
-  const textClass = cn("text-azul-trifinio", !forceAzulColors && "dark:text-white");
-  const lineClass = cn("bg-azul-trifinio", !forceAzulColors && "dark:bg-white");
+  const textClass = forceAzulColors
+    ? "text-azul-trifinio-hero"
+    : cn("text-azul-trifinio", "dark:text-white");
+  const lineClass = forceAzulColors
+    ? "bg-azul-trifinio-hero"
+    : cn("bg-azul-trifinio", "dark:bg-white");
   const blurBgClass = forceAzulColors
-    ? "bg-white/55 backdrop-blur-md border border-white/50"
-    : "bg-white/55 dark:bg-white/10 backdrop-blur-md border border-white/50 dark:border-white/10";
+    ? "border border-white/50 bg-white/55 backdrop-blur-md"
+    : "border border-white/50 bg-white/55 backdrop-blur-md dark:border-white/10 dark:bg-white/10";
+  const glowBgClass = forceAzulColors
+    ? "bg-white/50"
+    : "bg-white/50 dark:bg-transparent";
 
   return (
     <>
       <motion.div
         onClick={handleClick}
         whileTap={{ scale: 0.96 }}
-        className="relative select-none cursor-pointer flex items-center justify-center p-2 w-[95%] mx-auto rounded-b-2xl overflow-hidden"
+        className="relative mx-auto flex w-[95%] cursor-pointer select-none items-center justify-center overflow-hidden rounded-b-2xl p-2"
         initial="hidden"
         animate="visible"
       >
         {backgroundEffect === "blur" && (
-          <div className={cn("absolute inset-0 -z-10 shadow-xl rounded-b-2xl", blurBgClass)} />
+          <div
+            className={cn(
+              "absolute inset-0 -z-10 rounded-b-2xl shadow-xl",
+              blurBgClass,
+            )}
+          />
         )}
 
         {backgroundEffect === "glow" && (
-          <div className="absolute inset-x-[-20%] inset-y-[-10%] bg-white/50 dark:bg-transparent blur-[60px] -z-10 rounded-[100px]" />
+          <div
+            className={cn(
+              "absolute inset-x-[-20%] inset-y-[-10%] -z-10 rounded-[100px] blur-[60px]",
+              glowBgClass,
+            )}
+          />
         )}
 
         <div className="flex flex-row items-center justify-between gap-2 sm:gap-6 w-full px-2 sm:px-6">

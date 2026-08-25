@@ -10,12 +10,14 @@ import {
   Search,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { cn } from "@/lib/utils";
 import { actionErrorMessage } from "@/components/ui/modal-toast";
 import { useBuscarParticipante, useRegistrarAsistencia } from "./lib/hooks";
 import type { DpiSugerencia } from "./lib/actions";
 import { BusquedaDpi } from "./BusquedaDpi";
 import { CamposInstitucionPuesto } from "./forms/CamposInstitucionPuesto";
+import { FechaNacimientoCampos } from "./forms/FechaNacimientoCampos";
+import { GeneroSwitch } from "./forms/GeneroSwitch";
+import { REGISTRO_PUBLICO_FIELD_CLASS } from "./forms/modal-field-class";
 import {
   formatFechaActividad,
   formatUbicacionActividad,
@@ -29,21 +31,7 @@ import {
   type TipoInstitucion,
 } from "./lib/zod";
 
-const inputClass =
-  "flex h-10 w-full rounded-lg border-2 border-celeste-trifinio bg-transparent px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-celeste-trifinio/30";
-
-const GENERO_STYLES = {
-  masculino: {
-    active:
-      "border-blue-600 bg-blue-100 text-blue-800 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-200",
-    idle: "border-blue-300/50 text-muted-foreground hover:border-blue-500 dark:border-blue-800",
-  },
-  femenino: {
-    active:
-      "border-pink-500 bg-pink-100 text-pink-800 dark:border-pink-500 dark:bg-pink-950 dark:text-pink-200",
-    idle: "border-pink-300/50 text-muted-foreground hover:border-pink-500 dark:border-pink-800",
-  },
-} as const;
+const inputClass = REGISTRO_PUBLICO_FIELD_CLASS;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -77,7 +65,7 @@ function aplicarParticipante(
     setEmail: (v: string) => void;
     setTelefono: (v: string) => void;
     setFechaNacimiento: (v: string) => void;
-    setGenero: (v: "masculino" | "femenino" | "") => void;
+    setGenero: (v: "masculino" | "femenino") => void;
     setTipoInstitucion: (v: TipoInstitucion) => void;
     setInstitucionOtra: (v: string) => void;
     setPuesto: (v: string) => void;
@@ -108,7 +96,7 @@ function limpiarDatosPersonales(setters: {
   setters.setEmail("");
   setters.setTelefono("");
   setters.setFechaNacimiento("");
-  setters.setGenero("");
+  setters.setGenero("masculino");
   setters.setTipoInstitucion("sin");
   setters.setInstitucionOtra("");
   setters.setPuesto("");
@@ -128,7 +116,7 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
   const [telefono, setTelefono] = useState("");
   const [puesto, setPuesto] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [genero, setGenero] = useState<"masculino" | "femenino" | "">("");
+  const [genero, setGenero] = useState<"masculino" | "femenino">("masculino");
   const [tipoInstitucion, setTipoInstitucion] =
     useState<TipoInstitucion>("sin");
   const [institucionOtra, setInstitucionOtra] = useState("");
@@ -392,40 +380,22 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
             <FormSection title="Datos personales">
               <div className="space-y-2">
                 <FieldLabel>Fecha de nacimiento</FieldLabel>
-                <input
-                  type="date"
+                <FechaNacimientoCampos
                   value={fechaNacimiento}
-                  onChange={(e) => setFechaNacimiento(e.target.value)}
-                  className={inputClass}
+                  onChange={setFechaNacimiento}
                   required
                 />
               </div>
 
               <div className="space-y-2">
                 <FieldLabel>Género</FieldLabel>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["masculino", "femenino"] as const).map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setGenero(g)}
-                      className={cn(
-                        "h-10 cursor-pointer rounded-lg border-2 text-sm font-bold transition-colors",
-                        genero === g
-                          ? GENERO_STYLES[g].active
-                          : GENERO_STYLES[g].idle,
-                      )}
-                    >
-                      {g === "masculino" ? "Masculino" : "Femenino"}
-                    </button>
-                  ))}
-                </div>
+                <GeneroSwitch value={genero} onChange={setGenero} />
               </div>
             </FormSection>
 
             <button
               type="submit"
-              disabled={registrar.isPending || !genero}
+              disabled={registrar.isPending || !fechaNacimiento}
               className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-emerald-200 text-[10px] font-bold uppercase tracking-widest text-emerald-900 transition-colors hover:bg-emerald-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-800/70 dark:text-emerald-50 dark:hover:bg-emerald-700/80"
             >
               {registrar.isPending ? (

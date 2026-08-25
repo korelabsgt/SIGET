@@ -1,13 +1,8 @@
 "use client";
 
-import { Children, useCallback, useEffect } from "react";
+import { Children, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  AnimatePresence,
-  motion,
-  useMotionTemplate,
-  useMotionValue,
-} from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +11,6 @@ export {
   MODAL_ACTION_ERRORS,
   toast,
 } from "@/components/ui/modal-toast";
-
-const MODAL_GRADIENT_SIZE = 380;
 
 export function ModalLabel({
   className,
@@ -92,7 +85,7 @@ export function ModalFooter({
   return (
     <div
       className={cn(
-        "mt-5 -mx-4 md:-mx-6 -mb-4 md:-mb-6 flex w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] gap-3 rounded-b-[calc(1.5rem-3px)] bg-zinc-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-zinc-800 md:px-6 md:pb-6",
+        "mt-5 -mx-4 md:-mx-6 -mb-4 md:-mb-6 flex w-[calc(100%+2rem)] md:w-[calc(100%+3rem)] gap-3 rounded-b-3xl bg-zinc-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] max-md:rounded-b-none dark:bg-zinc-800 md:px-6 md:pb-6",
         multiAction
           ? "[&>*]:flex [&>*]:min-w-0 [&>*]:flex-1 [&>*]:justify-center"
           : "justify-center",
@@ -147,47 +140,14 @@ function ModalFrame({
   children: React.ReactNode;
   className?: string;
 }) {
-  const mouseX = useMotionValue(-MODAL_GRADIENT_SIZE);
-  const mouseY = useMotionValue(-MODAL_GRADIENT_SIZE);
-
-  const reset = useCallback(() => {
-    mouseX.set(-MODAL_GRADIENT_SIZE);
-    mouseY.set(-MODAL_GRADIENT_SIZE);
-  }, [mouseX, mouseY]);
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      mouseX.set(e.clientX - rect.left);
-      mouseY.set(e.clientY - rect.top);
-    },
-    [mouseX, mouseY],
-  );
-
-  const glowBackground = useMotionTemplate`
-    radial-gradient(${MODAL_GRADIENT_SIZE}px circle at ${mouseX}px ${mouseY}px,
-    #1a95d3,
-    #5ec8f0,
-    transparent 72%)
-  `;
-
   return (
     <div
       className={cn(
-        "group relative h-full md:rounded-3xl md:p-[3px] md:shadow-sm",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-zinc-100 shadow-lg max-md:rounded-none max-md:border-0 dark:border-zinc-700 dark:bg-zinc-800",
         className,
       )}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={reset}
     >
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden rounded-3xl md:block"
-        style={{ background: glowBackground }}
-      />
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-zinc-100 max-md:rounded-none dark:bg-zinc-800 md:rounded-[calc(1.5rem-3px)]">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
@@ -199,6 +159,8 @@ export function ModalShell({
   subtitle,
   children,
   maxWidth = "max-w-md",
+  fullscreen = false,
+  fullHeight = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -206,6 +168,8 @@ export function ModalShell({
   subtitle: string;
   children: React.ReactNode;
   maxWidth?: string;
+  fullscreen?: boolean;
+  fullHeight?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -221,18 +185,42 @@ export function ModalShell({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[200] flex bg-zinc-100 dark:bg-zinc-900 max-md:flex-col md:items-center md:justify-center md:bg-zinc-700/20 md:p-4 md:backdrop-blur-sm">
+        <div
+          className={cn(
+            "fixed inset-0 z-[200] flex flex-col",
+            fullscreen
+              ? "bg-zinc-100 dark:bg-zinc-900"
+              : fullHeight
+                ? "max-md:bg-zinc-100 max-md:dark:bg-zinc-900 md:items-center md:justify-center md:p-4"
+                : "max-md:flex-col max-md:bg-zinc-100 max-md:dark:bg-zinc-900 md:items-center md:justify-center md:p-4",
+          )}
+        >
+          {!fullscreen ? (
+            <div
+              aria-hidden
+              className="absolute inset-0 hidden bg-black/40 backdrop-blur-xl md:block dark:bg-black/55"
+            />
+          ) : null}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: fullscreen || fullHeight ? 1 : 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, scale: fullscreen || fullHeight ? 1 : 0.95 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "relative flex min-h-0 w-full flex-col max-md:h-dvh max-md:max-w-none",
-              maxWidth,
+              "relative z-10 flex min-h-0 w-full flex-col",
+              fullscreen && "h-dvh max-w-none",
+              fullHeight &&
+                "h-dvh w-full max-w-none md:mx-auto md:w-full md:max-w-lg",
+              !fullscreen && !fullHeight && "max-md:h-dvh max-md:max-w-none",
+              !fullscreen && !fullHeight && maxWidth,
             )}
           >
-            <ModalFrame>
+            <ModalFrame
+              className={cn(
+                fullscreen &&
+                  "rounded-none border-0 shadow-none dark:bg-zinc-900 md:rounded-none",
+              )}
+            >
               <div className="flex shrink-0 items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-6 md:pt-6">
                 <div className="min-w-0 pr-3">
                   <h3 className="truncate text-lg font-bold tracking-tight text-foreground md:text-xl">
@@ -252,7 +240,14 @@ export function ModalShell({
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto bg-zinc-100 p-4 dark:bg-zinc-900 md:p-6">
+              <div
+                className={cn(
+                  "min-h-0 flex-1 overflow-y-auto bg-zinc-100 dark:bg-zinc-900",
+                  (fullscreen || fullHeight) &&
+                    "flex flex-col items-center justify-center p-4 md:p-6",
+                  !fullscreen && !fullHeight && "p-4 md:p-6",
+                )}
+              >
                 {children}
               </div>
             </ModalFrame>

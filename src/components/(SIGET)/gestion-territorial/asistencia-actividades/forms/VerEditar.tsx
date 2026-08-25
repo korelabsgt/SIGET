@@ -13,9 +13,11 @@ import {
   modalActionMessage,
 } from "@/components/ui/general-modal";
 import { CalendarDatePicker } from "@/components/ui/calendar-date-picker";
+import { MorphSwitch } from "@/components/ui/morph-switch";
 import { useEditarActividad } from "../lib/hooks";
 import { actividadFormSchema, normalizarFechaInput, type ActividadRecord } from "../lib/zod";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
+import { ACTIVIDAD_MODAL_FIELD_CLASS } from "./modal-field-class";
 
 export function VerEditarActividad({
   open,
@@ -95,6 +97,7 @@ export function VerEditarActividad({
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             required
+            className={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
         </div>
         <div className="space-y-2">
@@ -104,6 +107,7 @@ export function VerEditarActividad({
             value={fechaRealizacion}
             onChange={(val) => setFechaRealizacion(val)}
             required
+            inputClassName={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
         </div>
         <CamposUbicacionActividad
@@ -114,6 +118,7 @@ export function VerEditarActividad({
           onDireccionChange={setDireccion}
           onDepartamentoChange={setDepartamento}
           onMunicipioChange={setMunicipio}
+          fieldClassName={ACTIVIDAD_MODAL_FIELD_CLASS}
         />
         <div className="space-y-2">
           <ModalLabel htmlFor="edit-desc">Descripción (opcional)</ModalLabel>
@@ -122,17 +127,16 @@ export function VerEditarActividad({
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={3}
+            className={ACTIVIDAD_MODAL_FIELD_CLASS}
           />
         </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-foreground/70">
-          <input
-            type="checkbox"
-            checked={activo}
-            onChange={(e) => setActivo(e.target.checked)}
-            className="size-4 rounded border-celeste-trifinio accent-celeste-trifinio"
-          />
-          Actividad activa (acepta registros)
-        </label>
+        <MorphSwitch
+          id="edit-activo"
+          checked={activo}
+          onCheckedChange={setActivo}
+          label="Actividad activa"
+          description="Acepta registros públicos"
+        />
         <ModalFooter>
           <button
             type="button"
@@ -149,7 +153,7 @@ export function VerEditarActividad({
                 Guardando…
               </>
             ) : (
-              "Guardar cambios"
+              "Guardar"
             )}
           </ModalSubmit>
         </ModalFooter>
