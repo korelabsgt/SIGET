@@ -12,7 +12,7 @@ import {
 } from "lucide";
 import { type SolicitudRow } from "./lib/zod";
 import { GvMorphIcon } from "../lib/morph-icon";
-import { formatDiaFechaCortaGt, formatHoraAmGt } from "@/lib/fechas-gt";
+import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
 export function SolicitudCard({
@@ -71,10 +71,10 @@ export function SolicitudCard({
                 Salida
               </p>
               <p className="text-sm font-semibold tabular-nums text-foreground">
-                {formatDiaFechaCortaGt(solicitud.fecha_inicio)}
+                {formatFechaTablaGt(solicitud.fecha_inicio)}
               </p>
               <p className="text-xs font-semibold tabular-nums text-celeste-trifinio">
-                {formatHoraAmGt(solicitud.fecha_inicio)}
+                {formatHoraTablaGt(solicitud.fecha_inicio)}
               </p>
             </div>
           </div>

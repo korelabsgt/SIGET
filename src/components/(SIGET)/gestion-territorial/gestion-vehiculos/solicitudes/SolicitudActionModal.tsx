@@ -127,6 +127,8 @@ export function SolicitudActionModal({
           ? vehiculoPreferido.estado
           : "LIBRE",
       kilometraje_actual: vehiculoPreferido.kilometraje_actual ?? 0,
+      vencimiento_seguro: null,
+      vencimiento_circulacion: null,
       imagen_url: [],
     };
 
@@ -136,7 +138,9 @@ export function SolicitudActionModal({
   const preferidoFueraDeDisponibles = Boolean(
     vehiculoPreferido?.id &&
       !vehiculosLibres.some((v) => v.id === vehiculoPreferido.id) &&
-      !esVehiculoDisponible({ estado: vehiculoPreferido.estado ?? "" }),
+      !esVehiculoDisponible({
+        estado: (vehiculoPreferido.estado ?? "LIBRE") as VehiculoRow["estado"],
+      }),
   );
 
   const estadoPreferidoLabel = vehiculoPreferido?.estado
@@ -219,7 +223,12 @@ export function SolicitudActionModal({
                       Vehículo preferido del solicitante
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {formatVehiculoOpcion(vehiculoPreferido)}
+                      {formatVehiculoOpcion({
+                        placa: vehiculoPreferido.placa,
+                        marca: vehiculoPreferido.marca,
+                        modelo: vehiculoPreferido.modelo,
+                        color: vehiculoPreferido.color ?? "",
+                      })}
                     </p>
                     {vehiculoPreferido.kilometraje_actual != null ? (
                       <p className="text-xs text-muted-foreground dark:text-zinc-400">
@@ -229,7 +238,9 @@ export function SolicitudActionModal({
                     ) : null}
                     {estadoPreferidoLabel &&
                     vehiculoPreferido &&
-                    !esVehiculoDisponible(vehiculoPreferido) ? (
+                    !esVehiculoDisponible({
+                      estado: (vehiculoPreferido.estado ?? "LIBRE") as VehiculoRow["estado"],
+                    }) ? (
                       <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
                         Estado en flota: {estadoPreferidoLabel}
                       </p>
@@ -276,6 +287,7 @@ export function SolicitudActionModal({
                         const itemLabel = fueraDeLibres
                           ? `${label} · solicitado (no libre)`
                           : label;
+                        if (!v.id) return null;
                         return (
                           <SelectItem
                             key={v.id}

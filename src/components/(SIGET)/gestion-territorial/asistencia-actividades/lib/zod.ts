@@ -116,6 +116,7 @@ export type RegistroEditValues = z.infer<typeof registroEditSchema>;
 
 export type ActividadRecord = {
   id: string;
+  slug: string;
   nombre: string;
   descripcion: string | null;
   fecha_realizacion: string;
@@ -195,9 +196,59 @@ export function formatoTelefonoGt(telefono: string | null): string {
   return formatoTelefonoVisible(telefono);
 }
 
+export function formatoDpiVisible(dpi: string | null | undefined): string {
+  const digits = dpi?.replace(/\D/g, "") ?? "";
+  if (digits.length !== 13) return digits || dpi?.trim() || "";
+  return `${digits.slice(0, 4)} ${digits.slice(4, -4)} ${digits.slice(-4)}`;
+}
+
 export function normalizarFechaInput(value: string): string {
   if (!value) return "";
   return value.split("T")[0];
+}
+
+export function partesFechaCalendario(value: string): {
+  dia: string;
+  mes: string;
+  anio: string;
+} {
+  const norm = normalizarFechaInput(value);
+  if (!norm) return { dia: "", mes: "", anio: "" };
+  const [anio, mes, dia] = norm.split("-");
+  return {
+    dia: dia?.replace(/^0+(?=\d)/, "") ?? "",
+    mes: mes?.replace(/^0+(?=\d)/, "") ?? "",
+    anio: anio ?? "",
+  };
+}
+
+export function normalizarParteFechaDia(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 2);
+}
+
+export function normalizarParteFechaMes(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 2);
+}
+
+export function normalizarParteFechaAnio(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+export function fechaCalendarioDesdePartes(
+  dia: string,
+  mes: string,
+  anio: string,
+): string {
+  const d = dia.replace(/\D/g, "");
+  const m = mes.replace(/\D/g, "");
+  const y = anio.replace(/\D/g, "");
+  if (d.length === 0 || m.length === 0 || y.length !== 4) return "";
+  const dd = d.padStart(2, "0");
+  const mm = m.padStart(2, "0");
+  if (!/^\d{2}$/.test(dd) || !/^\d{2}$/.test(mm) || !/^\d{4}$/.test(y)) {
+    return "";
+  }
+  return `${y}-${mm}-${dd}`;
 }
 
 export function formatUbicacionActividad(actividad: {

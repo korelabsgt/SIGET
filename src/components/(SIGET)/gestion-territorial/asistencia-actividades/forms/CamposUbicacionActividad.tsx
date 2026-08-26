@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ModalInput, ModalLabel } from "@/components/ui/general-modal";
+import { ModalInput, ModalLabel, ModalField } from "@/components/ui/general-modal";
 import { BusquedaSelect } from "../BusquedaSelect";
 import {
   DEPARTAMENTOS_GT,
@@ -54,7 +54,7 @@ export function CamposUbicacionActividad({
 
   return (
     <>
-      <div className="space-y-2">
+      <ModalField>
         <ModalLabel>Departamento</ModalLabel>
         <BusquedaSelect
           value={departamento}
@@ -62,7 +62,7 @@ export function CamposUbicacionActividad({
           options={departamentosOpciones}
           placeholder="Buscar departamento…"
         />
-      </div>
+      </ModalField>
 
       <AnimatePresence initial={false}>
         {departamento ? (
@@ -72,16 +72,18 @@ export function CamposUbicacionActividad({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={revealTransition}
-            className="space-y-2 overflow-hidden"
+            className="overflow-hidden"
           >
-            <ModalLabel>Municipio</ModalLabel>
-            <BusquedaSelect
-              value={municipio}
-              onChange={handleMunicipio}
-              options={municipios}
-              placeholder="Buscar municipio…"
-              emptyMessage="Sin municipios coincidentes"
-            />
+            <ModalField>
+              <ModalLabel>Municipio</ModalLabel>
+              <BusquedaSelect
+                value={municipio}
+                onChange={handleMunicipio}
+                options={municipios}
+                placeholder="Buscar municipio…"
+                emptyMessage="Sin municipios coincidentes"
+              />
+            </ModalField>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -94,15 +96,17 @@ export function CamposUbicacionActividad({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={revealTransition}
-            className="space-y-2 overflow-hidden"
+            className="overflow-hidden"
           >
-            <ModalLabel htmlFor={`${idPrefix}-direccion`}>Dirección</ModalLabel>
-            <ModalInput
-              id={`${idPrefix}-direccion`}
-              value={direccion}
-              onChange={(e) => onDireccionChange(e.target.value)}
-              required
-            />
+            <ModalField>
+              <ModalLabel htmlFor={`${idPrefix}-direccion`}>Dirección</ModalLabel>
+              <ModalInput
+                id={`${idPrefix}-direccion`}
+                value={direccion}
+                onChange={(e) => onDireccionChange(e.target.value)}
+                required
+              />
+            </ModalField>
           </motion.div>
         ) : null}
       </AnimatePresence>

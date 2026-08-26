@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fechaManualToTimestamptz } from "@/lib/fechas-gt";
+import { fechaManualToTimestamptz } from "../../lib/fechas-input";
 
 export const ESTADOS_VEHICULO = ["LIBRE", "RESERVADO", "EN_MANTENIMIENTO"] as const;
 

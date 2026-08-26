@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import type { TipoInstitucion } from "../lib/zod";
+import { REGISTRO_PUBLICO_FIELD_CLASS } from "./modal-field-class";
 
-const inputClass =
-  "flex h-10 w-full rounded-lg border-2 border-celeste-trifinio bg-transparent px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-celeste-trifinio/30";
+const inputClass = REGISTRO_PUBLICO_FIELD_CLASS;
 
 function FieldLabel({
   children,

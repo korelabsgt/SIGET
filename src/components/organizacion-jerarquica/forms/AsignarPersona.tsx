@@ -234,16 +234,7 @@ function AsignarPersonaBody({
       )}
 
       <FormFooter>
-        <FormSubmitButton disabled={guardando || isLoading}>
-          {guardando ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar"
-          )}
-        </FormSubmitButton>
+        <FormSubmitButton disabled={guardando || isLoading} label="Guardar" />
       </FormFooter>
     </form>
   );

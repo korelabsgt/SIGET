@@ -1,3 +1,14 @@
+import type { IconNode } from "lucide";
+import {
+  BarChart3,
+  Briefcase,
+  Car,
+  ClipboardList,
+  Globe2,
+  LayoutDashboard,
+  PieChart,
+  Telescope,
+} from "lucide";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
 
 export type DashboardModule = {
@@ -6,6 +17,15 @@ export type DashboardModule = {
   subtitle: string;
   desc: string;
   animatedIcon: string;
+  morphIconFrom?: IconNode;
+  morphIconTo?: IconNode;
+  morphIconCycle?: readonly [IconNode, IconNode, IconNode, IconNode];
+  morphIconColor?: string;
+  morphIconBg?: string;
+  accentColor?: string;
+  hoverGradientFrom?: string;
+  hoverGradientTo?: string;
+  hoverBorderColor?: string;
   href: string;
   requiresAdmin?: boolean;
   allowedRoles?: string[];
@@ -18,6 +38,13 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     subtitle: "Web",
     desc: "Plataforma web de visualización de datos regionales.",
     animatedIcon: "qqvpjphn",
+    morphIconCycle: [Telescope, Globe2, BarChart3, PieChart],
+    morphIconColor: "#6366f1",
+    morphIconBg: "bg-indigo-100 dark:bg-indigo-950/50",
+    accentColor: "#6366f1",
+    hoverGradientFrom: "#4338ca",
+    hoverGradientTo: "#818cf8",
+    hoverBorderColor: "#6366f1",
     href: "/siget/observatorio",
     allowedRoles: ["super", "admin", "observatorio"],
   },
@@ -25,9 +52,16 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
   {
     id: "gestion-territorial",
     title: "Gestión",
-    subtitle: "Territorial",
-    desc: "Módulo de Gestión Territorial.",
+    subtitle: "Administrativa",
+    desc: "Actividades, reportes, productos, flota vehicular y gestión institucional.",
     animatedIcon: "giblkgwf",
+    morphIconCycle: [Briefcase, LayoutDashboard, ClipboardList, Car],
+    morphIconColor: "#1a95d3",
+    morphIconBg: "bg-sky-100 dark:bg-sky-950/50",
+    accentColor: "#1a95d3",
+    hoverGradientFrom: "#2c5f9b",
+    hoverGradientTo: "#1a95d3",
+    hoverBorderColor: "#2c5f9b",
     href: "/siget/gestion-territorial",
     allowedRoles: ["super", "admin"],
   },
@@ -61,7 +95,21 @@ export const OBSERVATORIO_MENU_OPTIONS = [
   },
 ] as const;
 
-export const GESTION_VEHICULOS_MENU_OPTIONS = [
+export const GESTION_TERRITORIAL_MENU_OPTIONS = [
+  {
+    id: "memoria-labores",
+    title: "Memoria de Labores",
+    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    href: "/siget/gestion-territorial/memoria-labores",
+    animatedIcon: "wvhscmei",
+  },
+  {
+    id: "asistencia-actividades",
+    title: "Registro de Actividades",
+    desc: "Gestión de asistentes, minuta de actividad y estadísticas en tiempo real.",
+    href: "/siget/gestion-territorial/asistencia-actividades",
+    animatedIcon: "unfvchvi",
+  },
   {
     id: "flota",
     title: "Flota",
@@ -81,38 +129,14 @@ export const GESTION_VEHICULOS_MENU_OPTIONS = [
     title: "Bitácoras",
     desc: "Registro digital de viajes y métricas operativas.",
     href: "/siget/gestion-territorial/gestion-vehiculos/bitacoras",
-    animatedIcon: "wyqtxzlg",
+    animatedIcon: "wyqtxzlg", // Or any other suitable icon if known, using a placeholder for now
   },
   {
     id: "mantenimiento",
     title: "Mantenimiento",
     desc: "Gestión de averías y mantenimiento preventivo.",
     href: "/siget/gestion-territorial/gestion-vehiculos/mantenimiento",
-    animatedIcon: "zchvbdce",
-  },
-] as const;
-
-export const GESTION_TERRITORIAL_MENU_OPTIONS = [
-  {
-    id: "memoria-labores",
-    title: "Memoria de Labores",
-    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    href: "/siget/gestion-territorial/memoria-labores",
-    animatedIcon: "wvhscmei",
-  },
-  {
-    id: "asistencia-actividades",
-    title: "Registro de Asistencia",
-    desc: "Actividades con código QR y estadísticas de asistencia.",
-    href: "/siget/gestion-territorial/asistencia-actividades",
-    animatedIcon: "unfvchvi",
-  },
-  {
-    id: "gestion-vehiculos",
-    title: "Gestión de Vehículos",
-    desc: "Flota, solicitudes, bitácoras y mantenimiento vehicular.",
-    href: "/siget/gestion-territorial/gestion-vehiculos",
-    animatedIcon: "cdxxgczv",
+    animatedIcon: "zchvbdce", // placeholder
   },
 ] as const;
 

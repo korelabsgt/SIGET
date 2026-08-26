@@ -1194,9 +1194,8 @@ export function OrganigramaModal({
           transition={{ duration: ORG_MODAL_MS / 1000, ease: ORG_ACTIONS_EASE }}
           className={cn(
             "fixed left-0 right-0 bottom-0 z-[90] flex flex-col bg-background",
-            "top-[calc(var(--banner-height,0px)+var(--mobile-header-height)+var(--mobile-breadcrumb-height))]",
-            "h-[calc(100dvh-var(--banner-height,0px)-var(--mobile-header-height)-var(--mobile-breadcrumb-height))]",
-            "md:top-[calc(var(--banner-height,0px)+4rem)] md:h-[calc(100dvh-var(--banner-height,0px)-4rem)]",
+            "top-[calc(var(--banner-height,0px)+var(--header-row-height)+var(--breadcrumb-row-height))]",
+            "h-[calc(100dvh-var(--banner-height,0px)-var(--header-row-height)-var(--breadcrumb-row-height))]",
           )}
         >
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-zinc-100 px-4 py-3 md:px-6 dark:bg-zinc-800">

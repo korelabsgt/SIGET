@@ -467,9 +467,9 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
   }, []);
 
   const menuTop =
-    "top-[calc(var(--banner-height,0px)+var(--mobile-header-height)+var(--mobile-breadcrumb-height))] md:top-[calc(var(--banner-height,0px)+4rem)]";
+    "top-[calc(var(--banner-height,0px)+var(--header-row-height))]";
   const menuHeight =
-    "h-[calc(100dvh-var(--banner-height,0px)-var(--mobile-header-height)-var(--mobile-breadcrumb-height))] md:h-[calc(100dvh-var(--banner-height,0px)-4rem)]";
+    "h-[calc(100dvh-var(--banner-height,0px)-var(--header-row-height))]";
 
   const metadata = user?.user_metadata || {};
   const usuario = metadata.username || user?.email?.split("@")[0] || "—";
@@ -548,6 +548,16 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
       {mounted &&
         createPortal(
           <>
+            <div
+              aria-hidden={!isOpen}
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "fixed right-0 bottom-0 left-0 z-[105] cursor-pointer transition-opacity duration-500",
+                "top-[calc(var(--banner-height,0px)+var(--header-row-height))]",
+                "bg-white/55 backdrop-blur-md dark:bg-black/55",
+                isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+              )}
+            />
             <aside
               className={cn(
                 "fixed right-0 z-[110] pointer-events-auto w-full sm:w-100 bg-zinc-100 dark:bg-zinc-800 border-l border-border/50 transition-transform duration-500 overflow-y-auto flex flex-col",

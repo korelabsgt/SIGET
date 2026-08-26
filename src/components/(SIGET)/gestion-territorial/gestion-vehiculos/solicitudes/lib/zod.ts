@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseFechaHoraManualToIso } from "@/lib/fechas-gt";
+import { parseFechaHoraManualToIso } from "../../lib/fechas-input";
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",

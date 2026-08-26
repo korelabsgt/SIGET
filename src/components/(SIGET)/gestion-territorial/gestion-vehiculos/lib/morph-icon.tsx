@@ -44,11 +44,11 @@ export function GvMorphIcon({
       el.closest("button, a, [role='button'], label, [data-morph-hover-scope]") ?? el;
     const onEnter = () => setInternalHover(true);
     const onLeave = () => setInternalHover(false);
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.pointerType === "touch") onEnter();
+    const onPointerDown = (event: Event) => {
+      if (event instanceof PointerEvent && event.pointerType === "touch") onEnter();
     };
-    const onPointerUp = (event: PointerEvent) => {
-      if (event.pointerType === "touch") onLeave();
+    const onPointerUp = (event: Event) => {
+      if (event instanceof PointerEvent && event.pointerType === "touch") onLeave();
     };
 
     scope.addEventListener("pointerenter", onEnter);

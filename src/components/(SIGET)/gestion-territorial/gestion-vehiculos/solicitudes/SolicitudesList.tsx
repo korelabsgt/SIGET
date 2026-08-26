@@ -10,7 +10,7 @@ import {
   GestionVehiculosThead,
 } from "../lib/table-ui";
 import { GvMorphIcon } from "../lib/morph-icon";
-import { formatDiaFechaCortaGt, formatHoraAmGt } from "@/lib/fechas-gt";
+import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
 function SolicitudListRow({
@@ -41,10 +41,10 @@ function SolicitudListRow({
       <td className="px-4 py-3 align-middle">
         <div className="tabular-nums">
           <p className="text-sm font-bold text-foreground">
-            {formatDiaFechaCortaGt(solicitud.fecha_inicio)}
+            {formatFechaTablaGt(solicitud.fecha_inicio)}
           </p>
           <p className="text-sm font-semibold text-celeste-trifinio">
-            {formatHoraAmGt(solicitud.fecha_inicio)}
+            {formatHoraTablaGt(solicitud.fecha_inicio)}
           </p>
         </div>
       </td>

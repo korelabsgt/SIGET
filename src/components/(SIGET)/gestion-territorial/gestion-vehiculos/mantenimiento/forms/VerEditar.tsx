@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   ModalShell,
@@ -190,7 +190,6 @@ export function VerEditar({
     <ModalShell
       open={open && modo !== null}
       onClose={onClose}
-      variant="floating"
       title={isAtender ? "Iniciar reparación" : "Finalizar reparación"}
       subtitle={isAtender ? "Asignar atención a la avería" : "Registrar diagnóstico y reparación"}
     >
@@ -225,10 +224,7 @@ export function VerEditar({
             >
               Cancelar
             </button>
-            <ModalSubmit disabled={pending}>
-              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Reparación
-            </ModalSubmit>
+            <ModalSubmit disabled={pending} label="Reparación" />
           </ModalFooter>
         </form>
       ) : (
@@ -259,10 +255,7 @@ export function VerEditar({
             >
               Cancelar
             </button>
-            <ModalSubmit disabled={pending}>
-              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Solventar avería
-            </ModalSubmit>
+            <ModalSubmit disabled={pending} label="Solventar" />
           </ModalFooter>
         </form>
       )}

@@ -14,10 +14,10 @@ export default function ConditionalFooter() {
   return (
     <footer
       className={cn(
-        "w-full relative z-10 mt-auto shrink-0",
+        "w-full relative z-10",
         isDashboard
-          ? "bg-zinc-100 dark:bg-zinc-800 border-t-0"
-          : "bg-zinc-100 dark:bg-zinc-800 border-t border-border/40",
+          ? "mt-auto shrink-0 bg-muted dark:bg-zinc-950 border-t-0"
+          : "mt-auto shrink-0 bg-zinc-100 dark:bg-zinc-950 border-t border-border/40",
       )}
     >
       <div className="mx-auto flex h-14 md:h-16 items-center justify-center px-4 md:px-8">

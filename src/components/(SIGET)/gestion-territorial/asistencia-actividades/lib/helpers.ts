@@ -97,3 +97,40 @@ export function agruparActividadesPorMes(
 export function etiquetaEncargado(actividad: ActividadRecord): string {
   return actividad.creador_nombre?.trim() || "Sin encargado";
 }
+
+const UUID_ACTividad_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function esUuidActividad(value: string): boolean {
+  return UUID_ACTividad_RE.test(value);
+}
+
+export function slugifyNombreActividad(nombre: string): string {
+  return nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function slugActividadDesdeRecord(actividad: Pick<ActividadRecord, "slug" | "nombre">): string {
+  const guardado = actividad.slug?.trim();
+  if (guardado) return guardado;
+  return slugifyNombreActividad(actividad.nombre) || "actividad";
+}
+
+export function rutaDetalleActividadAsistencia(
+  actividad: Pick<ActividadRecord, "slug" | "nombre">,
+): string {
+  return `/siget/gestion-territorial/asistencia-actividades/${slugActividadDesdeRecord(actividad)}`;
+}
+
+export function rutaPublicaActividadAsistencia(
+  actividad: Pick<ActividadRecord, "slug" | "nombre">,
+): string {
+  return `/actividades/${slugActividadDesdeRecord(actividad)}`;
+}

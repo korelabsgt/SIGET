@@ -31,9 +31,8 @@ import {
   GV_DETALLE_NESTED_CLASS,
   GV_DETALLE_PANEL_CLASS,
 } from "../lib/detalle-ui";
-import { type VehiculoRow } from "./lib/zod";
+import { type AlertStatus, type VehiculoRow } from "./lib/zod";
 import {
-  type AlertStatus,
   fotosVehiculo,
   getMantenimientoAlertStatus,
   getVencimientoDocumentoStatus,

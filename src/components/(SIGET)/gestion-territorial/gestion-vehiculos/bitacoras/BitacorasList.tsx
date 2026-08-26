@@ -10,7 +10,7 @@ import {
   GestionVehiculosThead,
 } from "../lib/table-ui";
 import { GvMorphIcon } from "../lib/morph-icon";
-import { formatDiaFechaCortaGt, formatHoraAmGt } from "@/lib/fechas-gt";
+import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
 
 function formatMontoCombustible(monto: number) {
   if (monto <= 0) return "Sin recarga";
@@ -38,10 +38,10 @@ function BitacoraListRow({
       <td className="px-4 py-3 align-middle">
         <div className="tabular-nums">
           <p className="text-sm font-bold text-foreground">
-            {formatDiaFechaCortaGt(bitacora.fecha)}
+            {formatFechaTablaGt(bitacora.fecha)}
           </p>
           <p className="text-sm font-semibold text-celeste-trifinio">
-            {formatHoraAmGt(bitacora.fecha)}
+            {formatHoraTablaGt(bitacora.fecha)}
           </p>
         </div>
       </td>

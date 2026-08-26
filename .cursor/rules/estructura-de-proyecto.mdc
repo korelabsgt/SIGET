@@ -44,9 +44,13 @@ Prohibido dispersar lógica del módulo fuera de esa carpeta.
 
 ## Modales
 
-Implementación única en `components/ui/general-modal.tsx` (`ModalShell`, `ModalInput`, `ModalLabel`, `ModalTextarea`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`). Feedback con `toast` de react-toastify y `modalActionMessage` de `modal-toast.ts`.
+Implementación única en `components/ui/general-modal.tsx` (`ModalShell`, `ModalForm`, `ModalField`, `ModalInput`, `ModalFechaInput`, `ModalLabel`, `ModalTextarea`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`). Feedback con `toast` de react-toastify y `modalActionMessage` de `modal-toast.ts`.
 
 Comportamiento, overlay, superficies, campos y prohibiciones: ver `diseno-ux-ui.mdc`.
+
+## Botones de acción
+
+Obligatorio `SigetActionButton` en toda la app (skill `ui-tema-botones`). Prohibido botones ad hoc, `Button` de shadcn o `ModalSubmit` legacy para acciones.
 
 ## Al crear un componente nuevo
 

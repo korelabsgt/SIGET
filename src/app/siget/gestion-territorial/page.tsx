@@ -3,29 +3,173 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import AnimatedIcon from "@/components/ui/AnimatedIcon";
-import { AuroraText } from "@/components/ui/aurora-text";
+import type { IconNode } from "lucide";
+import {
+  BarChart3,
+  ChartPie,
+  CalendarCheck,
+  Car,
+  ClipboardList,
+  ClipboardPen,
+  Eye,
+  FileBarChart,
+  FilePlus,
+  FileText,
+  FolderKanban,
+  Globe2,
+  KeyRound,
+  Map,
+  Route,
+  Settings,
+  Truck,
+  UserCheck,
+  Users,
+  Wrench,
+} from "lucide";
+import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/components/(base)/providers/UserProvider";
+import { AuroraText } from "@/components/ui/aurora-text";
 import { createClient } from "@/utils/supabase/client";
+import { pickSaludoMotivacional } from "@/components/(SIGET)/gestion-territorial/lib/saludos";
 
-const FRASES_BIENVENIDA = [
-  "¡Es un gusto saludarte! Accede a las herramientas para el seguimiento y control territorial.",
-  "¡Qué bueno verte de nuevo! Todo está listo para la gestión de asistencia y reportes de labores.",
-  "¡Un saludo! El módulo de gestión territorial te permite mantener todo organizado de manera eficiente.",
-];
+type GtCardFeature = {
+  label: string;
+  iconFrom: IconNode;
+  iconTo: IconNode;
+};
+
+const GT_CARDS = [
+  {
+    id: "card-memoria-labores",
+    href: "/siget/gestion-territorial/memoria-labores",
+    badge: "Gestión Documental",
+    title: "Memoria de Labores",
+    description:
+      "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    cta: "Acceder a Formularios",
+    iconFrom: FileText,
+    iconTo: ClipboardList,
+    iconColor: "#fb923c",
+    accent: {
+      border: "border-orange-300/40 dark:border-orange-400/20",
+      ring: "ring-orange-300/20",
+      badge: "bg-orange-400/90",
+      button: "bg-orange-400 hover:bg-orange-500",
+      check: "text-orange-400",
+      iconBg: "bg-orange-50 dark:bg-orange-400/10",
+    },
+    features: [
+      {
+        label: "Creación de registros semestrales",
+        iconFrom: FilePlus,
+        iconTo: CalendarCheck,
+      },
+      {
+        label: "Visualización de proyectos",
+        iconFrom: FolderKanban,
+        iconTo: Eye,
+      },
+      {
+        label: "Reporte de actividades institucionales",
+        iconFrom: ClipboardList,
+        iconTo: FileBarChart,
+      },
+    ] satisfies GtCardFeature[],
+  },
+  {
+    id: "card-asistencia",
+    href: "/siget/gestion-territorial/asistencia-actividades",
+    badge: "Gestión de Eventos",
+    title: "Registro de Actividades",
+    description:
+      "Gestión de asistentes, minuta de actividad y estadísticas en tiempo real.",
+    cta: "Acceder a Registro",
+    iconFrom: ClipboardPen,
+    iconTo: UserCheck,
+    iconColor: "#a78bfa",
+    accent: {
+      border: "border-violet-300/40 dark:border-violet-400/20",
+      ring: "ring-violet-300/20",
+      badge: "bg-violet-400/90",
+      button: "bg-violet-400 hover:bg-violet-500",
+      check: "text-violet-400",
+      iconBg: "bg-violet-50 dark:bg-violet-400/10",
+    },
+    features: [
+      {
+        label: "Gestión de asistentes",
+        iconFrom: Users,
+        iconTo: UserCheck,
+      },
+      {
+        label: "Minuta de Actividad",
+        iconFrom: ClipboardPen,
+        iconTo: FileText,
+      },
+      {
+        label: "Estadísticas en tiempo real",
+        iconFrom: BarChart3,
+        iconTo: ChartPie,
+      },
+    ] satisfies GtCardFeature[],
+  },
+  {
+    id: "card-vehiculos",
+    href: "/siget/gestion-territorial/gestion-vehiculos/flota",
+    badge: "Gestión de Flota",
+    title: "Gestión de Vehículos",
+    description: "Control y asignación de la flota vehicular de la institución.",
+    cta: "Acceder a Flota",
+    iconFrom: Car,
+    iconTo: Truck,
+    iconColor: "#60a5fa",
+    accent: {
+      border: "border-blue-300/40 dark:border-blue-400/20",
+      ring: "ring-blue-300/20",
+      badge: "bg-blue-400/90",
+      button: "bg-blue-400 hover:bg-blue-500",
+      check: "text-blue-400",
+      iconBg: "bg-blue-50 dark:bg-blue-400/10",
+    },
+    features: [
+      {
+        label: "Control de asignaciones",
+        iconFrom: KeyRound,
+        iconTo: Car,
+      },
+      {
+        label: "Registro de mantenimientos",
+        iconFrom: Wrench,
+        iconTo: Settings,
+      },
+      {
+        label: "Reporte de recorridos",
+        iconFrom: Map,
+        iconTo: Route,
+      },
+    ] satisfies GtCardFeature[],
+    colSpan: "md:col-span-2 lg:col-span-1",
+  },
+] as const;
 
 export default function GestionTerritorialPage() {
   const router = useRouter();
   const user = useUser();
   const metadata = user?.user_metadata || {};
 
+  const [loading, setLoading] = useState(true);
   const [genero, setGenero] = useState<string | null>(null);
+  const [saludoMotivacional] = useState(() => pickSaludoMotivacional());
   const [typedText, setTypedText] = useState("");
+  const [headerHovered, setHeaderHovered] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.id) return;
-
-    let cancelled = false;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetchProfile = async () => {
       try {
         const supabase = createClient();
@@ -33,35 +177,39 @@ export default function GestionTerritorialPage() {
           .from("profiles")
           .select("genero")
           .eq("id", user.id)
-          .maybeSingle();
-        if (!cancelled && data && !error) {
+          .single();
+        if (data && !error) {
           setGenero(data.genero);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
+      } finally {
+        setLoading(false);
       }
     };
-
-    void fetchProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+    fetchProfile();
+  }, [user]);
 
   useEffect(() => {
-    const fraseAleatoria =
-      FRASES_BIENVENIDA[Math.floor(Math.random() * FRASES_BIENVENIDA.length)];
     let i = 0;
     const timeout = setTimeout(() => {
       const interval = setInterval(() => {
-        setTypedText(fraseAleatoria.substring(0, i + 1));
+        setTypedText(saludoMotivacional.substring(0, i + 1));
         i++;
-        if (i >= fraseAleatoria.length) clearInterval(interval);
+        if (i >= saludoMotivacional.length) clearInterval(interval);
       }, 30);
       return () => clearInterval(interval);
     }, 600);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [saludoMotivacional]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 w-full px-6 lg:px-12 space-y-10 max-w-550 mx-auto pb-10 pt-20">
+        <Skeleton className="h-[400px] w-full rounded-[2.5rem]" />
+      </div>
+    );
+  }
 
   const welcomeText =
     genero === "Femenino"
@@ -83,17 +231,19 @@ export default function GestionTerritorialPage() {
             transition={{ duration: 0.3 }}
             className="space-y-8"
           >
-            {/* Header Centrado */}
             <div className="flex flex-col items-center justify-center text-center w-full gap-4 relative z-10">
               <div
-                id="gt-header-icon"
-                className="group cursor-pointer flex items-center justify-center gap-4 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 pl-2 pr-8 py-2 rounded-full text-xs font-black uppercase tracking-[0.15em] mb-6 border border-orange-100 dark:border-orange-500/20 shadow-sm transition-all hover:shadow-lg hover:bg-orange-100 dark:hover:bg-orange-500/20"
+                className="group mb-6 flex cursor-pointer items-center justify-center gap-4 rounded-full border border-orange-200/80 bg-orange-50/90 py-2 pl-2 pr-8 text-xs font-black uppercase tracking-[0.15em] text-orange-500 shadow-sm transition-all hover:bg-orange-100/90 hover:shadow-md dark:border-orange-400/15 dark:bg-orange-400/8 dark:text-orange-300 dark:hover:bg-orange-400/12"
+                onMouseEnter={() => setHeaderHovered(true)}
+                onMouseLeave={() => setHeaderHovered(false)}
               >
-                <div className="shrink-0 flex items-center justify-center w-16 h-16 dark:rounded-full dark:bg-white transition-transform group-hover:scale-105">
-                  <AnimatedIcon
-                    iconKey="giblkgwf"
-                    target="#gt-header-icon"
-                    size={48}
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/80 transition-transform group-hover:scale-105 dark:bg-white/10">
+                  <MorphHoverIcon
+                    from={Map}
+                    to={Globe2}
+                    hovered={headerHovered}
+                    size={32}
+                    color="#fb923c"
                   />
                 </div>
                 Módulo de Gestión Territorial
@@ -114,193 +264,79 @@ export default function GestionTerritorialPage() {
                 <motion.span
                   animate={{ opacity: [1, 0] }}
                   transition={{ repeat: Infinity, duration: 0.8 }}
-                  className="inline-block w-[2px] h-[1em] bg-orange-600 ml-1 align-middle"
+                  className="inline-block w-[2px] h-[1em] bg-orange-400 ml-1 align-middle"
                 />
               </p>
             </div>
 
-            {/* Cards estilo Pricing */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-6xl mx-auto mt-12 relative z-10">
-              {/* Card Básica -> Memoria de Labores (Naranja/Coral) */}
-              <div
-                id="card-memoria-labores"
-                className="bg-card rounded-3xl border border-orange-500/30 dark:border-orange-500/20 shadow-xl p-0 flex flex-col justify-between relative overflow-hidden ring-1 ring-orange-500/20 cursor-pointer group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                onClick={() => router.push("/siget/gestion-territorial/memoria-labores")}
-              >
-                <div className="bg-orange-600 text-white text-center py-2 text-[10px] font-black tracking-widest uppercase">
-                  Gestión Documental
-                </div>
-                <div className="p-8 flex flex-col h-full">
-                  <div className="flex items-start gap-5 mb-8">
-                    <div className="flex shrink-0 items-center justify-center w-20 h-20 dark:rounded-2xl dark:bg-white group-hover:scale-110 transition-transform">
-                      <AnimatedIcon
-                        iconKey="wvhscmei"
-                        target="#card-memoria-labores"
-                        size={48}
-                      />
-                    </div>
-                    <div className="flex flex-col pt-1">
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white leading-none mb-2">
-                        Memoria de Labores
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        Formularios institucionales del Plan Trifinio para la
-                        memoria de labores semestral.
-                      </p>
-                    </div>
+            <div className="relative z-10 mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {GT_CARDS.map((card) => (
+                <div
+                  key={card.id}
+                  id={card.id}
+                  className={`group flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border bg-card p-0 shadow-lg ring-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${card.accent.border} ${card.accent.ring} ${"colSpan" in card ? card.colSpan : ""}`}
+                  onMouseEnter={() => setHoveredCard(card.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  onClick={() => router.push(card.href)}
+                >
+                  <div
+                    className={`py-2 text-center text-[10px] font-black uppercase tracking-widest text-white ${card.accent.badge}`}
+                  >
+                    {card.badge}
                   </div>
-                  <button className="w-full text-center py-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md transition-colors mb-8 cursor-pointer pointer-events-none">
-                    Acceder a Formularios
-                  </button>
-                  <ul className="space-y-4 mt-auto">
-                    {[
-                      "Creación de registros semestrales",
-                      "Visualización de proyectos",
-                      "Reporte de actividades institucionales",
-                    ].map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300"
+                  <div className="flex h-full flex-col p-8">
+                    <div className="mb-8 flex items-start gap-5">
+                      <div
+                        className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 ${card.accent.iconBg}`}
                       >
-                        <svg
-                          className="w-5 h-5 text-orange-500 shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
+                        <MorphHoverIcon
+                          from={card.iconFrom}
+                          to={card.iconTo}
+                          hovered={hoveredCard === card.id}
+                          size={40}
+                          color={card.iconColor}
+                        />
+                      </div>
+                      <div className="flex flex-col pt-1">
+                        <h3 className="mb-2 text-3xl font-black leading-none text-slate-900 dark:text-white">
+                          {card.title}
+                        </h3>
+                        <p className="text-sm font-medium leading-snug text-slate-500 dark:text-slate-400">
+                          {card.description}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`pointer-events-none mb-8 w-full cursor-pointer rounded-xl py-3.5 text-center text-sm font-bold text-white shadow-sm transition-colors ${card.accent.button}`}
+                    >
+                      {card.cta}
+                    </button>
+                    <ul className="mt-auto space-y-4">
+                      {card.features.map((feature) => (
+                        <li
+                          key={feature.label}
+                          className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Card -> Registro de Asistencia (Teal/Turquesa) */}
-              <div
-                id="card-asistencia"
-                className="bg-card rounded-3xl border border-teal-500/30 dark:border-teal-500/20 shadow-xl p-0 flex flex-col justify-between relative overflow-hidden ring-1 ring-teal-500/20 cursor-pointer group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                onClick={() => router.push("/siget/gestion-territorial/asistencia-actividades")}
-              >
-                <div className="bg-teal-600 text-white text-center py-2 text-[10px] font-black tracking-widest uppercase">
-                  Gestión de Eventos
-                </div>
-                <div className="p-8 flex flex-col h-full">
-                  <div className="flex items-start gap-5 mb-8">
-                    <div className="flex shrink-0 items-center justify-center w-20 h-20 dark:rounded-2xl dark:bg-white group-hover:scale-110 transition-transform">
-                      <AnimatedIcon
-                        iconKey="unfvchvi"
-                        target="#card-asistencia"
-                        size={48}
-                      />
-                    </div>
-                    <div className="flex flex-col pt-1">
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white leading-none mb-2">
-                        Registro de Asistencia
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        Actividades con código QR y estadísticas de asistencia.
-                      </p>
-                    </div>
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center ${card.accent.check}`}
+                          >
+                            <MorphHoverIcon
+                              from={feature.iconFrom}
+                              to={feature.iconTo}
+                              hovered={hoveredCard === card.id}
+                              size={18}
+                              color={card.iconColor}
+                              spring="snappy"
+                            />
+                          </span>
+                          {feature.label}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <button className="w-full text-center py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition-colors mb-8 cursor-pointer pointer-events-none">
-                    Acceder a Registro
-                  </button>
-                  <ul className="space-y-4 mt-auto">
-                    {[
-                      "Generación de Códigos QR",
-                      "Estadísticas en tiempo real",
-                      "Gestión de asistentes",
-                    ].map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300"
-                      >
-                        <svg
-                          className="w-5 h-5 text-teal-500 shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-              </div>
-
-              {/* Card -> Gestión de Vehículos (Blue/Azul) */}
-              <div
-                id="card-vehiculos"
-                className="bg-card rounded-3xl border border-blue-500/30 dark:border-blue-500/20 shadow-xl p-0 flex flex-col justify-between relative overflow-hidden ring-1 ring-blue-500/20 cursor-pointer group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 md:col-span-2 xl:col-span-1"
-                onClick={() => router.push("/siget/gestion-territorial/gestion-vehiculos/flota")}
-              >
-                <div className="bg-blue-600 text-white text-center py-2 text-[10px] font-black tracking-widest uppercase">
-                  Gestión de Flota
-                </div>
-                <div className="p-8 flex flex-col h-full">
-                  <div className="flex items-start gap-5 mb-8">
-                    <div className="flex shrink-0 items-center justify-center w-20 h-20 dark:rounded-2xl dark:bg-white group-hover:scale-110 transition-transform">
-                      <AnimatedIcon
-                        iconKey="cdxxgczv"
-                        target="#card-vehiculos"
-                        size={48}
-                      />
-                    </div>
-                    <div className="flex flex-col pt-1">
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white leading-none mb-2">
-                        Gestión de Vehículos
-                      </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        Control y asignación de la flota vehicular de la institución.
-                      </p>
-                    </div>
-                  </div>
-                  <button className="w-full text-center py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-colors mb-8 cursor-pointer pointer-events-none">
-                    Acceder a Flota
-                  </button>
-                  <ul className="space-y-4 mt-auto">
-                    {[
-                      "Control de asignaciones",
-                      "Registro de mantenimientos",
-                      "Reporte de recorridos",
-                    ].map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300"
-                      >
-                        <svg
-                          className="w-5 h-5 text-blue-500 shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              ))}
             </div>
           </motion.div>
         </AnimatePresence>

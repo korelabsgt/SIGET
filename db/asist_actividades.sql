@@ -14,6 +14,7 @@ create table if not exists public.asist_actividades (
   departamento text,
   municipio text,
   activo boolean not null default true,
+  slug text,
   created_by uuid references public.profiles (id) on delete set null,
   updated_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -47,6 +48,10 @@ create index if not exists asist_actividades_created_at_idx
 
 create index if not exists asist_actividades_activo_idx
   on public.asist_actividades (activo);
+
+create unique index if not exists asist_actividades_slug_uidx
+  on public.asist_actividades (slug)
+  where slug is not null;
 
 create index if not exists asist_registros_genero_idx
   on public.asist_registros (genero);

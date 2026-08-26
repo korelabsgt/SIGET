@@ -12,7 +12,7 @@ import {
   Wrench,
 } from "lucide";
 import type { IconNode } from "lucide";
-import { GESTION_VEHICULOS_MENU_OPTIONS } from "@/components/(base)/dashboard/modules";
+import { GV_MENU_OPTIONS } from "./gestion-vehiculos/lib/menu-options";
 import { GvMorphIcon } from "./gestion-vehiculos/lib/morph-icon";
 import { GvSwitchGroup, GvSwitchItem } from "./gestion-vehiculos/lib/switch-ui";
 import {
@@ -37,7 +37,7 @@ export function SubmodulosNav() {
   return (
     <div className="mb-6 flex flex-wrap items-end gap-2 pb-1">
       <GvSwitchGroup layoutId="gv-submodulos-nav">
-        {GESTION_VEHICULOS_MENU_OPTIONS.map((opt) => {
+        {GV_MENU_OPTIONS.map((opt) => {
           const isActive = gvTab
             ? gvTab.tab === opt.id
             : pathname.startsWith(opt.href);

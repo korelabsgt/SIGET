@@ -207,13 +207,7 @@ function EditarDepartamentoBody({
       ) : null}
 
       <FormFooter>
-        <FormSubmitButton disabled={editar.isPending}>
-          {editar.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Guardar"
-          )}
-        </FormSubmitButton>
+        <FormSubmitButton disabled={editar.isPending} label="Guardar" />
       </FormFooter>
     </motion.form>
   );
@@ -376,13 +370,7 @@ function EditarPuestoBody({
       ) : null}
 
       <FormFooter>
-        <FormSubmitButton disabled={editar.isPending}>
-          {editar.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Guardar"
-          )}
-        </FormSubmitButton>
+        <FormSubmitButton disabled={editar.isPending} label="Guardar" />
       </FormFooter>
     </motion.form>
   );

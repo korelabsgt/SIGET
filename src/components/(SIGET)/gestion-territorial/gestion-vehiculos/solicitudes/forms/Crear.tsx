@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
-import { aplicarMascaraEnInput, maskFechaHoraManual } from "@/lib/fechas-gt";
+import { aplicarMascaraEnInput, maskFechaHoraManual } from "../../lib/fechas-input";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";

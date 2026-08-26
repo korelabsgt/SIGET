@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import type { DpiSugerencia } from "./lib/actions";
 import { useDpisSugerencias } from "./lib/hooks";
 import { normalizarDpiInput } from "./lib/zod";
+import { REGISTRO_PUBLICO_FIELD_CLASS } from "./forms/modal-field-class";
 
-const inputClass =
-  "flex h-10 w-full rounded-lg border-2 border-celeste-trifinio bg-transparent px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-celeste-trifinio/30";
+const inputClass = REGISTRO_PUBLICO_FIELD_CLASS;
 
 export function BusquedaDpi({
   value,
@@ -60,7 +60,7 @@ export function BusquedaDpi({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border-2 border-celeste-trifinio bg-zinc-100 py-1 dark:bg-zinc-900"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-zinc-200/80 bg-zinc-100 py-1 dark:border-zinc-700 dark:bg-zinc-900"
           >
             {isFetching ? (
               <li className="flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground">

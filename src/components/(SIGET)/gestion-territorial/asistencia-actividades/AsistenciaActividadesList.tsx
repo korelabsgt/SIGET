@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Ellipsis, EllipsisVertical, ExternalLink } from "lucide";
 import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  MoreVertical,
   Pencil,
   Plus,
   Search,
@@ -17,7 +17,9 @@ import {
   UserRound,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import {
   DropdownMenu,
@@ -39,6 +41,7 @@ import {
   isPrivilegedAsistenciaRole,
   sortActividadesPorFechaDesc,
   type TabAsistenciaActividades,
+  rutaDetalleActividadAsistencia,
 } from "./lib/helpers";
 
 const PAGE_SIZE_OPTIONS = [10, 15, 25, 50] as const;
@@ -73,65 +76,72 @@ function EstadoBadge({ activo }: { activo: boolean }) {
   );
 }
 
+function NombreActividadCell({ act }: { act: ActividadRecord }) {
+  const creador = etiquetaEncargado(act);
+
+  return (
+    <div className="min-w-0">
+      <p className="font-semibold text-foreground">{act.nombre}</p>
+      {creador !== "Sin encargado" ? (
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          <span className="font-bold">Por:</span> {creador}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function AccionesRow({
   act,
   canDelete,
   deletingId,
   onEdit,
   onDelete,
+  rowHovered = false,
 }: {
   act: ActividadRecord;
   canDelete: boolean;
   deletingId: string | null;
   onEdit: (act: ActividadRecord) => void;
   onDelete: (act: ActividadRecord) => void;
+  rowHovered?: boolean;
 }) {
-  const href = `/siget/asistencia-actividades/${act.id}`;
+  const href = rutaDetalleActividadAsistencia(act);
   const isDeleting = deletingId === act.id;
 
   return (
     <div className="flex items-center justify-end gap-1.5">
       <Link
         href={href}
-        className="inline-flex h-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 px-3 text-[10px] font-bold uppercase tracking-wide text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
+        className="inline-flex h-8 cursor-pointer flex-row items-center gap-1.5 rounded-lg border-0 bg-sky-100 px-3 text-[10px] font-bold uppercase tracking-wide text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
       >
-        Entrar
+        <MorphHoverIcon
+          from={ExternalLink}
+          to={ArrowUpRight}
+          hovered={rowHovered}
+          size={14}
+          color="#1a95d3"
+          spring="snappy"
+          className="shrink-0"
+        />
+        <span>Entrar</span>
       </Link>
-
-      <div className="hidden items-center gap-1.5 md:flex">
-        <button
-          type="button"
-          onClick={() => onEdit(act)}
-          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
-          aria-label={`Editar ${act.nombre}`}
-        >
-          <Pencil className="size-3.5" />
-        </button>
-        {canDelete ? (
-          <button
-            type="button"
-            onClick={() => onDelete(act)}
-            disabled={isDeleting}
-            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-red-100 text-red-600 transition-colors hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
-            aria-label={`Eliminar ${act.nombre}`}
-          >
-            {isDeleting ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="size-3.5" />
-            )}
-          </button>
-        ) : null}
-      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 md:hidden dark:bg-sky-950 dark:hover:bg-sky-900"
+            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
             aria-label={`Más acciones de ${act.nombre}`}
           >
-            <MoreVertical className="size-4" />
+            <MorphHoverIcon
+              from={EllipsisVertical}
+              to={Ellipsis}
+              hovered={rowHovered}
+              size={16}
+              color="#1a95d3"
+              spring="snappy"
+            />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -162,6 +172,102 @@ function AccionesRow({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+function AsistenciaActividadesListSkeleton({
+  conEncargado,
+}: {
+  conEncargado: boolean;
+}) {
+  const colSpan = conEncargado ? 6 : 5;
+
+  return (
+    <>
+      <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center dark:border-zinc-700">
+        <Skeleton className="h-11 w-full rounded-xl sm:flex-1" />
+        <Skeleton className="h-11 w-full rounded-xl sm:w-44" />
+      </div>
+
+      <div className="hidden md:block">
+        <table className="w-full min-w-[780px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-sky-50/80 dark:border-zinc-700 dark:bg-sky-950/30">
+              {Array.from({ length: colSpan }).map((_, i) => (
+                <th key={i} className="px-4 py-3">
+                  <Skeleton className="h-3 w-16 rounded-md" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 6 }).map((_, row) => (
+              <tr
+                key={row}
+                className="border-b border-border last:border-0 dark:border-zinc-800"
+              >
+                <td className="px-4 py-3">
+                  <Skeleton className="mb-1.5 h-4 w-48 max-w-full rounded-md" />
+                  <Skeleton className="h-3 w-32 rounded-md" />
+                </td>
+                {conEncargado && (
+                  <td className="px-4 py-3">
+                    <Skeleton className="mb-1.5 h-4 w-36 rounded-md" />
+                    <Skeleton className="h-3 w-24 rounded-md" />
+                  </td>
+                )}
+                <td className="px-4 py-3">
+                  <Skeleton className="h-4 w-24 rounded-md" />
+                </td>
+                <td className="px-4 py-3">
+                  <Skeleton className="h-4 w-8 rounded-md" />
+                </td>
+                <td className="px-4 py-3">
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-1.5">
+                    <Skeleton className="h-8 w-20 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="divide-y divide-border md:hidden dark:divide-zinc-800">
+        {Array.from({ length: 5 }).map((_, row) => (
+          <div key={row} className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-4 w-3/5 rounded-md" />
+              <Skeleton className="h-5 w-14 shrink-0 rounded-full" />
+            </div>
+            {conEncargado && (
+              <>
+                <Skeleton className="h-4 w-40 rounded-md" />
+                <Skeleton className="h-3 w-28 rounded-md" />
+              </>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-3">
+                <Skeleton className="h-3 w-20 rounded-md" />
+                <Skeleton className="h-3 w-16 rounded-md" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-3 border-t border-border px-4 py-3 dark:border-zinc-700">
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-4 w-10 rounded-md" />
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-9 w-14 rounded-lg" />
+      </div>
+    </>
   );
 }
 
@@ -199,6 +305,7 @@ export default function AsistenciaActividadesList() {
     null,
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
   const esTabOtros = canVerOtros && tabActiva === "otros";
 
@@ -252,9 +359,12 @@ export default function AsistenciaActividadesList() {
     return agruparActividadesPorMes(pageItems);
   }, [esTabOtros, pageItems]);
 
-  useEffect(() => {
+  const paginacionKey = `${tabActiva}|${search}|${pageSize}`;
+  const [paginacionKeyPrevia, setPaginacionKeyPrevia] = useState(paginacionKey);
+  if (paginacionKey !== paginacionKeyPrevia) {
+    setPaginacionKeyPrevia(paginacionKey);
     setPage(1);
-  }, [tabActiva, search, pageSize]);
+  }
 
   const handleDelete = async (act: ActividadRecord) => {
     const ok = await confirmQuitarActividad(
@@ -276,69 +386,79 @@ export default function AsistenciaActividadesList() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          SIGET
-        </p>
-        <h1 className="text-2xl font-black text-foreground sm:text-3xl">
-          Registro de asistencia
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Crea actividades, genera un código QR y consulta los registros.
-        </p>
-      </div>
-
-      {canVerOtros && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setTabActiva("propios")}
-            className={cn(
-              "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border-0 px-5 text-xs font-bold uppercase tracking-wider transition-colors",
-              tabActiva === "propios"
-                ? "bg-celeste-trifinio text-white hover:opacity-90"
-                : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600",
-            )}
-          >
-            Mis actividades
-            <span
-              className={cn(
-                "ml-2 rounded-full px-2 py-0.5 text-[10px] tabular-nums",
-                tabActiva === "propios"
-                  ? "bg-white/25"
-                  : "bg-zinc-900/10 dark:bg-white/10",
-              )}
-            >
-              {actividadesPropias.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTabActiva("otros")}
-            className={cn(
-              "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border-0 px-5 text-xs font-bold uppercase tracking-wider transition-colors",
-              tabActiva === "otros"
-                ? "bg-celeste-trifinio text-white hover:opacity-90"
-                : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600",
-            )}
-          >
-            De otros
-            <span
-              className={cn(
-                "ml-2 rounded-full px-2 py-0.5 text-[10px] tabular-nums",
-                tabActiva === "otros"
-                  ? "bg-white/25"
-                  : "bg-zinc-900/10 dark:bg-white/10",
-              )}
-            >
-              {actividadesOtros.length}
-            </span>
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h1 className="text-2xl font-black text-foreground sm:text-3xl">
+            Registro de actividades
+          </h1>
+          {canVerOtros &&
+            (isLoading ? (
+              <Skeleton className="h-8 w-56 shrink-0 rounded-lg" />
+            ) : (
+              <div className="inline-flex shrink-0 border-b border-zinc-200 dark:border-zinc-700">
+                {(
+                  [
+                    {
+                      id: "propios" as const,
+                      label: "Mis actividades",
+                      count: actividadesPropias.length,
+                    },
+                    {
+                      id: "otros" as const,
+                      label: "De otros",
+                      count: actividadesOtros.length,
+                    },
+                  ] as const
+                ).map((tab) => {
+                  const active = tabActiva === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setTabActiva(tab.id)}
+                      className={cn(
+                        "relative inline-flex h-8 cursor-pointer items-center gap-1 border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors",
+                        active
+                          ? "text-celeste-trifinio"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tab.label}
+                      <span
+                        className={cn(
+                          "tabular-nums",
+                          active
+                            ? "text-celeste-trifinio/80"
+                            : "text-muted-foreground/70",
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                      {active ? (
+                        <motion.span
+                          layoutId="asistencia-tab-indicator"
+                          className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio"
+                          transition={{
+                            type: "spring",
+                            stiffness: 380,
+                            damping: 32,
+                          }}
+                        />
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
         </div>
-      )}
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40">
         <div className="h-1 w-full bg-celeste-trifinio" />
 
+        {isLoading ? (
+          <AsistenciaActividadesListSkeleton conEncargado={esTabOtros} />
+        ) : (
+          <>
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center dark:border-zinc-700">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-celeste-trifinio" />
@@ -364,11 +484,7 @@ export default function AsistenciaActividadesList() {
           </button>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
-          </div>
-        ) : error ? (
+        {error ? (
           <p className="py-12 text-center text-sm text-red-500">
             No se pudieron cargar las actividades.
           </p>
@@ -433,10 +549,12 @@ export default function AsistenciaActividadesList() {
                                 duration: 0.25,
                                 ease: [0.4, 0, 0.2, 1],
                               }}
+                              onMouseEnter={() => setHoveredRowId(act.id)}
+                              onMouseLeave={() => setHoveredRowId(null)}
                               className="border-b border-border last:border-0 hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
                             >
-                              <td className="px-4 py-3 font-semibold text-foreground">
-                                {act.nombre}
+                              <td className="px-4 py-3">
+                                <NombreActividadCell act={act} />
                               </td>
                               <td className="px-4 py-3">
                                 <EncargadoCell act={act} />
@@ -462,6 +580,7 @@ export default function AsistenciaActividadesList() {
                                   deletingId={deletingId}
                                   onEdit={setEditarActividad}
                                   onDelete={handleDelete}
+                                  rowHovered={hoveredRowId === act.id}
                                 />
                               </td>
                             </motion.tr>
@@ -478,10 +597,12 @@ export default function AsistenciaActividadesList() {
                               duration: 0.25,
                               ease: [0.4, 0, 0.2, 1],
                             }}
+                            onMouseEnter={() => setHoveredRowId(act.id)}
+                            onMouseLeave={() => setHoveredRowId(null)}
                             className="border-b border-border last:border-0 hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
                           >
-                            <td className="px-4 py-3 font-semibold text-foreground">
-                              {act.nombre}
+                            <td className="px-4 py-3">
+                              <NombreActividadCell act={act} />
                             </td>
                             <td
                               className="px-4 py-3 whitespace-nowrap text-xs capitalize text-muted-foreground"
@@ -504,6 +625,7 @@ export default function AsistenciaActividadesList() {
                                 deletingId={deletingId}
                                 onEdit={setEditarActividad}
                                 onDelete={handleDelete}
+                                rowHovered={hoveredRowId === act.id}
                               />
                             </td>
                           </motion.tr>
@@ -537,12 +659,12 @@ export default function AsistenciaActividadesList() {
                               duration: 0.25,
                               ease: [0.4, 0, 0.2, 1],
                             }}
+                            onMouseEnter={() => setHoveredRowId(act.id)}
+                            onMouseLeave={() => setHoveredRowId(null)}
                             className="space-y-3 border-t border-border p-4 dark:border-zinc-800"
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <p className="font-semibold text-foreground">
-                                {act.nombre}
-                              </p>
+                              <NombreActividadCell act={act} />
                               <EstadoBadge activo={act.activo} />
                             </div>
                             <EncargadoCell act={act} />
@@ -562,6 +684,7 @@ export default function AsistenciaActividadesList() {
                                   deletingId={deletingId}
                                   onEdit={setEditarActividad}
                                   onDelete={handleDelete}
+                                  rowHovered={hoveredRowId === act.id}
                                 />
                               </div>
                             </div>
@@ -585,12 +708,12 @@ export default function AsistenciaActividadesList() {
                           duration: 0.25,
                           ease: [0.4, 0, 0.2, 1],
                         }}
+                        onMouseEnter={() => setHoveredRowId(act.id)}
+                        onMouseLeave={() => setHoveredRowId(null)}
                         className="space-y-3 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <p className="font-semibold text-foreground">
-                            {act.nombre}
-                          </p>
+                          <NombreActividadCell act={act} />
                           <EstadoBadge activo={act.activo} />
                         </div>
                         <div className="flex items-center justify-between gap-2">
@@ -609,6 +732,7 @@ export default function AsistenciaActividadesList() {
                               deletingId={deletingId}
                               onEdit={setEditarActividad}
                               onDelete={handleDelete}
+                              rowHovered={hoveredRowId === act.id}
                             />
                           </div>
                         </div>
@@ -656,12 +780,20 @@ export default function AsistenciaActividadesList() {
             ))}
           </select>
         </div>
+          </>
+        )}
       </div>
 
       <CrearActividad
         open={crearOpen}
         onClose={() => setCrearOpen(false)}
-        onCreated={(id) => router.push(`/siget/asistencia-actividades/${id}`)}
+        onCreated={(slug) => {
+          if (slug) {
+            router.push(
+              `/siget/gestion-territorial/asistencia-actividades/${slug}`,
+            );
+          }
+        }}
       />
 
       <VerEditarActividad

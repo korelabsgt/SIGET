@@ -76,66 +76,65 @@ export function formatFechaHoraGt(
   }).format(date);
 }
 
-export function formatFechaCortaGt(value: string | null | undefined): string {
-  if (!value) return "—";
+function formatAmPmGt(dayPeriod: string): string {
+  const letter = dayPeriod.replace(/[^ap]/gi, "").toUpperCase();
+  return letter === "P" ? "P.M." : "A.M.";
+}
+
+function formatDiaSemanaCortoGt(weekday: string): string {
+  const limpio = weekday.replace(/\./g, "").trim();
+  if (!limpio) return "";
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1, 3).toLowerCase();
+}
+
+function partesFechaHoraTablaGt(value: string | null | undefined): {
+  fecha: string;
+  hora: string;
+} | null {
+  if (!value) return null;
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return null;
 
-  return new Intl.DateTimeFormat(LOCALE_GT, {
+  const parts = new Intl.DateTimeFormat(LOCALE_GT, {
     timeZone: TIMEZONE_GT,
+    weekday: "short",
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
-  }).format(date);
-}
-
-export function formatDiaFechaCortaGt(value: string | null | undefined): string {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  const weekdayRaw = new Intl.DateTimeFormat(LOCALE_GT, {
-    timeZone: TIMEZONE_GT,
-    weekday: "short",
-  })
-    .format(date)
-    .replace(/\.$/, "")
-    .slice(0, 3);
-
-  const weekday =
-    weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1).toLowerCase();
-
-  return `${weekday} ${formatFechaCortaGt(value)}`;
-}
-
-export function formatHoraAmGt(value: string | null | undefined): string {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: TIMEZONE_GT,
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-  }).format(date);
+  }).formatToParts(date);
+
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
+  const dayPeriod = parts.find((p) => p.type === "dayPeriod")?.value ?? "";
+
+  return {
+    fecha: `${formatDiaSemanaCortoGt(weekday)} ${day}/${month}/${year}`,
+    hora: `${hour}:${minute} ${formatAmPmGt(dayPeriod)}`,
+  };
 }
 
-export function formatHoraGt(value: string | null | undefined): string {
-  if (!value) return "—";
+export function formatFechaTablaGt(value: string | null | undefined): string {
+  return partesFechaHoraTablaGt(value)?.fecha ?? "—";
+}
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+export function formatHoraTablaGt(value: string | null | undefined): string {
+  return partesFechaHoraTablaGt(value)?.hora ?? "—";
+}
 
-  return new Intl.DateTimeFormat(LOCALE_GT, {
-    timeZone: TIMEZONE_GT,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+export function formatFechaHoraTablaGt(
+  value: string | null | undefined,
+): string {
+  const partes = partesFechaHoraTablaGt(value);
+  if (!partes) return "—";
+  return `${partes.fecha}, ${partes.hora}`;
 }
 
 export function mesCalendarioToTimestamptz(mes: string): string {
@@ -164,264 +163,31 @@ export function timestamptzToMesCalendario(
   return y && m ? `${y}-${m}` : mesCalendarioGt();
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
+export function formatFechaManualGt(value: string | null | undefined): string {
+  const norm = normalizarFechaCalendario(value);
+  if (!norm) return "";
+  const [y, m, d] = norm.split("-");
+  return `${d}/${m}/${y}`;
 }
 
-function diasEnMes(y: number, m: number): number {
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-}
-
-function clampDia(day: string, month: string, year: string): string {
-  if (day.length !== 2) return day;
-  let d = Number(day);
-  if (!Number.isFinite(d) || d < 1) d = 1;
-  let max = 31;
-  if (month.length === 2) {
-    const m = Number(month);
-    if (m === 2) {
-      max = year.length === 4 ? diasEnMes(Number(year), 2) : 29;
-    } else if (m === 4 || m === 6 || m === 9 || m === 11) {
-      max = 30;
-    } else if (m >= 1 && m <= 12) {
-      max = year.length === 4 ? diasEnMes(Number(year), m) : 31;
-    }
+export function parseFechaManualGt(formatted: string): string | null {
+  if (formatted.length !== 10) return null;
+  const [dd, mm, yyyy] = formatted.split("/");
+  if (!dd || !mm || !yyyy || dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) {
+    return null;
   }
-  if (d > max) d = max;
-  return pad2(d);
-}
-
-function clampPar(value: string, min: number, max: number): string {
-  if (value.length !== 2) return value;
-  let n = Number(value);
-  if (!Number.isFinite(n) || n < min) n = min;
-  if (n > max) n = max;
-  return pad2(n);
-}
-
-function extraerSlotsFecha(
-  raw: string,
-  conHora: boolean,
-): {
-  day: string;
-  month: string;
-  year: string;
-  hour: string;
-  minute: string;
-} {
-  const max = conHora ? [2, 2, 4, 2, 2] : [2, 2, 4];
-  const slots = max.map(() => "");
-  let i = 0;
-
-  for (const ch of raw) {
-    if (ch >= "0" && ch <= "9") {
-      while (i < slots.length && slots[i].length >= max[i]) i += 1;
-      if (i >= slots.length) break;
-      slots[i] += ch;
-      continue;
-    }
-    if (ch === "/" || ch === ":" || ch === " ") {
-      if (i < slots.length - 1) i += 1;
-    }
+  const d = Number(dd);
+  const m = Number(mm);
+  const y = Number(yyyy);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const date = new Date(y, m - 1, d);
+  if (
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
   }
-
-  return {
-    day: slots[0] ?? "",
-    month: slots[1] ?? "",
-    year: slots[2] ?? "",
-    hour: slots[3] ?? "",
-    minute: slots[4] ?? "",
-  };
-}
-
-function ensamblarFechaHoraSlots(
-  day: string,
-  month: string,
-  year: string,
-  hour: string,
-  minute: string,
-  conHora: boolean,
-): string {
-  const hayTrasDia = Boolean(month || year || hour || minute);
-  const hayTrasMes = Boolean(year || hour || minute);
-  const hayTrasAnio = Boolean(hour || minute);
-  const hayTrasHora = Boolean(minute);
-
-  if (!day && !hayTrasDia) return "";
-
-  let out = day;
-  if (day.length === 2 || hayTrasDia) out += "/";
-  out += month;
-  if (month.length === 2 || hayTrasMes) out += "/";
-  out += year;
-  if (!conHora) return out;
-  if (year.length === 4 || hayTrasAnio) out += " ";
-  out += hour;
-  if (hour.length === 2 || hayTrasHora) out += ":";
-  out += minute;
-  return out;
-}
-
-export function maskFechaManual(raw: string): string {
-  let { day, month, year } = extraerSlotsFecha(raw, false);
-  if (!day && !month && !year) return "";
-
-  month = clampPar(month, 1, 12);
-  day = clampDia(day, month, year);
-
-  return ensamblarFechaHoraSlots(day, month, year, "", "", false);
-}
-
-export function maskFechaHoraManual(raw: string): string {
-  let { day, month, year, hour, minute } = extraerSlotsFecha(raw, true);
-  if (!day && !month && !year && !hour && !minute) return "";
-
-  month = clampPar(month, 1, 12);
-  day = clampDia(day, month, year);
-  hour = clampPar(hour, 0, 23);
-  minute = clampPar(minute, 0, 59);
-
-  return ensamblarFechaHoraSlots(day, month, year, hour, minute, true);
-}
-
-export function aplicarMascaraEnInput(
-  input: HTMLInputElement,
-  mask: (raw: string) => string,
-): void {
-  const caret = input.selectionStart ?? input.value.length;
-  const raw = input.value;
-  const masked = mask(raw);
-  input.value = masked;
-  const inserted = masked.length - raw.length;
-  const next = Math.max(0, Math.min(masked.length, caret + Math.max(inserted, 0)));
-  input.setSelectionRange(next, next);
-}
-
-function esFechaCalendarioValida(y: number, m: number, d: number): boolean {
-  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
-  const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  return (
-    dt.getUTCFullYear() === y &&
-    dt.getUTCMonth() === m - 1 &&
-    dt.getUTCDate() === d
-  );
-}
-
-export function parseFechaManualToYmd(
-  value: string | null | undefined,
-): string {
-  if (!value) return "";
-  const t = value.trim();
-  const iso = normalizarFechaCalendario(t);
-  if (iso) {
-    const [y, m, d] = iso.split("-").map(Number);
-    return esFechaCalendarioValida(y, m, d) ? iso : "";
-  }
-  const match = t.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
-  if (!match) return "";
-  const d = Number(match[1]);
-  const m = Number(match[2]);
-  const y = Number(match[3]);
-  if (!esFechaCalendarioValida(y, m, d)) return "";
-  return `${y}-${pad2(m)}-${pad2(d)}`;
-}
-
-export function fechaManualToTimestamptz(
-  value: string | null | undefined,
-): string | null {
-  if (!value?.trim()) return null;
-  const ymd = parseFechaManualToYmd(value);
-  return ymd ? `${ymd}T12:00:00.000Z` : null;
-}
-
-export function formatFechaManualInput(
-  value: string | null | undefined,
-): string {
-  if (!value?.trim()) return "";
-  const ymd = parseFechaManualToYmd(value);
-  if (ymd) {
-    const [y, m, d] = ymd.split("-");
-    return `${d}/${m}/${y}`;
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TIMEZONE_GT,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).formatToParts(date);
-  const d = parts.find((p) => p.type === "day")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const y = parts.find((p) => p.type === "year")?.value;
-  return d && m && y ? `${d}/${m}/${y}` : "";
-}
-
-export function parseFechaHoraManualToIso(
-  value: string | null | undefined,
-): string {
-  if (!value?.trim()) return "";
-  const t = value.trim();
-
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:/.test(t)) {
-    const date = new Date(t);
-    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
-  }
-
-  const dmy = t.match(
-    /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})(?:\s+|T)(\d{1,2}):(\d{2})$/,
-  );
-  const ymd = t.match(
-    /^(\d{4})-(\d{2})-(\d{2})(?:\s+|T)(\d{1,2}):(\d{2})$/,
-  );
-
-  let year: number;
-  let month: number;
-  let day: number;
-  let hour: number;
-  let minute: number;
-
-  if (dmy) {
-    day = Number(dmy[1]);
-    month = Number(dmy[2]);
-    year = Number(dmy[3]);
-    hour = Number(dmy[4]);
-    minute = Number(dmy[5]);
-  } else if (ymd) {
-    year = Number(ymd[1]);
-    month = Number(ymd[2]);
-    day = Number(ymd[3]);
-    hour = Number(ymd[4]);
-    minute = Number(ymd[5]);
-  } else {
-    return "";
-  }
-
-  if (!esFechaCalendarioValida(year, month, day)) return "";
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "";
-
-  return `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:00-06:00`;
-}
-
-export function formatFechaHoraManualInput(
-  value: string | null | undefined,
-): string {
-  if (!value?.trim()) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TIMEZONE_GT,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const d = parts.find((p) => p.type === "day")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const y = parts.find((p) => p.type === "year")?.value;
-  const h = parts.find((p) => p.type === "hour")?.value;
-  const min = parts.find((p) => p.type === "minute")?.value;
-  return d && m && y && h && min ? `${d}/${m}/${y} ${h}:${min}` : "";
+  const iso = `${yyyy}-${mm}-${dd}`;
+  return normalizarFechaCalendario(iso) ? iso : null;
 }

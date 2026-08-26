@@ -59,12 +59,12 @@ export default function Page() {
 - Tema oscuro: fondo de página `zinc-900`; cards y componentes en un tono de gris más claro (`zinc-800`).
 - La UI usa tonos zinc para fondos de superficie.
 
-### Botones (UI general)
+### Botones de acción (obligatorio en todo el sistema)
 
-- Texto y borde en color de acento del proyecto (primary o token de marca).
-- Fondo: `bg-zinc-100` en tema claro, `dark:bg-zinc-800` en tema oscuro.
-- Hover: un tono más claro u oscuro según el tema.
-- Siempre `cursor-pointer`.
+- Componente único: `SigetActionButton` en `@/components/ui/siget-action-button.tsx`.
+- Base: `RippleButton` (Magic UI) + `MorphHoverIcon` (morphicons).
+- Layout: **una palabra** + **icono a la derecha**, contenido centrado, `border-2`, fondo blanco/card.
+- Skill completa: `ui-tema-botones`. **Sin excepciones** — pantallas, modales, listas, cards.
 
 ### Modales
 

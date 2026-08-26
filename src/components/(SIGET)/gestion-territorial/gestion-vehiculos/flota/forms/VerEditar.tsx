@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { aplicarMascaraEnInput, formatFechaManualInput, maskFechaManual } from "@/lib/fechas-gt";
+import {
+  aplicarMascaraEnInput,
+  formatFechaManualInput,
+  maskFechaManual,
+} from "../../lib/fechas-input";
 import { Button } from "@/components/ui/button";
 
 import {

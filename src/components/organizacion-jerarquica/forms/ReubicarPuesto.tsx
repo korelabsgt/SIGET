@@ -256,16 +256,8 @@ function ReubicarPuestoBody({
       <FormFooter>
         <FormSubmitButton
           disabled={reubicar.isPending || cargandoDeps || tieneHijos}
-        >
-          {reubicar.isPending ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            "Guardar"
-          )}
-        </FormSubmitButton>
+          label="Guardar"
+        />
       </FormFooter>
     </form>
   );

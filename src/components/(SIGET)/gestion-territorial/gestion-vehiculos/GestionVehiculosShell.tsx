@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { GESTION_VEHICULOS_MENU_OPTIONS } from "@/components/(base)/dashboard/modules";
+import { GV_MENU_OPTIONS } from "./lib/menu-options";
 import {
   GvTabProvider,
   GV_SUBMODULO_TITLES,
@@ -46,7 +46,7 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
 ];
 
 function hrefForSubmodulo(id: GvSubmoduloId) {
-  return GESTION_VEHICULOS_MENU_OPTIONS.find((opt) => opt.id === id)?.href;
+  return GV_MENU_OPTIONS.find((opt) => opt.id === id)?.href;
 }
 
 export function GestionVehiculosShell() {

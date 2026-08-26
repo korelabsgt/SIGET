@@ -198,9 +198,7 @@ function CrearBody({
       )}
 
       <FormFooter>
-        <FormSubmitButton disabled={guardando}>
-          {guardando ? <Loader2 className="size-4 animate-spin" /> : "Guardar"}
-        </FormSubmitButton>
+        <FormSubmitButton disabled={guardando} label="Guardar" />
       </FormFooter>
     </motion.form>
   );
