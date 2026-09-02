@@ -352,7 +352,7 @@ export function esVehiculoDisponible(
 }
 
 export function formatVehiculoOpcion(
-  v: Pick<VehiculoRow, "placa" | "marca" | "modelo" | "color">,
+  v: Pick<VehiculoRow, "placa" | "marca" | "modelo"> & { color?: string | null },
 ): string {
   const base = `${v.placa} · ${v.marca} ${v.modelo}`;
   const color = v.color?.trim();

@@ -204,12 +204,12 @@ export function Flota() {
               </SelectContent>
             </Select>
 
-            <div className="flex items-center sm:col-span-2 lg:col-span-1 lg:justify-end">
+            <div className="w-full sm:col-span-2 lg:col-span-1 lg:flex lg:justify-end">
               {canManage ? (
               <button
                 type="button"
                 onClick={handleCreate}
-                className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-full lg:w-auto")}
               >
                 <GvMorphIcon icon={Plus} hoverIcon={Check} size={16} />
                 Añadir

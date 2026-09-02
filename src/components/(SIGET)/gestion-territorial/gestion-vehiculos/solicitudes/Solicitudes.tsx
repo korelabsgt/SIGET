@@ -10,18 +10,19 @@ import { SolicitudesPanel } from "./SolicitudesPanel";
 import { Crear } from "./forms/Crear";
 import { SolicitudActionModal } from "./SolicitudActionModal";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
-import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
+import { GvTabFilter } from "../lib/gv-tab-filter";
 
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
-import { GV_HEADER_ACTIONS_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
+import { GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { canManageSolicitudesVehiculos } from "../lib/permissions";
+import { cn } from "@/lib/utils";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 type TabSolicitud = (typeof TABS)[number];
@@ -125,31 +126,47 @@ export function Solicitudes() {
           }
           toolbar={
             !inDetailView ? (
-              <div className="flex flex-col gap-3 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
-                {canVerFiltros ? (
-                  <GvSwitchGroup layoutId="gv-solicitudes-tabs">
-                    {TABS.map((tab) => (
-                      <GvSwitchItem
-                        key={tab}
-                        active={tabActiva === tab}
-                        onClick={() => setTabActiva(tab)}
-                        size="sm"
-                      >
-                        {TAB_LABELS[tab]}
-                      </GvSwitchItem>
-                    ))}
-                  </GvSwitchGroup>
-                ) : null}
+              <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex w-full items-stretch gap-2 lg:contents">
+                  {canVerFiltros ? (
+                    <GvTabFilter
+                      value={tabActiva}
+                      onChange={setTabActiva}
+                      layoutId="gv-solicitudes-tabs"
+                      compact
+                      options={TABS.map((tab) => ({
+                        value: tab,
+                        label: TAB_LABELS[tab],
+                      }))}
+                    />
+                  ) : null}
 
-                <div className={`${GV_HEADER_ACTIONS_CLASS} lg:ml-auto`}>
-                  <GvMonthPicker value={periodoFilter} onChange={setPeriodoFilter} />
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="!h-9 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
+                  />
+                </div>
+
+                <div
+                  className={cn(
+                    "grid w-full grid-cols-1 gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto",
+                    "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
+                  )}
+                >
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="hidden lg:inline-flex"
+                  />
                   <button
                     type="button"
                     onClick={() => setFormOpen(true)}
                     className={GV_HEADER_OUTLINE_BUTTON_CLASS}
                   >
                     <Plus className="size-4 shrink-0" />
-                    Nueva Solicitud
+                    <span className="lg:hidden">Nueva</span>
+                    <span className="hidden lg:inline">Nueva Solicitud</span>
                   </button>
                 </div>
               </div>

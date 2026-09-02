@@ -12,11 +12,11 @@ import { useRouter } from "next/navigation";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
+import { cn } from "@/lib/utils";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
-import { GV_HEADER_ACTIONS_CLASS } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
-import { GvSwitchGroup, GvSwitchItem } from "../lib/switch-ui";
+import { GvTabFilter } from "../lib/gv-tab-filter";
 import { filtrarFallasMantenimiento } from "./lib/helpers";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { useGvTablePagination } from "../lib/table-pagination";
@@ -169,26 +169,43 @@ export function Mantenimiento() {
               }
               toolbar={
                 !enDetalle ? (
-                  <div className="flex flex-col gap-3 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
-                    {canManage ? (
-                      <GvSwitchGroup layoutId="gv-mantenimiento-tabs" layout="responsive-grid">
-                        {TABS.map((tab) => (
-                          <GvSwitchItem
-                            key={tab}
-                            active={tabActiva === tab}
-                            onClick={() => setTabActiva(tab)}
-                            size="sm"
-                            fill
-                            tone={tab === "CRITICAS" ? "danger" : "default"}
-                          >
-                            {TAB_LABELS[tab]}
-                          </GvSwitchItem>
-                        ))}
-                      </GvSwitchGroup>
-                    ) : null}
+                  <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex w-full items-stretch gap-2 lg:contents">
+                      {canManage ? (
+                        <GvTabFilter
+                          value={tabActiva}
+                          onChange={setTabActiva}
+                          layoutId="gv-mantenimiento-tabs"
+                          layout="responsive-grid"
+                          fill
+                          compact
+                          options={TABS.map((tab) => ({
+                            value: tab,
+                            label: TAB_LABELS[tab],
+                            tone: tab === "CRITICAS" ? "danger" : "default",
+                          }))}
+                        />
+                      ) : null}
 
-                    <div className={`${GV_HEADER_ACTIONS_CLASS} lg:ml-auto`}>
-                      <GvMonthPicker value={periodoFilter} onChange={setPeriodoFilter} />
+                      <GvMonthPicker
+                        value={periodoFilter}
+                        onChange={setPeriodoFilter}
+                        className="!h-9 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
+                      />
+                    </div>
+
+                    <div
+                      className={cn(
+                        "grid w-full gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto",
+                        canExport ? "grid-cols-2" : "grid-cols-1",
+                        "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
+                      )}
+                    >
+                      <GvMonthPicker
+                        value={periodoFilter}
+                        onChange={setPeriodoFilter}
+                        className="hidden lg:inline-flex"
+                      />
                       {canExport ? (
                         <GvExportReporteButton
                           onClick={handleExportReporte}

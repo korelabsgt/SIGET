@@ -137,7 +137,8 @@ export function Crear() {
           className={GV_DANGER_OUTLINE_BUTTON_CLASS}
         >
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Reportar Avería
+          <span className="lg:hidden">Avería</span>
+          <span className="hidden lg:inline">Reportar Avería</span>
         </button>
       </DialogTrigger>
       <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[500px]">

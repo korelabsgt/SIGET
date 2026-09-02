@@ -27,7 +27,6 @@ import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import {
   GV_FILTRO_FIELD_CLASS,
-  GV_HEADER_ACTIONS_CLASS,
   GV_HEADER_OUTLINE_BUTTON_CLASS,
   GV_TABLE_SEARCH_INPUT_CLASS,
   GV_TABLE_SEARCH_WRAPPER_CLASS,
@@ -209,9 +208,9 @@ export function Bitacoras() {
           }
           toolbar={
             !inDetailView ? (
-              <div className="flex w-full flex-row flex-nowrap items-center gap-3 md:col-span-2">
+              <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:gap-3">
                 {canViewAll ? (
-                  <div className={GV_TABLE_SEARCH_WRAPPER_CLASS}>
+                  <div className={cn(GV_TABLE_SEARCH_WRAPPER_CLASS, "w-full lg:min-w-0 lg:flex-1")}>
                     <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-celeste-trifinio" />
                     <input
                       type="text"
@@ -223,67 +222,117 @@ export function Bitacoras() {
                   </div>
                 ) : null}
 
+                <div className="w-full lg:hidden">
+                  <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+                    <SelectTrigger
+                      className={cn(
+                        filtroTriggerClass,
+                        "h-9 px-2 text-xs data-[size=default]:h-9",
+                      )}
+                    >
+                      <SelectValue
+                        placeholder={
+                          canViewAll ? "Todos los vehículos" : "Mis vehículos"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className={filtroContentClass}>
+                      <SelectItem
+                        value={TODOS_VEHICULOS}
+                        textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                        className={filtroItemClass}
+                      >
+                        {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                      </SelectItem>
+                      {vehiculosParaFiltro
+                        .filter((v) => v.id)
+                        .map((v) => {
+                          const label = formatVehiculoOpcion(v);
+                          return (
+                            <SelectItem
+                              key={v.id}
+                              value={v.id as string}
+                              textValue={label}
+                              className={filtroItemClass}
+                            >
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="!h-9 !w-full text-xs lg:hidden"
+                />
+
+                <div className="hidden w-[12rem] shrink-0 lg:block">
+                  <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+                    <SelectTrigger className={filtroTriggerClass}>
+                      <SelectValue
+                        placeholder={
+                          canViewAll ? "Todos los vehículos" : "Mis vehículos"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className={filtroContentClass}>
+                      <SelectItem
+                        value={TODOS_VEHICULOS}
+                        textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                        className={filtroItemClass}
+                      >
+                        {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                      </SelectItem>
+                      {vehiculosParaFiltro
+                        .filter((v) => v.id)
+                        .map((v) => {
+                          const label = formatVehiculoOpcion(v);
+                          return (
+                            <SelectItem
+                              key={v.id}
+                              value={v.id as string}
+                              textValue={label}
+                              className={filtroItemClass}
+                            >
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div
                   className={cn(
-                    "flex shrink-0 flex-row flex-nowrap items-center gap-2",
-                    !canViewAll && "ml-auto",
+                    "grid w-full gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto lg:shrink-0",
+                    canExport ? "grid-cols-2" : "grid-cols-1",
+                    "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
                   )}
                 >
-                  <GvMonthPicker value={periodoFilter} onChange={setPeriodoFilter} />
-
-                  <div className="w-[12rem] shrink-0">
-                    <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-                      <SelectTrigger className={filtroTriggerClass}>
-                        <SelectValue
-                          placeholder={
-                            canViewAll ? "Todos los vehículos" : "Mis vehículos"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className={filtroContentClass}>
-                        <SelectItem
-                          value={TODOS_VEHICULOS}
-                          textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                          className={filtroItemClass}
-                        >
-                          {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                        </SelectItem>
-                        {vehiculosParaFiltro
-                          .filter((v) => v.id)
-                          .map((v) => {
-                            const label = formatVehiculoOpcion(v);
-                            return (
-                              <SelectItem
-                                key={v.id}
-                                value={v.id as string}
-                                textValue={label}
-                                className={filtroItemClass}
-                              >
-                                {label}
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className={GV_HEADER_ACTIONS_CLASS}>
-                    {canExport ? (
-                      <GvExportReporteButton
-                        onClick={handleExportReporte}
-                        disabled={loading}
-                        loading={isExporting}
-                      />
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setView({ mode: "create" })}
-                      className={GV_HEADER_OUTLINE_BUTTON_CLASS}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Registrar Viaje
-                    </button>
-                  </div>
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="hidden lg:inline-flex"
+                  />
+                  {canExport ? (
+                    <GvExportReporteButton
+                      onClick={handleExportReporte}
+                      disabled={loading}
+                      loading={isExporting}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setView({ mode: "create" })}
+                    className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                  >
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="lg:hidden">Viaje</span>
+                    <span className="hidden lg:inline">Registrar Viaje</span>
+                  </button>
                 </div>
               </div>
             ) : undefined

@@ -34,7 +34,8 @@ export function GvExportReporteButton({
       )}
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4 shrink-0" />}
-      Exportar Reporte
+      <span className="lg:hidden">Reporte</span>
+      <span className="hidden lg:inline">Exportar Reporte</span>
     </button>
   );
 }
