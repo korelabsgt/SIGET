@@ -6,8 +6,25 @@ import {
   safeSupabaseQuery,
 } from "@/utils/supabase/auth";
 
+function isServerActionRequest(request: NextRequest): boolean {
+  return (
+    request.method === "POST" &&
+    (request.headers.has("next-action") || request.headers.has("Next-Action"))
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { supabase, response } = createClient(request);
+
+  if (isServerActionRequest(request)) {
+    try {
+      await supabase.auth.getUser();
+    } catch {
+      // La Server Action valida sesión; no bloquear por red inestable.
+    }
+    return response;
+  }
+
   const auth = await checkAuth(supabase);
   const user = auth.ok ? auth.user : null;
 
@@ -43,21 +60,22 @@ export async function proxy(request: NextRequest) {
 
   if (user) {
     try {
-      const settings = await safeSupabaseQuery(() =>
-        supabase
-          .from("app_settings")
-          .select("require_device_authorization")
-          .limit(1)
-          .maybeSingle(),
-      );
-
-      const profile = await safeSupabaseQuery(() =>
-        supabase
-          .from("profiles")
-          .select("ultimo_cambio_password")
-          .eq("id", user.id)
-          .maybeSingle(),
-      );
+      const [settings, profile] = await Promise.all([
+        safeSupabaseQuery(() =>
+          supabase
+            .from("app_settings")
+            .select("require_device_authorization")
+            .limit(1)
+            .maybeSingle(),
+        ),
+        safeSupabaseQuery(() =>
+          supabase
+            .from("profiles")
+            .select("ultimo_cambio_password")
+            .eq("id", user.id)
+            .maybeSingle(),
+        ),
+      ]);
 
       const requireAuth = settings?.require_device_authorization ?? false;
 

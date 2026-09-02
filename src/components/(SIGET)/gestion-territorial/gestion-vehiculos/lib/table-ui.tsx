@@ -1,14 +1,26 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { GestionVehiculosTablePagination } from "./table-pagination";
+
+export type GestionVehiculosTablePaginationProps = {
+  pageSafe: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  hidden?: boolean;
+};
 
 export function GestionVehiculosTableShell({
   toolbar,
   children,
   className,
+  pagination,
 }: {
   toolbar?: ReactNode;
   children: ReactNode;
   className?: string;
+  pagination?: GestionVehiculosTablePaginationProps;
 }) {
   return (
     <div
@@ -24,6 +36,7 @@ export function GestionVehiculosTableShell({
         </div>
       ) : null}
       {children}
+      {pagination ? <GestionVehiculosTablePagination {...pagination} /> : null}
     </div>
   );
 }
@@ -62,6 +75,14 @@ export type GestionVehiculosThCell = {
   label: string;
   className?: string;
 };
+
+export const gvTableHeaderThClass = "px-4 py-3 text-center";
+export const gvTableActionThClass = "w-0 whitespace-nowrap px-4 py-3 text-center";
+export const gvTableActionTdClass = "w-0 whitespace-nowrap px-4 py-3 align-middle";
+
+export function GestionVehiculosActionCell({ children }: { children: ReactNode }) {
+  return <div className="flex justify-center">{children}</div>;
+}
 
 export function GestionVehiculosThead({ cells }: { cells: GestionVehiculosThCell[] }) {
   return (

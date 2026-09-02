@@ -1,10 +1,14 @@
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
 
-import type { VehiculoRow } from "../../flota/lib/zod";
-import { getDatosReporteBitacora } from "./actions";
-import type { BitacoraRow } from "./zod";
+import { fechaCalendarioGt } from "@/lib/fechas-gt";
+import type { FallaRow } from "./zod";
+import {
+  formatEstadoFallaLabel,
+  formatSeveridadLabel,
+  formatVehiculoFalla,
+} from "./helpers";
 
 const COLUMN_COUNT = 9;
 const MIN_DATA_ROWS = 18;
@@ -12,19 +16,34 @@ const LOGO_COL = 2;
 const TITLE_START_COL = 3;
 const TITLE_END_COL = 8;
 const TITLE_ROW_1 = "PLAN TRIFINIO/ DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
-const TITLE_ROW_2 = "FORMULARIO DE CONTROL DE USO DE VEHICULO - BITACORA";
+const TITLE_ROW_2 = "FORMULARIO DE REPORTE DE AVERIAS Y MANTENIMIENTO VEHICULAR";
 
 const TABLE_HEADERS = [
   "FECHA",
-  "Destino de la Misión",
-  "Responsable de la Misión",
-  "Kilometraje Inicial",
-  "Kilometraje Final",
-  "Recorrido",
-  "Vale",
-  "Monto Q.",
-  "Firma Responsable de la Misión",
+  "Placa",
+  "Vehículo",
+  "Severidad",
+  "Estado",
+  "Descripción de la Avería",
+  "Reportado por",
+  "Mecánico / Taller",
+  "Firma Responsable del Reporte",
 ] as const;
+
+const MESES_LABEL: Record<number, string> = {
+  1: "Enero",
+  2: "Febrero",
+  3: "Marzo",
+  4: "Abril",
+  5: "Mayo",
+  6: "Junio",
+  7: "Julio",
+  8: "Agosto",
+  9: "Septiembre",
+  10: "Octubre",
+  11: "Noviembre",
+  12: "Diciembre",
+};
 
 const thinBorder: Partial<ExcelJS.Borders> = {
   top: { style: "thin" },
@@ -39,12 +58,24 @@ const headerFill: ExcelJS.Fill = {
   fgColor: { argb: "FFD9D9D9" },
 };
 
-export type BitacoraReporteGrupo = {
+export type AveriaReporteGrupo = {
   mesLabel: string;
   anio: string;
-  vehiculo: Pick<VehiculoRow, "placa" | "marca" | "modelo" | "color"> | null;
-  bitacoras: BitacoraRow[];
+  vehiculo: { placa: string; marca: string; modelo: string } | null;
+  fallas: FallaRow[];
 };
+
+type ExcelJSImport = typeof import("exceljs");
+
+async function cargarExcelJS(): Promise<ExcelJSImport> {
+  const mod = await import("exceljs");
+  const candidato = (mod as { default?: unknown }).default ?? mod;
+  const conWorkbook = candidato as { Workbook?: unknown };
+  if (typeof conWorkbook.Workbook === "function") {
+    return candidato as ExcelJSImport;
+  }
+  return mod as unknown as ExcelJSImport;
+}
 
 function safeFilename(name: string): string {
   return (
@@ -54,37 +85,27 @@ function safeFilename(name: string): string {
       .replace(/[^\w\s-]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .slice(0, 60) || "bitacora"
+      .slice(0, 60) || "reporte-averias"
   );
 }
 
-function sanitizeSheetName(name: string, used: Set<string>): string {
-  const base =
-    name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[\\/?*[\]:]/g, "")
-      .trim()
-      .slice(0, 31) || "Bitacora";
-
-  let candidate = base;
-  let suffix = 2;
-  while (used.has(candidate)) {
-    const tail = `-${suffix}`;
-    candidate = `${base.slice(0, 31 - tail.length)}${tail}`;
-    suffix += 1;
-  }
-  used.add(candidate);
-  return candidate;
+function currentPeriodoGt(): { mesLabel: string; anio: string } {
+  const fecha = fechaCalendarioGt();
+  const [anio, mes] = fecha.split("-");
+  const mesNum = Number(mes);
+  return {
+    mesLabel: MESES_LABEL[mesNum] ?? mes,
+    anio,
+  };
 }
 
 function formatDescripcionVehiculo(
-  vehiculo: Pick<VehiculoRow, "marca" | "modelo" | "color"> | null,
+  vehiculo: { marca: string; modelo: string } | null,
 ): string {
   if (!vehiculo) return "CONSOLIDADO GENERAL";
   const marca = vehiculo.marca.trim().toUpperCase();
-  const color = vehiculo.color?.trim().toUpperCase() ?? "";
-  return color ? `${marca} ${color}` : `${marca} ${vehiculo.modelo.trim().toUpperCase()}`.trim();
+  const modelo = vehiculo.modelo.trim().toUpperCase();
+  return `${marca} ${modelo}`.trim();
 }
 
 function formatPlacaReporte(placa: string): string {
@@ -95,8 +116,15 @@ function formatPeriodoReporte(mesLabel: string, anio: string): string {
   return `${mesLabel.toUpperCase()} ${anio}`;
 }
 
-function responsableBitacoraNombre(bitacora: BitacoraRow): string {
-  return bitacora.profiles?.nombre?.trim() ?? "";
+function reportadorNombre(falla: FallaRow): string {
+  return falla.reportador?.nombre?.trim() ?? "";
+}
+
+function mecanicoOTaller(falla: FallaRow): string {
+  const mecanico = falla.mecanico?.nombre?.trim();
+  const taller = falla.taller_externo?.trim();
+  if (mecanico && taller) return `${mecanico} / ${taller}`;
+  return mecanico || taller || "";
 }
 
 function setCellUnderlineValue(
@@ -159,25 +187,24 @@ async function fetchLogoBuffer(): Promise<ArrayBuffer | null> {
   }
 }
 
-function buildBitacoraSheet(
+function buildAveriaSheet(
   workbook: ExcelJS.Workbook,
-  sheetName: string,
-  grupo: BitacoraReporteGrupo,
+  grupo: AveriaReporteGrupo,
   logoBuffer: ArrayBuffer | null,
 ) {
-  const sheet = workbook.addWorksheet(sheetName, {
+  const sheet = workbook.addWorksheet("Averias", {
     views: [{ showGridLines: true }],
   });
 
   sheet.columns = [
     { width: 12 },
-    { width: 26 },
-    { width: 22 },
-    { width: 14 },
-    { width: 14 },
-    { width: 11 },
-    { width: 11 },
     { width: 12 },
+    { width: 22 },
+    { width: 12 },
+    { width: 14 },
+    { width: 28 },
+    { width: 22 },
+    { width: 22 },
     { width: 28 },
   ];
 
@@ -209,7 +236,7 @@ function buildBitacoraSheet(
   sheet.getRow(3).height = 18;
 
   const descripcion = formatDescripcionVehiculo(grupo.vehiculo);
-  const placa = grupo.vehiculo ? formatPlacaReporte(grupo.vehiculo.placa) : "—";
+  const placa = grupo.vehiculo ? formatPlacaReporte(grupo.vehiculo.placa) : "TODAS";
   const periodo = formatPeriodoReporte(grupo.mesLabel, grupo.anio);
 
   sheet.getCell(4, LOGO_COL).value = "Descripción del Vehículo:";
@@ -241,11 +268,7 @@ function buildBitacoraSheet(
   TABLE_HEADERS.forEach((header, index) => {
     const cell = sheet.getCell(headerRowIndex, index + 1);
     cell.value = header;
-    cell.font = {
-      bold: true,
-      size: index === 5 ? 9 : 10,
-      italic: index === 5,
-    };
+    cell.font = { bold: true, size: 10 };
     cell.fill = headerFill;
     cell.alignment = {
       horizontal: "center",
@@ -256,8 +279,8 @@ function buildBitacoraSheet(
   });
   sheet.getRow(headerRowIndex).height = 36;
 
-  const sorted = [...grupo.bitacoras].sort(
-    (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
+  const sorted = [...grupo.fallas].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
   const dataStartRow = headerRowIndex + 1;
@@ -265,21 +288,21 @@ function buildBitacoraSheet(
 
   for (let offset = 0; offset < Math.max(sorted.length, MIN_DATA_ROWS); offset += 1) {
     const rowIndex = dataStartRow + offset;
-    const bitacora = sorted[offset];
+    const falla = sorted[offset];
 
-    const values: (string | number | null)[] = bitacora
+    const values: string[] = falla
       ? (() => {
-          const responsable = responsableBitacoraNombre(bitacora);
+          const reportador = reportadorNombre(falla);
           return [
-            format(new Date(bitacora.fecha), "dd/MM/yyyy"),
-            bitacora.destino,
-            responsable,
-            bitacora.km_inicial,
-            bitacora.km_final,
-            bitacora.km_recorrido,
-            bitacora.vale_combustible ?? "",
-            Number(bitacora.monto_combustible) || 0,
-            responsable,
+            format(new Date(falla.created_at), "dd/MM/yyyy"),
+            falla.vehiculo?.placa ?? "",
+            formatVehiculoFalla(falla),
+            formatSeveridadLabel(falla.severidad),
+            formatEstadoFallaLabel(falla.estado),
+            falla.descripcion,
+            reportador,
+            mecanicoOTaller(falla),
+            reportador,
           ];
         })()
       : ["", "", "", "", "", "", "", "", ""];
@@ -289,18 +312,11 @@ function buildBitacoraSheet(
       cell.value = value;
       cell.font = { size: 10 };
       cell.alignment = {
-        horizontal: colIndex === 8 ? "center" : colIndex <= 2 ? "left" : "center",
+        horizontal: colIndex === 8 ? "center" : colIndex <= 2 || colIndex === 5 ? "left" : "center",
         vertical: "middle",
-        wrapText: colIndex <= 2,
+        wrapText: colIndex === 5,
       };
       cell.border = thinBorder;
-
-      if (colIndex === 7 && typeof value === "number") {
-        cell.numFmt = '"Q"#,##0.00';
-      }
-      if ((colIndex === 3 || colIndex === 4 || colIndex === 5) && typeof value === "number") {
-        cell.numFmt = "#,##0";
-      }
     });
 
     sheet.getRow(rowIndex).height = 22;
@@ -309,141 +325,57 @@ function buildBitacoraSheet(
   applyBorderRange(sheet, headerRowIndex, dataEndRow, 1, COLUMN_COUNT);
 }
 
-export function buildBitacoraReporteGrupos(
-  bitacoras: BitacoraRow[],
-  vehiculos: VehiculoRow[],
-  mesLabel: string,
-  anio: string,
-  vehiculoId: string,
-): BitacoraReporteGrupo[] {
-  if (vehiculoId !== "all") {
-    const vehiculo = vehiculos.find((item) => item.id === vehiculoId) ?? null;
-    return [{ mesLabel, anio, vehiculo, bitacoras }];
-  }
-
-  const ids = [...new Set(bitacoras.map((item) => item.vehiculo_id))];
-  return ids.map((id) => {
-    const vehiculo =
-      vehiculos.find((item) => item.id === id) ??
-      (() => {
-        const row = bitacoras.find((item) => item.vehiculo_id === id);
-        if (!row?.ter_vehiculos) return null;
-        return {
-          placa: row.ter_vehiculos.placa,
-          marca: row.ter_vehiculos.marca,
-          modelo: row.ter_vehiculos.modelo,
-          color: "",
-        };
-      })();
-
-    return {
-      mesLabel,
-      anio,
-      vehiculo,
-      bitacoras: bitacoras.filter((item) => item.vehiculo_id === id),
-    };
-  });
+export function buildAveriasReporteGrupo(fallas: FallaRow[]): AveriaReporteGrupo {
+  const { mesLabel, anio } = currentPeriodoGt();
+  return {
+    mesLabel,
+    anio,
+    vehiculo: null,
+    fallas,
+  };
 }
 
-export async function downloadBitacoraReporteExcel(
-  grupos: BitacoraReporteGrupo[],
+export async function downloadAveriasReporteExcel(
+  grupo: AveriaReporteGrupo,
   filenameBase: string,
 ) {
+  const ExcelJS = await cargarExcelJS();
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "SIGET";
+  workbook.creator = "SIGET · Plan Trifinio";
   workbook.created = new Date();
 
   const logoBuffer = await fetchLogoBuffer();
-  const usedSheetNames = new Set<string>();
-
-  grupos.forEach((grupo, index) => {
-    const sheetName = sanitizeSheetName(
-      grupo.vehiculo?.placa ?? `Bitacora-${index + 1}`,
-      usedSheetNames,
-    );
-    buildBitacoraSheet(workbook, sheetName, grupo, logoBuffer);
-  });
+  buildAveriaSheet(workbook, grupo, logoBuffer);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
   const filename = filenameBase.endsWith(".xlsx") ? filenameBase : `${filenameBase}.xlsx`;
-  saveAs(blob, safeFilename(filename.replace(/\.xlsx$/, "")) + ".xlsx");
+  saveAs(blob, safeFilename(filename.replace(/\.xlsx$/i, "")) + ".xlsx");
 }
 
-export function buildBitacoraReporteFilename(
-  placa: string | null | undefined,
-  mes: string,
-  anio: string,
-  consolidado: boolean,
-): string {
-  if (consolidado) {
-    return `Bitacora_General_${mes}_${anio}.xlsx`;
-  }
-  return `Bitacora_${safeFilename(placa ?? "vehiculo")}_${mes}_${anio}.xlsx`;
+export function buildAveriasReporteFilename(fecha = fechaCalendarioGt()): string {
+  return `Reporte_Averias_${fecha}.xlsx`;
 }
 
-const MESES_LABEL: Record<number, string> = {
-  1: "Enero",
-  2: "Febrero",
-  3: "Marzo",
-  4: "Abril",
-  5: "Mayo",
-  6: "Junio",
-  7: "Julio",
-  8: "Agosto",
-  9: "Septiembre",
-  10: "Octubre",
-  11: "Noviembre",
-  12: "Diciembre",
-};
-
-export type ExportBitacoraReporteResult =
+export type ExportAveriasReporteResult =
   | { ok: true }
   | { ok: false; reason: "no_data" | "error" };
 
-export async function exportBitacoraReporteVehiculo(input: {
-  vehiculos: VehiculoRow[];
-  vehiculoId: string;
-  mes?: number;
-  anio?: number;
-}): Promise<ExportBitacoraReporteResult> {
-  const now = new Date();
-  const mesNum = input.mes ?? now.getMonth() + 1;
-  const anioNum = input.anio ?? now.getFullYear();
-  const mesStr = String(mesNum);
-  const anioStr = String(anioNum);
+export async function exportAveriasReporte(
+  fallas: FallaRow[],
+): Promise<ExportAveriasReporteResult> {
+  if (fallas.length === 0) {
+    return { ok: false, reason: "no_data" };
+  }
 
   try {
-    const data = ((await getDatosReporteBitacora(mesNum, anioNum, input.vehiculoId)) ??
-      []) as unknown as BitacoraRow[];
-
-    if (data.length === 0) {
-      return { ok: false, reason: "no_data" };
-    }
-
-    const consolidado = input.vehiculoId === "all";
-    const vehiculo = consolidado
-      ? null
-      : (input.vehiculos.find((item) => item.id === input.vehiculoId) ?? null);
-    const grupos = buildBitacoraReporteGrupos(
-      data,
-      input.vehiculos,
-      MESES_LABEL[mesNum] ?? format(new Date(anioNum, mesNum - 1, 1), "MMMM"),
-      anioStr,
-      input.vehiculoId,
-    );
-    const nombreArchivo = buildBitacoraReporteFilename(
-      vehiculo?.placa,
-      mesStr,
-      anioStr,
-      consolidado,
-    );
-
-    await downloadBitacoraReporteExcel(grupos, nombreArchivo);
+    const grupo = buildAveriasReporteGrupo(fallas);
+    await downloadAveriasReporteExcel(grupo, buildAveriasReporteFilename());
     return { ok: true };
-  } catch {
+  } catch (error) {
+    console.error("exportAveriasReporte:", error);
     return { ok: false, reason: "error" };
   }
 }

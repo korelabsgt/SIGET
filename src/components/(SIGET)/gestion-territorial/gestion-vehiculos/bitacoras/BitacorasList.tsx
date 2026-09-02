@@ -1,24 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, Eye } from "lucide";
 import { BookOpen, Fuel, Route } from "lucide-react";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { type BitacoraRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
   GestionVehiculosTableEmpty,
   GestionVehiculosThead,
+  GestionVehiculosActionCell,
+  gvTableActionTdClass,
+  gvTableActionThClass,
 } from "../lib/table-ui";
-import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
-
-function formatMontoCombustible(monto: number) {
-  if (monto <= 0) return "Sin recarga";
-  return `Q. ${monto.toLocaleString("es-GT", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+import { formatMontoCombustibleBitacora } from "./lib/helpers";
 
 function BitacoraListRow({
   bitacora,
@@ -27,14 +22,8 @@ function BitacoraListRow({
   bitacora: BitacoraRow;
   onDetail: (bitacora: BitacoraRow) => void;
 }) {
-  const [rowHover, setRowHover] = useState(false);
-
   return (
-    <tr
-      className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
-      onMouseEnter={() => setRowHover(true)}
-      onMouseLeave={() => setRowHover(false)}
-    >
+    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
       <td className="px-4 py-3 align-middle">
         <div className="tabular-nums">
           <p className="text-sm font-bold text-foreground">
@@ -63,22 +52,24 @@ function BitacoraListRow({
         {bitacora.monto_combustible > 0 ? (
           <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
             <Fuel className="size-3" />
-            {formatMontoCombustible(Number(bitacora.monto_combustible))}
+            {formatMontoCombustibleBitacora(Number(bitacora.monto_combustible))}
           </span>
         ) : (
           <span className="text-xs italic text-muted-foreground">Sin recarga</span>
         )}
       </td>
-      <td className="px-4 py-3 text-center align-middle">
-        <button
-          type="button"
-          onClick={() => onDetail(bitacora)}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-          aria-label={`Ver bitácora a ${bitacora.destino}`}
-        >
-          <GvMorphIcon icon={Eye} hoverIcon={ArrowRight} size={14} externalHover={rowHover} />
-          Ver
-        </button>
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <SigetActionButton
+            label="Ver"
+            accentColor={sigetAccent.abrir}
+            morphFrom={Eye}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(bitacora)}
+            ariaLabel={`Ver bitácora a ${bitacora.destino}`}
+            className="w-auto shrink-0"
+          />
+        </GestionVehiculosActionCell>
       </td>
     </tr>
   );
@@ -109,7 +100,7 @@ export function BitacorasList({
           { key: "conductor", label: "Conductor" },
           { key: "recorrido", label: "Recorrido" },
           { key: "combustible", label: "Combustible" },
-          { key: "acciones", label: "Acciones", className: "text-center" },
+          { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}
       />
       <tbody>

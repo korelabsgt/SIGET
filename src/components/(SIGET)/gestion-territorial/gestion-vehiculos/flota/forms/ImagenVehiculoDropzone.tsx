@@ -1,11 +1,12 @@
 "use client";
 
-import { Plus, UploadCloud, X } from "lucide-react";
+import { Loader2, Plus, UploadCloud, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
+import { canManageFlota } from "../../lib/permissions";
 
 const MAX_BYTES = 2_000_000;
 const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -13,11 +14,13 @@ const ACCEPT_ATTR = ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
 
 export function ImagenVehiculoDropzone({
   previews,
+  previewLoading = [],
   onAddFiles,
   onRemove,
   disabled,
 }: {
   previews: string[];
+  previewLoading?: boolean[];
   onAddFiles: (files: File[]) => void;
   onRemove: (index: number) => void;
   disabled?: boolean;
@@ -57,9 +60,11 @@ export function ImagenVehiculoDropzone({
       {previews.length > 0 ? (
         <div className="flex gap-2 overflow-x-auto pb-1">
           <AnimatePresence mode="popLayout" initial={false}>
-            {previews.map((url, index) => (
+            {previews.map((url, index) => {
+              const loading = previewLoading[index] ?? false;
+              return (
               <motion.div
-                key={`${url}-${index}`}
+                key={`${url || "pending"}-${index}`}
                 layout={!prefersReducedMotion}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -77,6 +82,10 @@ export function ImagenVehiculoDropzone({
                     alt={`Fotografía ${index + 1}`}
                     className="size-full object-cover"
                   />
+                ) : loading ? (
+                  <div className="flex size-full items-center justify-center bg-zinc-200 dark:bg-zinc-700">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
                 ) : (
                   <div className="size-full bg-zinc-200 dark:bg-zinc-700" />
                 )}
@@ -90,7 +99,8 @@ export function ImagenVehiculoDropzone({
                   <X className="size-3.5" />
                 </button>
               </motion.div>
-            ))}
+            );
+            })}
           </AnimatePresence>
           {canAdd ? (
             <label className="relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl bg-sky-100 text-celeste-trifinio hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900">
@@ -159,6 +169,12 @@ export async function uploadImagenVehiculo(file: File, placa: string): Promise<s
     throw new Error("Debes iniciar sesión para subir la fotografía.");
   }
 
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+  if (!canManageFlota(role)) {
+    throw new Error("No tienes permisos para subir fotografías de la flota.");
+  }
+
   const extensionFromName = file.name.split(".").pop()?.toLowerCase();
   const extensionFromType = file.type.split("/")[1]?.replace("jpeg", "jpg");
   const extension = (extensionFromName || extensionFromType || "jpg").replace(/[^a-z0-9]/g, "");
@@ -168,11 +184,11 @@ export async function uploadImagenVehiculo(file: File, placa: string): Promise<s
       .toUpperCase()
       .replace(/[^A-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "vehiculo";
-  const filePath = `flota/${placaSegment}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension || "jpg"}`;
+  const filePath = `flota/${placaSegment}_${crypto.randomUUID()}.${extension || "jpg"}`;
 
   const { error: uploadError } = await supabase.storage.from("vehiculos").upload(filePath, file, {
     cacheControl: "3600",
-    upsert: true,
+    upsert: false,
     contentType: file.type || "image/jpeg",
   });
 

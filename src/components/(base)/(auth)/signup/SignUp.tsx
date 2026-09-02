@@ -25,6 +25,8 @@ import {
   getManageableRoles,
   isObservatorioRole,
 } from "@/components/(base)/(users)/usuarios/lib/permissions";
+import { extractRolesFromProfiles } from "@/components/(base)/(users)/usuarios/lib/helpers";
+import { useUsers } from "@/components/(base)/(users)/usuarios/lib/hooks";
 import { SelectorRol } from "@/components/(base)/(users)/usuarios/forms/SelectorRol";
 
 interface SignUpProps {
@@ -100,9 +102,10 @@ export default function SignUp({
 }: SignUpProps) {
   const logic = useSignupLogic();
   const { effectiveRole } = useUserContext();
+  const { data: users = [] } = useUsers(effectiveRole);
   const creatableRoles = useMemo(
-    () => getManageableRoles(effectiveRole),
-    [effectiveRole],
+    () => getManageableRoles(effectiveRole, extractRolesFromProfiles(users)),
+    [effectiveRole, users],
   );
   const [step, setStep] = useState(1);
   const [phoneNumber, setPhoneNumber] = useState("");

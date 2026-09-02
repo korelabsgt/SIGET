@@ -6,45 +6,36 @@ import { MantenimientoList } from "./MantenimientoList";
 import { MantenimientoCards } from "./MantenimientoCards";
 import { FallaDetalleView } from "./FallaDetalleView";
 import { type FallaRow, type MecanicoOption } from "./lib/zod";
+import { useGvDetailScrollToTop } from "../lib/scroll-detail-to-top";
 
 export function MantenimientoPanel({
   fallas,
+  catalogo,
   mecanicos,
   isAuthorized,
-  filtro,
   onDetailViewChange,
 }: {
   fallas: FallaRow[];
+  catalogo?: FallaRow[];
   mecanicos: MecanicoOption[];
   isAuthorized: boolean;
-  filtro: "ACTIVAS" | "CRITICAS" | "SOLVENTADAS";
   onDetailViewChange?: (active: boolean) => void;
 }) {
   const prefersReducedMotion = useReducedMotion();
   const [selectedFalla, setSelectedFalla] = useState<FallaRow | null>(null);
+  const fuente = catalogo ?? fallas;
 
-  const filtradas = fallas.filter((falla) => {
-    if (filtro === "ACTIVAS") {
-      return falla.estado === "PENDIENTE" || falla.estado === "EN_REPARACION";
-    }
-    if (filtro === "CRITICAS") {
-      return falla.severidad === "ALTA" && falla.estado !== "SOLVENTADA";
-    }
-    if (filtro === "SOLVENTADAS") {
-      return falla.estado === "SOLVENTADA";
-    }
-    return true;
-  });
+  useGvDetailScrollToTop(selectedFalla !== null, selectedFalla?.id);
 
   useEffect(() => {
     if (!selectedFalla?.id) return;
-    const updated = fallas.find((item) => item.id === selectedFalla.id);
+    const updated = fuente.find((item) => item.id === selectedFalla.id);
     if (updated) {
       setSelectedFalla(updated);
     } else {
       setSelectedFalla(null);
     }
-  }, [fallas, selectedFalla?.id]);
+  }, [fuente, selectedFalla?.id]);
 
   useEffect(() => {
     onDetailViewChange?.(selectedFalla !== null);
@@ -81,10 +72,10 @@ export function MantenimientoPanel({
             transition={transition}
           >
             <div className="hidden lg:block">
-              <MantenimientoList fallas={filtradas} onDetail={setSelectedFalla} />
+              <MantenimientoList fallas={fallas} onDetail={setSelectedFalla} />
             </div>
             <div className="p-4 lg:hidden">
-              <MantenimientoCards fallas={filtradas} onDetail={setSelectedFalla} />
+              <MantenimientoCards fallas={fallas} onDetail={setSelectedFalla} />
             </div>
           </motion.div>
         )}

@@ -35,8 +35,8 @@ export function SubmodulosNav() {
   if (!pathname.includes("/gestion-vehiculos")) return null;
 
   return (
-    <div className="mb-6 flex flex-wrap items-end gap-2 pb-1">
-      <GvSwitchGroup layoutId="gv-submodulos-nav">
+    <div className="mb-6 w-full pb-1">
+      <GvSwitchGroup layoutId="gv-submodulos-nav" className="justify-center md:justify-start">
         {GV_MENU_OPTIONS.map((opt) => {
           const isActive = gvTab
             ? gvTab.tab === opt.id
@@ -56,7 +56,12 @@ export function SubmodulosNav() {
               }}
             >
               {icons ? (
-                <GvMorphIcon icon={icons.icon} hoverIcon={icons.hoverIcon} size={16} />
+                <GvMorphIcon
+                  icon={icons.icon}
+                  hoverIcon={icons.hoverIcon}
+                  size="1em"
+                  className="inline-flex shrink-0 leading-none"
+                />
               ) : null}
               {opt.title}
             </GvSwitchItem>

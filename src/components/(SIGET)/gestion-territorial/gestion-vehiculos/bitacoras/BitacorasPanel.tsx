@@ -2,32 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { BitacorasList } from "./BitacorasList";
+import { BitacorasCards } from "./BitacorasCards";
 import { BitacoraDetalleView } from "./BitacoraDetalleView";
 import { type BitacoraRow } from "./lib/zod";
+import { useGvDetailScrollToTop } from "../lib/scroll-detail-to-top";
 
 export function BitacorasPanel({
   bitacoras,
+  catalogo,
   onDetailViewChange,
-  fillHeight,
 }: {
   bitacoras: BitacoraRow[];
+  catalogo?: BitacoraRow[];
   onDetailViewChange?: (active: boolean) => void;
-  fillHeight?: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
   const [selectedBitacora, setSelectedBitacora] = useState<BitacoraRow | null>(null);
+  const fuente = catalogo ?? bitacoras;
+
+  useGvDetailScrollToTop(selectedBitacora !== null, selectedBitacora?.id);
 
   useEffect(() => {
     if (!selectedBitacora?.id) return;
-    const updated = bitacoras.find((b) => b.id === selectedBitacora.id);
+    const updated = fuente.find((b) => b.id === selectedBitacora.id);
     if (updated) {
       setSelectedBitacora(updated);
     } else {
       setSelectedBitacora(null);
     }
-  }, [bitacoras, selectedBitacora?.id]);
+  }, [fuente, selectedBitacora?.id]);
 
   useEffect(() => {
     onDetailViewChange?.(selectedBitacora !== null);
@@ -38,12 +42,7 @@ export function BitacorasPanel({
     : { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden",
-        fillHeight && "flex h-full min-h-0 flex-1 flex-col",
-      )}
-    >
+    <div className="relative overflow-hidden">
       <AnimatePresence mode="wait" initial={false}>
         {selectedBitacora ? (
           <motion.div
@@ -52,7 +51,6 @@ export function BitacorasPanel({
             animate={{ opacity: 1, x: 0 }}
             exit={prefersReducedMotion ? undefined : { opacity: 0, x: 32 }}
             transition={transition}
-            className="absolute inset-0 flex min-h-0 flex-col overflow-y-auto overscroll-y-contain pt-8 lg:overflow-hidden lg:pt-0"
           >
             <BitacoraDetalleView
               bitacora={selectedBitacora}
@@ -67,7 +65,12 @@ export function BitacorasPanel({
             exit={prefersReducedMotion ? undefined : { opacity: 0, x: -24 }}
             transition={transition}
           >
-            <BitacorasList bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+            <div className="hidden lg:block">
+              <BitacorasList bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+            </div>
+            <div className="p-4 lg:hidden">
+              <BitacorasCards bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

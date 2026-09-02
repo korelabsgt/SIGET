@@ -43,7 +43,7 @@ export function formatFechaCalendarioGt(
   },
 ): string {
   const fecha = normalizarFechaCalendario(value);
-  if (!fecha) return "—";
+  if (!fecha) return "\u2014";
 
   const [y, m, d] = fecha.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
@@ -65,10 +65,10 @@ export function formatFechaHoraGt(
     hour12: true,
   },
 ): string {
-  if (!value) return "—";
+  if (!value) return "\u2014";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "\u2014";
 
   return new Intl.DateTimeFormat(LOCALE_GT, {
     timeZone: TIMEZONE_GT,
@@ -122,19 +122,27 @@ function partesFechaHoraTablaGt(value: string | null | undefined): {
 }
 
 export function formatFechaTablaGt(value: string | null | undefined): string {
-  return partesFechaHoraTablaGt(value)?.fecha ?? "—";
+  return partesFechaHoraTablaGt(value)?.fecha ?? "\u2014";
 }
 
 export function formatHoraTablaGt(value: string | null | undefined): string {
-  return partesFechaHoraTablaGt(value)?.hora ?? "—";
+  return partesFechaHoraTablaGt(value)?.hora ?? "\u2014";
 }
 
 export function formatFechaHoraTablaGt(
   value: string | null | undefined,
 ): string {
   const partes = partesFechaHoraTablaGt(value);
-  if (!partes) return "—";
+  if (!partes) return "\u2014";
   return `${partes.fecha}, ${partes.hora}`;
+}
+
+export function formatFechaHoraTablaCompactGt(
+  value: string | null | undefined,
+): string {
+  const partes = partesFechaHoraTablaGt(value);
+  if (!partes) return "\u2014";
+  return `${partes.fecha} ${partes.hora}`;
 }
 
 export function mesCalendarioToTimestamptz(mes: string): string {

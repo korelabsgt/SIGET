@@ -13,14 +13,17 @@ import {
   CircleCheck,
   Clock,
   FileText,
-  Image,
-  Images,
   User,
   Wrench,
 } from "lucide";
+import { Loader2 } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGt } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
+import {
+  resolveStorageDisplaySrc,
+  useSignedStorageUrls,
+} from "../lib/storage-hooks";
 import {
   GV_DETALLE_CARD_CLASS,
   GV_DETALLE_CHIP_CLASS,
@@ -29,6 +32,8 @@ import {
 import { type FallaRow, type MecanicoOption } from "./lib/zod";
 import {
   estadoFallaBadgeClass,
+  FALLA_BADGE_BASE_CLASS,
+  evidenciasFalla,
   formatEstadoFallaLabel,
   formatSeveridadLabel,
   formatVehiculoFalla,
@@ -87,11 +92,93 @@ function FilaDocumento({
   );
 }
 
-function FilaSimple({ label, value }: { label: string; value: string }) {
+function EvidenciaFallaImagen({
+  path,
+  src,
+  onBroken,
+}: {
+  path: string;
+  src: string;
+  onBroken: () => void;
+}) {
+  const abrirEvidencia = () => {
+    window.open(src, "_blank", "noopener,noreferrer");
+  };
+
   return (
-    <div className="flex items-baseline justify-between gap-4 border-t border-zinc-300 py-3 first:border-t-0 first:pt-0 dark:border-zinc-800">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="text-right text-sm font-semibold text-foreground">{value}</p>
+    <button
+      type="button"
+      onClick={abrirEvidencia}
+      className="block w-full cursor-pointer overflow-hidden rounded-xl border-0 bg-sky-50/60 p-0 dark:bg-sky-950/20"
+    >
+      <img
+        src={src}
+        alt={`Evidencia de la avería: ${path}`}
+        onError={onBroken}
+        className="aspect-[4/3] w-full object-cover object-center"
+      />
+    </button>
+  );
+}
+
+function EvidenciasFalla({ paths }: { paths: string[] }) {
+  const cleaned = evidenciasFalla({ evidencia_url: paths });
+  const { data: signedMap = {}, isLoading, isError, refetch, isFetching } = useSignedStorageUrls(cleaned);
+  const [rotas, setRotas] = useState<Record<string, boolean>>({});
+
+  if (cleaned.length === 0) {
+    return (
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Sin evidencia fotográfica registrada.
+      </p>
+    );
+  }
+
+  if (isLoading || isFetching) {
+    return (
+      <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-sky-50/60 dark:bg-sky-950/20">
+        <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
+      </div>
+    );
+  }
+
+  const visibles = cleaned
+    .map((path) => ({
+      path,
+      src: resolveStorageDisplaySrc(path, signedMap),
+    }))
+    .filter((item) => item.src.length > 0 && !rotas[item.path]);
+
+  if (isError || visibles.length === 0) {
+    return (
+      <div className="space-y-3 rounded-xl bg-sky-50/60 p-4 dark:bg-sky-950/20">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          No se pudo cargar la evidencia fotográfica.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setRotas({});
+            void refetch();
+          }}
+          className="inline-flex cursor-pointer items-center rounded-lg border-0 bg-celeste-trifinio px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {visibles.map((item) => (
+        <EvidenciaFallaImagen
+          key={item.path}
+          path={item.path}
+          src={item.src}
+          onBroken={() => setRotas((prev) => ({ ...prev, [item.path]: true }))}
+        />
+      ))}
     </div>
   );
 }
@@ -109,6 +196,7 @@ export function FallaDetalleView({
 }) {
   const [accion, setAccion] = useState<"atender" | "solventar" | null>(null);
   const vehiculoNombre = formatVehiculoFalla(falla);
+  const placa = falla.vehiculo?.placa?.trim() || "";
   const reportador = falla.reportador?.nombre?.trim() || "Desconocido";
   const atencion = falla.taller_externo
     ? `Taller: ${falla.taller_externo}`
@@ -158,33 +246,30 @@ export function FallaDetalleView({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={cn(
-                    "inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                    estadoFallaBadgeClass(falla.estado),
-                  )}
-                >
+                <span className={cn(FALLA_BADGE_BASE_CLASS, estadoFallaBadgeClass(falla.estado))}>
                   {formatEstadoFallaLabel(falla.estado)}
                 </span>
-                <span
-                  className={cn(
-                    "inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                    severidadBadgeClass(falla.severidad),
-                  )}
-                >
+                <span className={cn(FALLA_BADGE_BASE_CLASS, severidadBadgeClass(falla.severidad))}>
                   {formatSeveridadLabel(falla.severidad)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Reportada el {formatFechaHoraGt(falla.created_at)}
                 </span>
               </div>
               <h1 className="mt-3 flex items-start gap-2.5 text-3xl font-black tracking-tight text-foreground md:text-4xl">
                 <span className="mt-1 shrink-0 text-celeste-trifinio">
                   <GvMorphIcon icon={Car} hoverIcon={CarFront} size={28} />
                 </span>
-                <span className="min-w-0">{vehiculoNombre}</span>
+                <span className="min-w-0">
+                  {placa ? (
+                    <span className="block uppercase">{placa}</span>
+                  ) : (
+                    <span className="block capitalize">{vehiculoNombre}</span>
+                  )}
+                  {placa ? (
+                    <span className="mt-1 block text-base font-semibold capitalize text-muted-foreground md:text-lg">
+                      {vehiculoNombre}
+                    </span>
+                  ) : null}
+                </span>
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">Reportado por {reportador}</p>
             </div>
             {acciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
           </div>
@@ -241,45 +326,11 @@ export function FallaDetalleView({
 
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Vehículo
+              Evidencia fotográfica
             </h2>
             <div className={cn("mt-4", GV_DETALLE_NESTED_CLASS)} data-morph-hover-scope>
-              {falla.vehiculo ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-celeste-trifinio text-white">
-                      <GvMorphIcon icon={Car} hoverIcon={CarFront} size={22} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-lg font-black uppercase tracking-wide text-foreground">
-                        {falla.vehiculo.placa}
-                      </p>
-                      <p className="truncate text-sm capitalize text-muted-foreground">{vehiculoNombre}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <FilaSimple label="Marca" value={falla.vehiculo.marca || "—"} />
-                    <FilaSimple label="Modelo" value={falla.vehiculo.modelo || "—"} />
-                    <FilaSimple label="Placa" value={falla.vehiculo.placa || "—"} />
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  No hay vehículo asociado a esta avería.
-                </p>
-              )}
+              <EvidenciasFalla paths={falla.evidencia_url} />
             </div>
-            {falla.evidencia_url ? (
-              <a
-                href={falla.evidencia_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-wider text-celeste-trifinio hover:opacity-80"
-              >
-                <GvMorphIcon icon={Image} hoverIcon={Images} size={14} />
-                Ver evidencia
-              </a>
-            ) : null}
           </section>
         </div>
       </div>

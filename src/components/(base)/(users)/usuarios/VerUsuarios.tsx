@@ -8,6 +8,7 @@ import {
   canCreateUsers,
   canManageUsers,
   getManageableRoles,
+  isKnownRole,
   isUserVisibleToActor,
   orderRoles,
   ROLE_LABELS,
@@ -132,8 +133,8 @@ export function VerUsuarios() {
     }
 
     const orderedRoles = orderRoles(
-      Array.from(groups.keys()).filter((role) =>
-        manageableRoles.includes(role),
+      manageableRoles.filter(
+        (role) => groups.has(role) || (isLargeScreen && !isKnownRole(role)),
       ),
     );
 

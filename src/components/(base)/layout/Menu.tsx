@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,6 +42,12 @@ import { useAppSettings } from "@/components/(base)/(settings)/hooks";
 import VerPerfil from "@/components/(base)/(users)/profile/VerPerfil";
 import PassKeysModal from "@/components/(base)/layout/modals/PassKeysModal";
 import ManualUsuarioModal from "@/components/(base)/layout/modals/ManualUsuarioModal";
+import { extractRolesFromProfiles } from "@/components/(base)/(users)/usuarios/lib/helpers";
+import { useUsers } from "@/components/(base)/(users)/usuarios/lib/hooks";
+import {
+  formatSimulatedRoleLabel,
+  getSimulatableRoles,
+} from "@/components/(base)/(users)/usuarios/lib/permissions";
 
 const MENU_OPTION_ICONS: Record<string, LucideIcon> = {
   "movilidad-humana": Globe,
@@ -455,6 +461,20 @@ type MenuAccordionId = "observatorio" | "perfil" | "admin" | "gestion-territoria
 export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
   const pathname = usePathname();
   const { realRole, effectiveRole, simulatedRole, setSimulatedRole } = useUserContext();
+  const { data: users = [] } = useUsers(realRole);
+  const simulatableRoles = useMemo(
+    () =>
+      realRole === "super"
+        ? getSimulatableRoles(extractRolesFromProfiles(users))
+        : [],
+    [realRole, users],
+  );
+  const displaySimulatableRoles = useMemo(() => {
+    if (simulatedRole && !simulatableRoles.includes(simulatedRole)) {
+      return [...simulatableRoles, simulatedRole];
+    }
+    return simulatableRoles;
+  }, [simulatableRoles, simulatedRole]);
   const { data: appSettings } = useAppSettings();
   const [openAccordionId, setOpenAccordionId] = useState<MenuAccordionId | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -744,11 +764,11 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
                 className="bg-transparent text-xs font-bold text-yellow-700 outline-none cursor-pointer w-full"
               >
                 <option value="">Rol Real: {realRole.toUpperCase()}</option>
-                <option value="admin">Simular: ADMIN</option>
-                <option value="admin-observatorio">Simular: ADMIN-OBSERVATORIO</option>
-                <option value="observatorio">Simular: OBSERVATORIO</option>
-                <option value="comunicacion">Simular: COMUNICACIÓN</option>
-                <option value="user">Simular: USER</option>
+                {displaySimulatableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    Simular: {formatSimulatedRoleLabel(role).toUpperCase()}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

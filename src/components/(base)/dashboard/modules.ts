@@ -10,6 +10,7 @@ import {
   Telescope,
 } from "lucide";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
+import { canAccessGestionTerritorial } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
 
 export type DashboardModule = {
   id: string;
@@ -111,32 +112,11 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     animatedIcon: "unfvchvi",
   },
   {
-    id: "flota",
-    title: "Flota",
+    id: "gestion-vehiculos",
+    title: "Registro de Vehículos",
     desc: "Control y asignación de la flota vehicular de la institución.",
     href: "/siget/gestion-territorial/gestion-vehiculos/flota",
     animatedIcon: "cdxxgczv",
-  },
-  {
-    id: "solicitudes",
-    title: "Solicitudes",
-    desc: "Reservas de vehículos para misiones.",
-    href: "/siget/gestion-territorial/gestion-vehiculos/solicitudes",
-    animatedIcon: "abwrkdvl",
-  },
-  {
-    id: "bitacoras",
-    title: "Bitácoras",
-    desc: "Registro digital de viajes y métricas operativas.",
-    href: "/siget/gestion-territorial/gestion-vehiculos/bitacoras",
-    animatedIcon: "wyqtxzlg", // Or any other suitable icon if known, using a placeholder for now
-  },
-  {
-    id: "mantenimiento",
-    title: "Mantenimiento",
-    desc: "Gestión de averías y mantenimiento preventivo.",
-    href: "/siget/gestion-territorial/gestion-vehiculos/mantenimiento",
-    animatedIcon: "zchvbdce", // placeholder
   },
 ] as const;
 
@@ -211,6 +191,9 @@ export function getVisibleDashboardModules(effectiveRole: string) {
       return canManageUsers(effectiveRole);
     }
     if (mod.requiresAdmin && !isSuperOrAdmin) return false;
+    if (mod.id === "gestion-territorial") {
+      return canAccessGestionTerritorial(effectiveRole);
+    }
     if (mod.allowedRoles) {
       const isAllowed =
         mod.allowedRoles.includes(effectiveRole) ||

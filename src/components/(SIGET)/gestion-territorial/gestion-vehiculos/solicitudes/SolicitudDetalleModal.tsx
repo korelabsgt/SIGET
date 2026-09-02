@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { formatFechaHoraGt } from "@/lib/fechas-gt";
+import { formatFechaHoraTablaCompactGt } from "@/lib/fechas-gt";
 import { type SolicitudRow } from "./lib/zod";
 import {
   estadoBadgeClass,
@@ -104,7 +104,7 @@ export function SolicitudDetalleModal({
             </span>
           </div>
           <DialogDescription>
-            Solicitud creada el {formatFechaHoraGt(solicitud.created_at)}
+            Solicitud creada el {formatFechaHoraTablaCompactGt(solicitud.created_at)}
             {solicitud.solicitante?.nombre
               ? ` · ${solicitud.solicitante.nombre}`
               : ""}
@@ -126,11 +126,11 @@ export function SolicitudDetalleModal({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <CampoLectura
               label="Fecha y Hora de Inicio"
-              value={formatFechaHoraGt(solicitud.fecha_inicio)}
+              value={formatFechaHoraTablaCompactGt(solicitud.fecha_inicio)}
             />
             <CampoLectura
               label="Fecha y Hora de Retorno Estimado"
-              value={formatFechaHoraGt(solicitud.fecha_fin_estimada)}
+              value={formatFechaHoraTablaCompactGt(solicitud.fecha_fin_estimada)}
             />
           </div>
 

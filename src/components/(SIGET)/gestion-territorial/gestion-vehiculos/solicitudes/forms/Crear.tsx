@@ -103,7 +103,7 @@ export function Crear({
       <DialogContent
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
-        className="max-h-[85vh] gap-3 overflow-y-auto p-4 sm:max-w-lg"
+        className="max-h-[calc(100dvh-2rem)] gap-3 overflow-y-auto p-4 sm:max-w-lg"
       >
         <DialogHeader>
           <DialogTitle className="text-base">Nueva Solicitud de Vehículo</DialogTitle>

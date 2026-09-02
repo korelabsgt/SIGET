@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
+import { canManageSolicitudesVehiculos, canViewAllSolicitudes } from "../../lib/permissions";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
 const TABLE = "ter_solicitudes";
@@ -27,8 +28,9 @@ async function requireAuth() {
 
 export async function getSolicitudes(): Promise<SolicitudRow[]> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const { user, role, supabase } = await requireAuth();
+
+    let query = supabase
       .from(TABLE)
       .select(`
         *,
@@ -38,12 +40,18 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
       `)
       .order("created_at", { ascending: false });
 
+    if (!canViewAllSolicitudes(role)) {
+      query = query.eq("solicitante_id", user.id);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       console.error("Error getSolicitudes:", error);
       return [];
     }
 
-    return data as any[];
+    return data as SolicitudRow[];
   } catch (error) {
     console.error("Excepción en getSolicitudes:", error);
     return [];
@@ -122,7 +130,7 @@ export async function cambiarEstadoSolicitud(
 ) {
   try {
     const { user, role } = await requireAuth();
-    if (role !== "super" && role !== "admin") {
+    if (!canManageSolicitudesVehiculos(role)) {
       return { success: false, error: "No tienes permisos para realizar esta acción." };
     }
 

@@ -22,6 +22,9 @@ import { useEliminarVehiculo, useVehiculos } from "./lib/hooks";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
 import { cn } from "@/lib/utils";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
+import { GV_FILTRO_FIELD_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { canManageFlota } from "../lib/permissions";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
 const VerEditar = dynamic(() => import("./forms/VerEditar").then((m) => m.VerEditar));
@@ -34,8 +37,10 @@ const ESTADO_VEHICULO_LABELS: Record<(typeof ESTADOS_VEHICULO)[number], string> 
   EN_MANTENIMIENTO: "En mantenimiento",
 };
 
-const filtroEstadoTriggerClass =
-  "h-11 cursor-pointer rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 px-3 text-sm font-semibold text-foreground shadow-none transition-colors focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20";
+const filtroEstadoTriggerClass = cn(
+  GV_FILTRO_FIELD_CLASS,
+  "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
+);
 
 const filtroEstadoContentClass =
   "z-[200] min-w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
@@ -45,6 +50,8 @@ const filtroEstadoItemClass =
 
 export function Flota() {
   const router = useRouter();
+  const { effectiveRole } = useUserContext();
+  const canManage = canManageFlota(effectiveRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
   const eliminar = useEliminarVehiculo();
 
@@ -125,13 +132,7 @@ export function Flota() {
   };
 
   return (
-    <div
-      className={cn(
-        GV_MODULO_PAGE_CLASS,
-        inDetailView &&
-          "min-h-0 flex-1 overflow-y-auto pt-16 pb-10 lg:h-full lg:overflow-hidden lg:pt-10 lg:pb-10",
-      )}
-    >
+    <div className={GV_MODULO_PAGE_CLASS}>
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
       {!inDetailView ? <SubmodulosNav /> : null}
 
@@ -152,7 +153,7 @@ export function Flota() {
             Flota Vehicular
           </h1>
         </div>
-        {!loading ? (
+        {!loading && canManage ? (
           <FlotaNotificaciones vehiculos={vehiculos} onSelectVehiculo={handleAlertVehiculo} />
         ) : null}
       </div>
@@ -160,10 +161,9 @@ export function Flota() {
 
       <div
         className={cn(
-          "overflow-hidden dark:border-zinc-700",
           inDetailView
-            ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-transparent dark:bg-transparent"
-            : "rounded-2xl border border-border bg-card dark:bg-zinc-900/40",
+            ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
+            : "overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40",
         )}
       >
         {inDetailView ? null : <div className="h-1 w-full bg-celeste-trifinio" />}
@@ -205,14 +205,16 @@ export function Flota() {
             </Select>
 
             <div className="flex items-center sm:col-span-2 lg:col-span-1 lg:justify-end">
+              {canManage ? (
               <button
                 type="button"
                 onClick={handleCreate}
-                className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-celeste-trifinio bg-transparent px-5 text-xs font-bold uppercase tracking-widest text-celeste-trifinio transition-colors hover:bg-sky-50 sm:w-auto dark:hover:bg-sky-950/40"
+                className={GV_HEADER_OUTLINE_BUTTON_CLASS}
               >
                 <GvMorphIcon icon={Plus} hoverIcon={Check} size={16} />
                 Añadir
               </button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -249,7 +251,7 @@ export function Flota() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onDetailViewChange={setInDetailView}
-            fillHeight={inDetailView}
+            canManage={canManage}
           />
         )}
       </div>

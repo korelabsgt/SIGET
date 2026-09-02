@@ -33,6 +33,7 @@ import {
   GV_DETALLE_CHIP_CLASS,
   GV_DETALLE_NESTED_CLASS,
 } from "../lib/detalle-ui";
+import { GV_DETAIL_ROUND_ACTION_CLASS } from "../lib/gv-header-ui";
 
 function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
@@ -134,8 +135,8 @@ export function SolicitudDetalleView({
           <button
             type="button"
             onClick={() => onAction(solicitud, "RECHAZAR")}
-            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-red-600 px-4 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90"
-          >
+            className={GV_DETAIL_ROUND_ACTION_CLASS}
+            >
             <GvMorphIcon icon={X} hoverIcon={CircleX} size={14} />
             Rechazar
           </button>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
@@ -30,7 +30,7 @@ import {
 } from "../lib/zod";
 import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
 import { fotosVehiculo, MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
-import { ImagenVehiculoDropzone, fileToDataUrl, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
+import { ImagenVehiculoDropzone, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
 import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
@@ -50,15 +50,15 @@ export function VerEditar({
   const crear = useCrearVehiculo();
   const editar = useEditarVehiculo();
   const [existingUrls, setExistingUrls] = useState<string[]>([]);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const { data: signedMap = {} } = useSignedStorageUrls(existingUrls);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const submitInFlightRef = useRef(false);
+  const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(existingUrls);
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<VehiculoInput>({
     resolver: zodResolver(vehiculoInputSchema) as never,
@@ -76,41 +76,56 @@ export function VerEditar({
     },
   });
 
+  const placa = useWatch({ control, name: "placa" });
+
   const previews = [
     ...existingUrls.map((path) => resolveStorageDisplaySrc(path, signedMap)),
-    ...pendingPreviews,
+    ...Array.from({ length: uploadingCount }, () => ""),
+  ];
+  const previewLoading = [
+    ...existingUrls.map((path) => !resolveStorageDisplaySrc(path, signedMap) && firmandoFotos),
+    ...Array.from({ length: uploadingCount }, () => true),
   ];
 
   const handleRemoveFoto = (index: number) => {
     if (index < existingUrls.length) {
       setExistingUrls((prev) => prev.filter((_, i) => i !== index));
-      return;
     }
-    const pendingIndex = index - existingUrls.length;
-    setPendingFiles((prev) => prev.filter((_, i) => i !== pendingIndex));
-    setPendingPreviews((prev) => prev.filter((_, i) => i !== pendingIndex));
   };
 
   const handleAddFiles = async (selectedFiles: File[]) => {
-    const room = MAX_FOTOS_VEHICULO - existingUrls.length - pendingFiles.length;
+    const placaVal = placa?.trim();
+    if (!placaVal) {
+      toast.warn("Ingresa la placa antes de subir fotografías.");
+      return;
+    }
+
+    const room = MAX_FOTOS_VEHICULO - existingUrls.length - uploadingCount;
     const toAdd = selectedFiles.slice(0, Math.max(0, room));
     if (toAdd.length === 0) {
       toast.warn(`Puedes agregar hasta ${MAX_FOTOS_VEHICULO} fotografías.`);
       return;
     }
+
+    setUploadingCount((prev) => prev + toAdd.length);
     try {
-      const urls = await Promise.all(toAdd.map((item) => fileToDataUrl(item)));
-      setPendingFiles((prev) => [...prev, ...toAdd]);
-      setPendingPreviews((prev) => [...prev, ...urls]);
-    } catch {
-      toast.error("No se pudo leer la imagen seleccionada.");
+      const uploaded = await Promise.all(
+        toAdd.map((item) => uploadImagenVehiculo(item, placaVal)),
+      );
+      setExistingUrls((prev) => [...prev, ...uploaded].slice(0, MAX_FOTOS_VEHICULO));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo subir la fotografía.",
+      );
+    } finally {
+      setUploadingCount((prev) => Math.max(0, prev - toAdd.length));
     }
   };
 
   useEffect(() => {
     if (open) {
-      setPendingFiles([]);
-      setPendingPreviews([]);
+      submitInFlightRef.current = false;
+      setUploadingCount(0);
       if (initialData) {
         const fotos = fotosVehiculo(initialData);
         setExistingUrls(fotos);
@@ -147,21 +162,21 @@ export function VerEditar({
   }, [open, initialData, reset]);
 
   const onSubmit = async (data: VehiculoInput) => {
-    if (existingUrls.length + pendingFiles.length < MIN_FOTOS_VEHICULO) {
+    if (submitInFlightRef.current) return;
+    if (uploadingCount > 0) {
+      toast.warn("Espera a que terminen de subir las fotografías.");
+      return;
+    }
+    if (existingUrls.length < MIN_FOTOS_VEHICULO) {
       toast.warn("Debes subir al menos una fotografía del vehículo.");
       return;
     }
 
-    setUploading(true);
+    submitInFlightRef.current = true;
     try {
-      const uploaded = await Promise.all(
-        pendingFiles.map((item) => uploadImagenVehiculo(item, data.placa)),
-      );
-      const imagen_url = [...existingUrls, ...uploaded];
-
       const payload: VehiculoInput = {
         ...data,
-        imagen_url,
+        imagen_url: existingUrls,
       };
 
       if (initialData?.id) {
@@ -176,15 +191,16 @@ export function VerEditar({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error al guardar el vehículo");
     } finally {
-      setUploading(false);
+      submitInFlightRef.current = false;
     }
   };
 
-  const isWorking = crear.isPending || editar.isPending || isSubmitting || uploading;
+  const subiendoFotos = uploadingCount > 0;
+  const isWorking = crear.isPending || editar.isPending || isSubmitting || subiendoFotos;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
+      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
@@ -317,6 +333,7 @@ export function VerEditar({
 
           <ImagenVehiculoDropzone
             previews={previews}
+            previewLoading={previewLoading}
             onAddFiles={(files) => {
               void handleAddFiles(files);
             }}
@@ -334,7 +351,7 @@ export function VerEditar({
               Cancelar
             </Button>
             <Button type="submit" disabled={isWorking} className="bg-azul-trifinio text-white hover:bg-azul-trifinio/90">
-              {uploading ? (
+              {subiendoFotos ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
                   Subiendo fotografías...

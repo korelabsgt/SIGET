@@ -6,6 +6,7 @@ import {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from "react";
 import { useTheme } from "next-themes";
 import {
@@ -37,6 +38,8 @@ import {
   getManageableRoles,
   isUserVisibleToActor,
 } from "@/components/(base)/(users)/usuarios/lib/permissions";
+import { extractRolesFromProfiles } from "@/components/(base)/(users)/usuarios/lib/helpers";
+import { useUsers } from "@/components/(base)/(users)/usuarios/lib/hooks";
 import { SelectorRol } from "@/components/(base)/(users)/usuarios/forms/SelectorRol";
 import { cn } from "@/lib/utils";
 import { generateStrongPassword } from "@/utils/general/password-generator";
@@ -197,12 +200,16 @@ export const InfoUser = forwardRef<InfoUserRef, InfoUserProps>(
     const { theme } = useTheme();
     const { effectiveRole } = useUserContext();
     const queryClient = useQueryClient();
+    const { data: users = [] } = useUsers(effectiveRole);
     const { profile, refetch: refetchProfile } = useProfile(userId, true);
     const { credentials, loading, refetch } = useUserCredentials(userId);
     const mutation = useCredentialsMutation();
 
     const targetRole = profile?.rol || "user";
-    const roleOptions = getManageableRoles(effectiveRole);
+    const roleOptions = useMemo(
+      () => getManageableRoles(effectiveRole, extractRolesFromProfiles(users)),
+      [effectiveRole, users],
+    );
     const canManageTarget = isUserVisibleToActor(targetRole, effectiveRole);
     const canChangeRole =
       canManageTarget &&
@@ -334,6 +341,9 @@ export const InfoUser = forwardRef<InfoUserRef, InfoUserProps>(
           await updateProfile(userId, { rol: selectedRole as never });
           await queryClient.invalidateQueries({
             queryKey: ["profile", userId],
+          });
+          await queryClient.invalidateQueries({
+            queryKey: ["users-list"],
           });
           await refetchProfile();
         }

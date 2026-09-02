@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Loader2, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -17,6 +17,11 @@ import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
+import { GV_HEADER_ACTIONS_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
+import { GvMonthPicker } from "../lib/gv-month-picker";
+import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
+import { mesCalendarioGt } from "@/lib/fechas-gt";
+import { canManageSolicitudesVehiculos } from "../lib/permissions";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 type TabSolicitud = (typeof TABS)[number];
@@ -32,9 +37,11 @@ const TAB_LABELS: Record<TabSolicitud, string> = {
 export function Solicitudes() {
   const { data: solicitudes = [], isLoading: loading } = useSolicitudes();
   const invalidate = useInvalidateSolicitudes();
-  const { realRole } = useUserContext();
-  const canManage = ["super", "admin"].includes(realRole);
+  const { effectiveRole } = useUserContext();
+  const canVerFiltros = canManageSolicitudesVehiculos(effectiveRole);
+  const canManage = canVerFiltros;
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
+  const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
   const [inDetailView, setInDetailView] = useState(false);
   const router = useRouter();
 
@@ -70,13 +77,17 @@ export function Solicitudes() {
     setActionModalOpen(true);
   };
 
-  const filtradas = solicitudes.filter((sol) => {
-    if (tabActiva === "TODAS") return true;
-    if (tabActiva === "PENDIENTES") return sol.estado === "PENDIENTE";
-    if (tabActiva === "ACTIVAS") return sol.estado === "APROBADA" || sol.estado === "EN_MISION";
-    if (tabActiva === "HISTORIAL") return sol.estado === "FINALIZADA" || sol.estado === "RECHAZADA";
-    return true;
-  });
+  const filtradas = useMemo(() => {
+    return solicitudes.filter((sol) => {
+      if (!registroEnPeriodoCalendario(sol.fecha_inicio, periodoFilter)) return false;
+      if (!canVerFiltros) return true;
+      if (tabActiva === "TODAS") return true;
+      if (tabActiva === "PENDIENTES") return sol.estado === "PENDIENTE";
+      if (tabActiva === "ACTIVAS") return sol.estado === "APROBADA" || sol.estado === "EN_MISION";
+      if (tabActiva === "HISTORIAL") return sol.estado === "FINALIZADA" || sol.estado === "RECHAZADA";
+      return true;
+    });
+  }, [solicitudes, periodoFilter, canVerFiltros, tabActiva]);
 
   return (
     <div className={GV_MODULO_PAGE_CLASS}>
@@ -102,14 +113,6 @@ export function Solicitudes() {
               </h1>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-celeste-trifinio px-5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:opacity-90 sm:w-auto"
-          >
-            <Plus className="size-4 shrink-0" />
-            Nueva Solicitud
-          </button>
         </div>
       ) : null}
 
@@ -122,18 +125,34 @@ export function Solicitudes() {
           }
           toolbar={
             !inDetailView ? (
-              <GvSwitchGroup layoutId="gv-solicitudes-tabs">
-                {TABS.map((tab) => (
-                  <GvSwitchItem
-                    key={tab}
-                    active={tabActiva === tab}
-                    onClick={() => setTabActiva(tab)}
-                    size="sm"
+              <div className="flex flex-col gap-3 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
+                {canVerFiltros ? (
+                  <GvSwitchGroup layoutId="gv-solicitudes-tabs">
+                    {TABS.map((tab) => (
+                      <GvSwitchItem
+                        key={tab}
+                        active={tabActiva === tab}
+                        onClick={() => setTabActiva(tab)}
+                        size="sm"
+                      >
+                        {TAB_LABELS[tab]}
+                      </GvSwitchItem>
+                    ))}
+                  </GvSwitchGroup>
+                ) : null}
+
+                <div className={`${GV_HEADER_ACTIONS_CLASS} lg:ml-auto`}>
+                  <GvMonthPicker value={periodoFilter} onChange={setPeriodoFilter} />
+                  <button
+                    type="button"
+                    onClick={() => setFormOpen(true)}
+                    className={GV_HEADER_OUTLINE_BUTTON_CLASS}
                   >
-                    {TAB_LABELS[tab]}
-                  </GvSwitchItem>
-                ))}
-              </GvSwitchGroup>
+                    <Plus className="size-4 shrink-0" />
+                    Nueva Solicitud
+                  </button>
+                </div>
+              </div>
             ) : undefined
           }
         >

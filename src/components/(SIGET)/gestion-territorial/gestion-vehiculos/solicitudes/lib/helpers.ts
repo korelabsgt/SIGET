@@ -30,3 +30,12 @@ export function formatDuracionMision(inicio: string, fin: string): string {
 
   return parts.join(" ") || "—";
 }
+
+export function solicitudPendienteVencida(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio">,
+): boolean {
+  if (solicitud.estado !== "PENDIENTE") return false;
+  const inicio = new Date(solicitud.fecha_inicio);
+  if (Number.isNaN(inicio.getTime())) return false;
+  return inicio.getTime() < Date.now();
+}

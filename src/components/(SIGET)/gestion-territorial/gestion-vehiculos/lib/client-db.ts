@@ -7,7 +7,9 @@ import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
 import { esVehiculoDisponible, normalizeVehiculoRow } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
+import { canViewAllFallasMantenimiento } from "./permissions";
 import type { SolicitudRow } from "../solicitudes/lib/zod";
+import { canViewAllBitacoras, canViewAllSolicitudes } from "./permissions";
 
 function db() {
   return createClient();
@@ -38,7 +40,16 @@ export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
-  const { data, error } = await db()
+  const client = db();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+
+  let query = client
     .from("ter_solicitudes")
     .select(
       `
@@ -50,12 +61,27 @@ export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
     )
     .order("created_at", { ascending: false });
 
+  if (!canViewAllSolicitudes(role)) {
+    query = query.eq("solicitante_id", user.id);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw new Error(error.message);
   return (data ?? []) as SolicitudRow[];
 }
 
 export async function fetchBitacoras(): Promise<BitacoraRow[]> {
-  const { data, error } = await db()
+  const client = db();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+
+  let query = client
     .from("ter_bitacoras")
     .select(
       `
@@ -66,12 +92,27 @@ export async function fetchBitacoras(): Promise<BitacoraRow[]> {
     )
     .order("fecha", { ascending: false });
 
+  if (!canViewAllBitacoras(role)) {
+    query = query.eq("conductor_id", user.id);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => normalizeBitacoraRow(row as BitacoraRow));
 }
 
 export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
-  const { data, error } = await db()
+  const client = db();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+
+  let query = client
     .from("ter_fallas_mantenimiento")
     .select(
       `
@@ -82,6 +123,12 @@ export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
     `,
     )
     .order("created_at", { ascending: false });
+
+  if (!canViewAllFallasMantenimiento(role)) {
+    query = query.eq("reportado_por", user.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return (data ?? []) as FallaRow[];

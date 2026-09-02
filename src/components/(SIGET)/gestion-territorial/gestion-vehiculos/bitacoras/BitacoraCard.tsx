@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Play } from "lucide";
-import { CalendarRange, Car } from "lucide-react";
+import { ArrowRight, Eye } from "lucide";
+import { Car, Fuel, MapPin, Route } from "lucide-react";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
 import {
@@ -12,19 +12,21 @@ import {
   GV_LIST_CARD_ICON_BOX_CLASS,
   GV_LIST_CARD_SECTION_CLASS,
 } from "../lib/detalle-ui";
-import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
-import { type SolicitudRow } from "./lib/zod";
+import { formatMontoCombustibleBitacora } from "./lib/helpers";
+import { type BitacoraRow } from "./lib/zod";
 
-export function SolicitudCard({
-  solicitud,
+export function BitacoraCard({
+  bitacora,
   onDetail,
   index = 0,
 }: {
-  solicitud: SolicitudRow;
-  onDetail: (solicitud: SolicitudRow) => void;
+  bitacora: BitacoraRow;
+  onDetail: (bitacora: BitacoraRow) => void;
   index?: number;
 }) {
-  const vehiculo = solicitud.vehiculo;
+  const vehiculo = bitacora.ter_vehiculos;
+  const combustible = formatMontoCombustibleBitacora(Number(bitacora.monto_combustible));
+  const tieneCombustible = Number(bitacora.monto_combustible) > 0;
 
   return (
     <motion.div
@@ -36,36 +38,33 @@ export function SolicitudCard({
     >
       <div className="flex items-start gap-3">
         <div className={GV_LIST_CARD_ICON_BOX_CLASS}>
-          <CalendarRange className="h-5 w-5 text-sky-500" />
+          <MapPin className="h-5 w-5 text-sky-500" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-foreground">
-            {solicitud.solicitante?.nombre || "Desconocido"}
+            {bitacora.profiles?.nombre || "Desconocido"}
           </p>
           <div className="mt-0.5 tabular-nums">
-            <p className="text-xs font-semibold text-foreground">
-              {formatFechaTablaGt(solicitud.fecha_inicio)}
-            </p>
+            <p className="text-xs font-semibold text-foreground">{formatFechaTablaGt(bitacora.fecha)}</p>
             <p className="text-xs font-semibold text-celeste-trifinio">
-              {formatHoraTablaGt(solicitud.fecha_inicio)}
+              {formatHoraTablaGt(bitacora.fecha)}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${estadoBadgeClass(solicitud.estado)}`}
-          >
-            {formatEstadoLabel(solicitud.estado)}
+          <span className="inline-flex items-center gap-1 rounded-lg bg-sky-500/10 px-2 py-1 text-xs font-bold text-sky-600 dark:text-sky-400">
+            <Route className="size-3" />
+            {bitacora.km_recorrido.toLocaleString("es-GT")} km
           </span>
           <span
             className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
-              vehiculo
-                ? "bg-zinc-100 text-foreground dark:bg-zinc-800"
+              tieneCombustible
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
                 : "bg-zinc-100 text-muted-foreground dark:bg-zinc-800"
             }`}
           >
-            <Car className="size-3 shrink-0 text-celeste-trifinio" />
-            {vehiculo ? vehiculo.placa : "Sin asignar"}
+            <Fuel className="size-3 shrink-0" />
+            {combustible}
           </span>
         </div>
       </div>
@@ -75,9 +74,9 @@ export function SolicitudCard({
         <div className="mt-1 flex items-center justify-between gap-3">
           <p
             className="min-w-0 flex-1 truncate text-base font-semibold leading-snug text-foreground"
-            title={solicitud.destino}
+            title={bitacora.destino}
           >
-            {solicitud.destino}
+            {bitacora.destino}
           </p>
           {vehiculo ? (
             <span className={GV_LIST_CARD_CHIP_CLASS}>
@@ -88,7 +87,7 @@ export function SolicitudCard({
             </span>
           ) : (
             <span className="ml-auto shrink-0 rounded-lg bg-zinc-100 px-2 py-0.5 text-xs italic text-muted-foreground dark:bg-zinc-800">
-              Sin asignar
+              Sin vehículo
             </span>
           )}
         </div>
@@ -96,12 +95,12 @@ export function SolicitudCard({
 
       <div className={GV_LIST_CARD_FOOTER_CLASS}>
         <SigetActionButton
-          label="Ejecutar"
+          label="Ver"
           accentColor={sigetAccent.abrir}
-          morphFrom={Play}
+          morphFrom={Eye}
           morphTo={ArrowRight}
-          onClick={() => onDetail(solicitud)}
-          ariaLabel={`Ejecutar solicitud a ${solicitud.destino}`}
+          onClick={() => onDetail(bitacora)}
+          ariaLabel={`Ver bitácora a ${bitacora.destino}`}
           className="w-auto shrink-0"
         />
       </div>

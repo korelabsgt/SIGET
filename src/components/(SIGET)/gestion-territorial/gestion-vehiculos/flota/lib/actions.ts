@@ -1,13 +1,15 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { fotosVehiculo, MIN_FOTOS_VEHICULO, normalizeVehiculoRow } from "./helpers";
+import { fotosVehiculo, imagenUrlParaDb, MIN_FOTOS_VEHICULO, normalizeVehiculoRow } from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
 import {
   normalizeVehiculoStoragePath,
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
+import { canManageFlota } from "../../lib/permissions";
 
 const TABLE = "ter_vehiculos";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
@@ -19,11 +21,21 @@ async function requireAuth() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado.");
-    return { supabase, user };
+    const role =
+      (user.user_metadata?.rol as string | undefined) || user.role || "user";
+    return { supabase, user, role };
   } catch (err) {
     if (err instanceof Error && err.message === "No autenticado.") throw err;
     throw new Error("No se pudo verificar la sesión.");
   }
+}
+
+async function requireFlotaManageAuth() {
+  const auth = await requireAuth();
+  if (!canManageFlota(auth.role)) {
+    throw new Error("No tienes permisos para gestionar la flota vehicular.");
+  }
+  return auth;
 }
 
 export async function getVehiculos(): Promise<VehiculoRow[]> {
@@ -52,22 +64,23 @@ export async function getVehiculo(id: string): Promise<VehiculoRow | null> {
 }
 
 function payloadConFotos(data: VehiculoInput) {
-  const imagen_url = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
-  if (imagen_url.length < MIN_FOTOS_VEHICULO) {
+  const fotos = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
+  if (fotos.length < MIN_FOTOS_VEHICULO) {
     throw new Error("Debes subir al menos una fotografía del vehículo.");
   }
-  return { ...data, imagen_url };
+  return { ...data, imagen_url: imagenUrlParaDb(fotos) };
 }
 
 function mapImagenesDbError(message: string) {
-  if (message.toLowerCase().includes("imagen")) {
-    return "No se pudieron guardar las fotografías de la flota.";
+  const lower = message.toLowerCase();
+  if (lower.includes("imagen_url")) {
+    return `No se pudieron guardar las fotografías en imagen_url. (${message})`;
   }
   return message;
 }
 
 export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireAuth();
+  const { supabase } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -99,7 +112,7 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
 }
 
 export async function updateVehiculo(id: string, input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireAuth();
+  const { supabase } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -137,7 +150,7 @@ export async function removeVehiculoImagen(
   id: string,
   storagePath: string,
 ): Promise<VehiculoRow> {
-  const { supabase } = await requireAuth();
+  const { supabase } = await requireFlotaManageAuth();
   const path = normalizeVehiculoStoragePath(storagePath);
   if (!path) {
     throw new Error("No se pudo identificar la fotografía.");
@@ -161,10 +174,12 @@ export async function removeVehiculoImagen(
     throw new Error("Debes conservar al menos una fotografía del vehículo.");
   }
 
+  const fotosAnteriores = fotosVehiculo(row as VehiculoRow);
+
   const { data, error } = await supabase
     .from(TABLE)
     .update({
-      imagen_url: fotos,
+      imagen_url: imagenUrlParaDb(fotos),
     })
     .eq("id", id)
     .select("*")
@@ -172,7 +187,18 @@ export async function removeVehiculoImagen(
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
-  await supabase.storage.from(VEHICULOS_STORAGE_BUCKET).remove([path]);
+  const admin = createAdminClient();
+  const { error: storageError } = await admin.storage
+    .from(VEHICULOS_STORAGE_BUCKET)
+    .remove([path]);
+
+  if (storageError) {
+    await supabase
+      .from(TABLE)
+      .update({ imagen_url: imagenUrlParaDb(fotosAnteriores) })
+      .eq("id", id);
+    throw new Error(`No se pudo eliminar la fotografía del almacenamiento. (${storageError.message})`);
+  }
 
   revalidatePath(REVALIDATE_ROUTE);
   return normalizeVehiculoRow(data as VehiculoRow);
@@ -229,7 +255,7 @@ export async function deleteVehiculo(
   id: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const { supabase } = await requireAuth();
+    const { supabase } = await requireFlotaManageAuth();
 
     const bloqueos = await contarDependenciasVehiculo(supabase, id);
     if (bloqueos.length > 0) {

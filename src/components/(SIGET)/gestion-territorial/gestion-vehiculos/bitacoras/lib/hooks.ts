@@ -7,7 +7,8 @@ import {
   fetchBitacoras,
   fetchSolicitudesEnMision,
 } from "../../lib/client-db";
-import { useVehiculos } from "../../flota/lib/hooks";
+import { useVehiculos, VEHICULOS_KEY } from "../../flota/lib/hooks";
+import { SOLICITUDES_KEY } from "../../solicitudes/lib/hooks";
 import type { BitacoraInput } from "./zod";
 
 export const BITACORAS_KEY = ["ter-bitacoras"];
@@ -74,6 +75,9 @@ export function useCrearBitacora() {
     mutationFn: (input: BitacoraInput) => createBitacora(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BITACORAS_KEY });
+      qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+      qc.invalidateQueries({ queryKey: [...BITACORAS_KEY, "form-options", "misiones-propias"] });
     },
   });
 }

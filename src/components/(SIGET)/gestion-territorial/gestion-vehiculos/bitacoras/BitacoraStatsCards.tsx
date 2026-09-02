@@ -2,6 +2,15 @@
 
 import { motion } from "framer-motion";
 import { Route, Fuel, CheckCircle2 } from "lucide-react";
+import {
+  GV_STATS_KPI_BODY_CLASS,
+  GV_STATS_KPI_CARD_CLASS,
+  GV_STATS_KPI_GRID_CLASS,
+  GV_STATS_KPI_ICON_BOX_CLASS,
+  GV_STATS_KPI_TITLE_CLASS,
+  GV_STATS_KPI_VALUE_CLASS,
+} from "../lib/detalle-ui";
+import { cn } from "@/lib/utils";
 
 interface StatsProps {
   metrics: {
@@ -9,11 +18,17 @@ interface StatsProps {
     total_combustible: number;
     total_misiones: number;
   };
+  mesLabel?: string;
   filtroVehiculo?: boolean;
 }
 
-export function BitacoraStatsCards({ metrics, filtroVehiculo = false }: StatsProps) {
-  const periodoLabel = filtroVehiculo ? "Mes · Vehículo filtrado" : "Mes";
+export function BitacoraStatsCards({
+  metrics,
+  mesLabel,
+  filtroVehiculo = false,
+}: StatsProps) {
+  const periodoBase = mesLabel ?? "Mes";
+  const periodoLabel = filtroVehiculo ? `${periodoBase} · Vehículo` : periodoBase;
 
   const stats = [
     {
@@ -40,23 +55,19 @@ export function BitacoraStatsCards({ metrics, filtroVehiculo = false }: StatsPro
   ];
 
   return (
-    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className={cn(GV_STATS_KPI_GRID_CLASS, "grid-cols-3")}>
       {stats.map((stat, i) => (
         <motion.div
           key={`${stat.title}-${stat.value}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: i * 0.1 }}
-          className={`flex items-center gap-4 rounded-2xl border ${stat.border} bg-card p-5 shadow-sm dark:bg-zinc-900/30`}
+          className={cn(GV_STATS_KPI_CARD_CLASS, stat.border)}
         >
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.bg}`}>
-            {stat.icon}
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {stat.title}
-            </p>
-            <p className="mt-1 text-2xl font-black text-foreground">{stat.value}</p>
+          <div className={cn(GV_STATS_KPI_ICON_BOX_CLASS, stat.bg)}>{stat.icon}</div>
+          <div className={GV_STATS_KPI_BODY_CLASS}>
+            <p className={GV_STATS_KPI_TITLE_CLASS}>{stat.title}</p>
+            <p className={GV_STATS_KPI_VALUE_CLASS}>{stat.value}</p>
           </div>
         </motion.div>
       ))}

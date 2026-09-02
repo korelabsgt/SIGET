@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GV_DANGER_OUTLINE_BUTTON_CLASS } from "../../lib/gv-danger-ui";
 
 export function Crear() {
   const [open, setOpen] = useState(false);
@@ -40,59 +41,82 @@ export function Crear() {
   const { data: vehiculos = [] } = useVehiculosParaFallas(open);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadedEvidenciaPath, setUploadedEvidenciaPath] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   const form = useForm<FallaMantenimientoFormData>({
-    resolver: zodResolver(FallaMantenimientoSchema),
+    resolver: zodResolver(FallaMantenimientoSchema) as never,
     defaultValues: {
       vehiculo_id: "",
       severidad: "MEDIA",
       descripcion: "",
-      evidencia_url: "",
+      evidencia_url: [],
     },
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
+    e.target.value = "";
     if (selectedFile) {
       if (selectedFile.size > 512000) {
         toast.error("La imagen no debe superar los 500 KB");
         return;
       }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setUploadedEvidenciaPath(null);
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
     }
   };
 
   const clearFile = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
-    form.setValue("evidencia_url", "");
+    setUploadedEvidenciaPath(null);
+    form.setValue("evidencia_url", []);
   };
 
+  useEffect(() => {
+    if (!open) {
+      submitInFlightRef.current = false;
+      setUploadedEvidenciaPath(null);
+    }
+  }, [open]);
+
   async function onSubmit(data: FallaMantenimientoFormData) {
+    if (submitInFlightRef.current) return;
+
+    submitInFlightRef.current = true;
     setUploading(true);
     try {
-      let finalEvidenciaUrl = data.evidencia_url;
+      let evidenciaPaths = data.evidencia_url;
 
-      if (file) {
+      if (file && !uploadedEvidenciaPath) {
         const supabase = createClient();
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${data.vehiculo_id}_${Date.now()}.${fileExt}`;
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.${fileExt}`;
         const filePath = `fallas/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("vehiculos")
-          .upload(filePath, file);
+          .upload(filePath, file, { upsert: false });
 
         if (uploadError) {
           throw new Error("Error subiendo la imagen: " + uploadError.message);
         }
 
-        finalEvidenciaUrl = filePath;
+        evidenciaPaths = [filePath];
+        setUploadedEvidenciaPath(filePath);
+        setFile(null);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      } else if (uploadedEvidenciaPath) {
+        evidenciaPaths = [uploadedEvidenciaPath];
       }
 
-      await crear.mutateAsync({ ...data, evidencia_url: finalEvidenciaUrl });
+      await crear.mutateAsync({ ...data, evidencia_url: evidenciaPaths });
       toast.success("Avería reportada exitosamente.");
       form.reset();
       clearFile();
@@ -101,16 +125,20 @@ export function Crear() {
       toast.error(error instanceof Error ? error.message : "Error al reportar la avería.");
     } finally {
       setUploading(false);
+      submitInFlightRef.current = false;
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-red-600 hover:bg-red-700 text-white">
-          <AlertTriangle className="w-4 h-4" />
+        <button
+          type="button"
+          className={GV_DANGER_OUTLINE_BUTTON_CLASS}
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           Reportar Avería
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[500px]">
         <DialogHeader>

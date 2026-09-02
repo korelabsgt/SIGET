@@ -85,11 +85,15 @@ export function GestionVehiculosShell() {
 
   return (
     <GvTabProvider tab={tab} selectTab={selectTab}>
-      <div className="relative flex w-full min-h-[calc(100vh-4rem)] flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden">
+      <div
+        data-gv-scroll-root
+        className="relative flex w-full min-h-[calc(100vh-4rem)] flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden"
+      >
         {PANELS.map(({ id, Panel }) =>
           visited.has(id) ? (
             <div
               key={id}
+              data-gv-scroll-root
               className={cn(
                 "min-h-[calc(100vh-4rem)] flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden",
                 tab === id ? "flex" : "hidden",

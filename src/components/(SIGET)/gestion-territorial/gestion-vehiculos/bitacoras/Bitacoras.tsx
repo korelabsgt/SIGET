@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, ChevronLeft, Search, BookOpen, Download } from "lucide-react";
+import { Plus, Loader2, ChevronLeft, Search, BookOpen } from "lucide-react";
 import { toast } from "react-toastify";
 
 import { SubmodulosNav } from "../../SubmodulosNav";
@@ -17,19 +17,38 @@ import { BitacorasPanel } from "./BitacorasPanel";
 import { BitacoraStatsCards } from "./BitacoraStatsCards";
 import { Crear } from "./forms/Crear";
 import { useBitacoras } from "./lib/hooks";
-import { computeMetricasBitacorasMes } from "./lib/helpers";
+import { computeMetricasBitacorasMes, extractVehiculosVinculadosBitacoras, formatPeriodoCalendarioLabel, bitacoraEnPeriodoCalendario } from "./lib/helpers";
+import { normalizarMesCalendario } from "@/lib/fechas-gt";
 import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
 import { GestionVehiculosTableShell } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
 import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
+import { GvExportReporteButton } from "../lib/gv-export-ui";
+import {
+  GV_FILTRO_FIELD_CLASS,
+  GV_HEADER_ACTIONS_CLASS,
+  GV_HEADER_OUTLINE_BUTTON_CLASS,
+  GV_TABLE_SEARCH_INPUT_CLASS,
+  GV_TABLE_SEARCH_WRAPPER_CLASS,
+} from "../lib/gv-header-ui";
+import { GvMonthPicker } from "../lib/gv-month-picker";
+import { useGvTablePagination } from "../lib/table-pagination";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { mesCalendarioGt } from "@/lib/fechas-gt";
+import {
+  canExportBitacoraReporte,
+  canViewAllBitacoras,
+} from "../lib/permissions";
 
 type BitacorasView = { mode: "list" } | { mode: "create" };
 
 const TODOS_VEHICULOS = "__todos__";
 
-const filtroTriggerClass =
-  "h-11 w-full cursor-pointer rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 px-3 text-sm font-semibold text-foreground shadow-none transition-colors focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20";
+const filtroTriggerClass = cn(
+  GV_FILTRO_FIELD_CLASS,
+  "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
+);
 
 const filtroContentClass =
   "z-[200] min-w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
@@ -39,29 +58,40 @@ const filtroItemClass =
 
 export function Bitacoras() {
   const router = useRouter();
+  const { effectiveRole } = useUserContext();
+  const canViewAll = canViewAllBitacoras(effectiveRole);
+  const canExport = canExportBitacoraReporte(effectiveRole);
   const { data: bitacoras = [], isLoading: loadingBitacoras } = useBitacoras();
-  const { data: vehiculos = [] } = useVehiculos();
+  const { data: vehiculosFlota = [] } = useVehiculos();
   const [view, setView] = useState<BitacorasView>({ mode: "list" });
   const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
   const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
   const [inDetailView, setInDetailView] = useState(false);
   const loading = loadingBitacoras;
 
-  const vehiculoSeleccionado = vehiculoFilter !== TODOS_VEHICULOS;
+  const vehiculosVinculados = useMemo(
+    () => extractVehiculosVinculadosBitacoras(bitacoras),
+    [bitacoras],
+  );
+
+  const vehiculosParaFiltro = canViewAll ? vehiculosFlota : vehiculosVinculados;
 
   const handleExportReporte = async () => {
-    if (!vehiculoSeleccionado) {
-      toast.warning("Selecciona un vehículo en el filtro para exportar su bitácora.");
-      return;
-    }
+    const vehiculoId =
+      vehiculoFilter === TODOS_VEHICULOS ? "all" : vehiculoFilter;
 
     setIsExporting(true);
     try {
       const { exportBitacoraReporteVehiculo } = await import("./lib/bitacora-excel");
+      const mesNorm = normalizarMesCalendario(periodoFilter) || mesCalendarioGt();
+      const [anioNum, mesNum] = mesNorm.split("-").map(Number);
       const result = await exportBitacoraReporteVehiculo({
-        vehiculos,
-        vehiculoId: vehiculoFilter,
+        vehiculos: vehiculosFlota,
+        vehiculoId,
+        mes: mesNum,
+        anio: anioNum,
       });
 
       if (result.ok) {
@@ -70,7 +100,11 @@ export function Bitacoras() {
       }
 
       if (result.reason === "no_data") {
-        toast.warning("No hay registros del vehículo seleccionado en el mes actual.");
+        toast.warning(
+          vehiculoId === "all"
+            ? "No hay registros de bitácora en el mes seleccionado."
+            : "No hay registros del vehículo seleccionado en el mes seleccionado.",
+        );
         return;
       }
 
@@ -81,8 +115,9 @@ export function Bitacoras() {
   };
 
   const bitacorasFiltradas = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = canViewAll ? searchQuery.trim().toLowerCase() : "";
     return bitacoras.filter((b) => {
+      if (!bitacoraEnPeriodoCalendario(b.fecha, periodoFilter)) return false;
       const matchVehiculo =
         vehiculoFilter === TODOS_VEHICULOS || b.vehiculo_id === vehiculoFilter;
       if (!matchVehiculo) return false;
@@ -96,34 +131,41 @@ export function Bitacoras() {
         (b.vale_combustible?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [bitacoras, searchQuery, vehiculoFilter]);
+  }, [bitacoras, searchQuery, vehiculoFilter, periodoFilter, canViewAll]);
 
   const metricas = useMemo(
-    () => computeMetricasBitacorasMes(bitacoras, vehiculoFilter, TODOS_VEHICULOS),
-    [bitacoras, vehiculoFilter],
+    () => computeMetricasBitacorasMes(bitacoras, vehiculoFilter, periodoFilter, TODOS_VEHICULOS),
+    [bitacoras, vehiculoFilter, periodoFilter],
   );
 
-  const hayFiltros = searchQuery.trim().length > 0 || vehiculoFilter !== TODOS_VEHICULOS;
+  const periodoLabel = useMemo(() => formatPeriodoCalendarioLabel(periodoFilter), [periodoFilter]);
+
+  const hayFiltros =
+    periodoFilter !== mesCalendarioGt() ||
+    (canViewAll && searchQuery.trim().length > 0) ||
+    vehiculoFilter !== TODOS_VEHICULOS;
+
+  const paginacionKey = `${searchQuery}|${vehiculoFilter}|${periodoFilter}`;
+  const {
+    pageItems: bitacorasPaginadas,
+    pageSafe,
+    totalPages,
+    pageSize,
+    setPage,
+    setPageSize,
+  } = useGvTablePagination(bitacorasFiltradas, paginacionKey);
 
   if (view.mode === "create") {
     return (
-      <div className="relative w-full min-h-[calc(100vh-4rem)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] bg-size-[24px_24px] opacity-50 dark:bg-[radial-gradient(oklch(36%_0_0)_1px,transparent_1px)] dark:opacity-40" />
-        <div className="relative z-10 mx-auto w-full px-0 pb-20 pt-6 sm:px-6 md:pt-10 lg:px-8 xl:w-[80%]">
-          <Crear onBack={() => setView({ mode: "list" })} onSaved={() => setView({ mode: "list" })} />
-        </div>
+      <div className={GV_MODULO_PAGE_CLASS}>
+        <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
+        <Crear onBack={() => setView({ mode: "list" })} onSaved={() => setView({ mode: "list" })} />
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        GV_MODULO_PAGE_CLASS,
-        inDetailView &&
-          "min-h-0 flex-1 overflow-y-auto pt-16 pb-10 lg:h-full lg:overflow-hidden lg:pt-10 lg:pb-10",
-      )}
-    >
+    <div className={GV_MODULO_PAGE_CLASS}>
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
 
       {!inDetailView ? <SubmodulosNav /> : null}
@@ -147,88 +189,118 @@ export function Bitacoras() {
             </h1>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={handleExportReporte}
-            disabled={!vehiculoSeleccionado || isExporting || loading}
-            className={cn(
-              "inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-transparent px-4 text-xs font-bold uppercase tracking-widest text-emerald-700 transition-colors hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40",
-              (!vehiculoSeleccionado || isExporting || loading) &&
-                "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
-            )}
-          >
-            {isExporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-            Exportar Reporte
-          </button>
-          <button
-            type="button"
-            onClick={() => setView({ mode: "create" })}
-            className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-celeste-trifinio px-5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" />
-            Registrar Viaje
-          </button>
-        </div>
       </div>
       ) : null}
 
-      {!inDetailView ? (
-        <BitacoraStatsCards metrics={metricas} filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS} />
+      {!inDetailView && canViewAll ? (
+        <BitacoraStatsCards
+          metrics={metricas}
+          mesLabel={periodoLabel}
+          filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS}
+        />
       ) : null}
 
-      <div className={cn("mt-2", inDetailView && "mt-0 flex h-full min-h-0 flex-1 flex-col")}>
+      <div className={cn("mt-2", inDetailView && "mt-0")}>
         <GestionVehiculosTableShell
           className={
             inDetailView
-              ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-transparent dark:bg-transparent"
+              ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
               : undefined
           }
           toolbar={
             !inDetailView ? (
-            <>
-              <div className="relative min-w-0 w-full lg:min-w-0">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-celeste-trifinio" />
-                <input
-                  type="text"
-                  placeholder="Buscar por destino, placa, conductor o vale..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 pl-10 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20"
-                />
-              </div>
+              <div className="flex w-full flex-row flex-nowrap items-center gap-3 md:col-span-2">
+                {canViewAll ? (
+                  <div className={GV_TABLE_SEARCH_WRAPPER_CLASS}>
+                    <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-celeste-trifinio" />
+                    <input
+                      type="text"
+                      placeholder="Buscar"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={GV_TABLE_SEARCH_INPUT_CLASS}
+                    />
+                  </div>
+                ) : null}
 
-              <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-                <SelectTrigger className={filtroTriggerClass}>
-                  <SelectValue placeholder="Todos los vehículos" />
-                </SelectTrigger>
-                <SelectContent position="popper" className={filtroContentClass}>
-                  <SelectItem
-                    value={TODOS_VEHICULOS}
-                    textValue="Todos los vehículos"
-                    className={filtroItemClass}
-                  >
-                    Todos los vehículos
-                  </SelectItem>
-                  {vehiculos
-                    .filter((v) => v.id)
-                    .map((v) => {
-                      const label = formatVehiculoOpcion(v);
-                      return (
+                <div
+                  className={cn(
+                    "flex shrink-0 flex-row flex-nowrap items-center gap-2",
+                    !canViewAll && "ml-auto",
+                  )}
+                >
+                  <GvMonthPicker value={periodoFilter} onChange={setPeriodoFilter} />
+
+                  <div className="w-[12rem] shrink-0">
+                    <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+                      <SelectTrigger className={filtroTriggerClass}>
+                        <SelectValue
+                          placeholder={
+                            canViewAll ? "Todos los vehículos" : "Mis vehículos"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className={filtroContentClass}>
                         <SelectItem
-                          key={v.id}
-                          value={v.id as string}
-                          textValue={label}
+                          value={TODOS_VEHICULOS}
+                          textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
                           className={filtroItemClass}
                         >
-                          {label}
+                          {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
                         </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
-            </>
+                        {vehiculosParaFiltro
+                          .filter((v) => v.id)
+                          .map((v) => {
+                            const label = formatVehiculoOpcion(v);
+                            return (
+                              <SelectItem
+                                key={v.id}
+                                value={v.id as string}
+                                textValue={label}
+                                className={filtroItemClass}
+                              >
+                                {label}
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className={GV_HEADER_ACTIONS_CLASS}>
+                    {canExport ? (
+                      <GvExportReporteButton
+                        onClick={handleExportReporte}
+                        disabled={loading}
+                        loading={isExporting}
+                      />
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setView({ mode: "create" })}
+                      className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Registrar Viaje
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : undefined
+          }
+          pagination={
+            !loading && !inDetailView && bitacorasFiltradas.length > 0
+              ? {
+                  pageSafe,
+                  totalPages,
+                  pageSize,
+                  onPageChange: setPage,
+                  onPageSizeChange: (size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  },
+                }
+              : undefined
           }
         >
           {loading ? (
@@ -243,15 +315,15 @@ export function Bitacoras() {
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {hayFiltros
-                  ? "Prueba con otro destino, placa o vehículo."
+                  ? "Prueba con otra fecha, destino, placa o vehículo."
                   : "Aún no se ha registrado ningún viaje en la bitácora digital."}
               </p>
             </div>
           ) : (
             <BitacorasPanel
-              bitacoras={bitacorasFiltradas}
+              bitacoras={bitacorasPaginadas}
+              catalogo={bitacorasFiltradas}
               onDetailViewChange={setInDetailView}
-              fillHeight={inDetailView}
             />
           )}
         </GestionVehiculosTableShell>

@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/client";
 
@@ -32,7 +40,7 @@ export function UserProvider({
 }) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [simulatedRole, setSimulatedRole] = useState<string | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const lastRoleRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -41,10 +49,20 @@ export function UserProvider({
 
   // ----- Refresco de sesión para obtener user_metadata actualizado -----
   const refreshUser = useCallback(async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
     try {
-      const { data, error } = await supabase.auth.refreshSession();
-      if (!error && data.user) {
-        setUser(data.user);
+      const { data, error } = await supabase.auth.getSession();
+      if (error) return;
+
+      if (!data.session) {
+        setUser(null);
+        return;
+      }
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (!userError && userData.user) {
+        setUser(userData.user);
       }
     } catch {
       // Red offline o Supabase inaccesible

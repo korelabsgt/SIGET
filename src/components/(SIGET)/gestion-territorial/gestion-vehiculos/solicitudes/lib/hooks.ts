@@ -11,11 +11,12 @@ import type { SolicitudInput } from "./zod";
 export const SOLICITUDES_KEY = ["ter-solicitudes"];
 export const VEHICULOS_DISPONIBLES_KEY = ["ter-vehiculos", "disponibles"] as const;
 
-export function useSolicitudes() {
+export function useSolicitudes(options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: SOLICITUDES_KEY,
     queryFn: () => shareInflight("ter-solicitudes", fetchSolicitudes),
     ...GV_QUERY_OPTIONS,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 

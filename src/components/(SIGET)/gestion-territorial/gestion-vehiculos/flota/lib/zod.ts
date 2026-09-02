@@ -39,11 +39,7 @@ export const vehiculoSchema = z.object({
   estado: z.enum(ESTADOS_VEHICULO).default("LIBRE"),
   vencimiento_seguro: fechaManualOpcional,
   vencimiento_circulacion: fechaManualOpcional,
-  imagen_url: z
-    .array(z.string())
-    .max(4)
-    .default([])
-    .transform((val) => val.filter((url) => url.trim().length > 0)),
+  imagen_url: z.array(z.string()).max(4).default([]),
   created_at: z.string().optional(),
 });
 

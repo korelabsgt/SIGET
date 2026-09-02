@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, Play } from "lucide";
 import { CalendarRange } from "lucide-react";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { type SolicitudRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
   GestionVehiculosTableEmpty,
   GestionVehiculosThead,
+  GestionVehiculosActionCell,
+  gvTableActionTdClass,
+  gvTableActionThClass,
 } from "../lib/table-ui";
-import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
@@ -20,14 +22,8 @@ function SolicitudListRow({
   solicitud: SolicitudRow;
   onDetail: (solicitud: SolicitudRow) => void;
 }) {
-  const [rowHover, setRowHover] = useState(false);
-
   return (
-    <tr
-      className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
-      onMouseEnter={() => setRowHover(true)}
-      onMouseLeave={() => setRowHover(false)}
-    >
+    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
       <td className="px-4 py-3 align-middle">
         <div className="min-w-0">
           <p className="truncate font-semibold text-foreground">
@@ -67,21 +63,18 @@ function SolicitudListRow({
           <span className="text-xs italic text-muted-foreground">Sin asignar</span>
         )}
       </td>
-      <td className="px-4 py-3 text-center align-middle">
-        <button
-          type="button"
-          onClick={() => onDetail(solicitud)}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-          aria-label={`Ejecutar solicitud a ${solicitud.destino}`}
-        >
-          <GvMorphIcon
-            icon={Play}
-            hoverIcon={ArrowRight}
-            size={14}
-            externalHover={rowHover}
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <SigetActionButton
+            label="Ejecutar"
+            accentColor={sigetAccent.abrir}
+            morphFrom={Play}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(solicitud)}
+            ariaLabel={`Ejecutar solicitud a ${solicitud.destino}`}
+            className="w-auto shrink-0"
           />
-          Ejecutar
-        </button>
+        </GestionVehiculosActionCell>
       </td>
     </tr>
   );
@@ -112,7 +105,7 @@ export function SolicitudesList({
           { key: "salida", label: "Fecha de salida" },
           { key: "estado", label: "Estado" },
           { key: "vehiculo", label: "Vehículo" },
-          { key: "acciones", label: "Acciones", className: "text-center" },
+          { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}
       />
       <tbody>

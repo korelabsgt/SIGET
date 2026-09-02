@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, LogIn } from "lucide";
-import { GvMorphIcon } from "../lib/morph-icon";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { GestionVehiculosActionCell, gvTableActionTdClass, gvTableActionThClass } from "../lib/table-ui";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 
@@ -35,14 +35,8 @@ function VehiculoListRow({
   index: number;
   onDetail: (vehiculo: VehiculoRow) => void;
 }) {
-  const [rowHover, setRowHover] = useState(false);
-
   return (
-    <tr
-      className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
-      onMouseEnter={() => setRowHover(true)}
-      onMouseLeave={() => setRowHover(false)}
-    >
+    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
       <td
         className={cn(
           cellPad,
@@ -65,21 +59,18 @@ function VehiculoListRow({
       <td className={cn(cellPad, "text-center align-middle")}>
         <EstadoBadge estado={vehiculo.estado} />
       </td>
-      <td className={cn(cellPad, "w-0 whitespace-nowrap text-center align-middle")}>
-        <button
-          type="button"
-          onClick={() => onDetail(vehiculo)}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-          aria-label={`Entrar a ${vehiculo.placa}`}
-        >
-          <GvMorphIcon
-            icon={LogIn}
-            hoverIcon={ArrowRight}
-            size={14}
-            externalHover={rowHover}
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <SigetActionButton
+            label="Entrar"
+            accentColor={sigetAccent.abrir}
+            morphFrom={LogIn}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(vehiculo)}
+            ariaLabel={`Entrar a ${vehiculo.placa}`}
+            className="w-auto shrink-0"
           />
-          Entrar
-        </button>
+        </GestionVehiculosActionCell>
       </td>
     </tr>
   );
@@ -88,9 +79,11 @@ function VehiculoListRow({
 export function VehiculosList({
   vehiculos,
   onDetail,
+  rowOffset = 0,
 }: {
   vehiculos: VehiculoRow[];
   onDetail: (vehiculo: VehiculoRow) => void;
+  rowOffset?: number;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -101,7 +94,7 @@ export function VehiculosList({
             <th className={cn(cellPad, "w-0 whitespace-nowrap text-left")}>Placa</th>
             <th className={cn(cellPad, "w-full text-left")}>Marca / modelo</th>
             <th className={cn(cellPad, "text-center")}>Estado</th>
-            <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>Acciones</th>
+            <th className={gvTableActionThClass}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -109,7 +102,7 @@ export function VehiculosList({
             <VehiculoListRow
               key={vehiculo.id}
               vehiculo={vehiculo}
-              index={index}
+              index={rowOffset + index}
               onDetail={onDetail}
             />
           ))}

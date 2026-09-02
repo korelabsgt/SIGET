@@ -362,25 +362,27 @@ export function formatVehiculoOpcion(
 export const MAX_FOTOS_VEHICULO = 4;
 export const MIN_FOTOS_VEHICULO = 1;
 
-export function fotosVehiculo(
-  vehiculo: Pick<VehiculoRow, "imagen_url">,
-): string[] {
-  const raw: unknown = vehiculo.imagen_url;
-  const fromArray = Array.isArray(raw)
-    ? raw.filter((item): item is string => typeof item === "string")
-    : typeof raw === "string" && raw.trim().length > 0
-      ? [raw]
-      : [];
-  const normalized = fromArray
+function normalizarFotoPaths(paths: string[]): string[] {
+  const normalized = paths
+    .filter((item) => typeof item === "string" && item.trim().length > 0)
     .map((url) => normalizeVehiculoStoragePath(url) ?? url.trim())
     .filter((url) => url.length > 0);
   return [...new Set(normalized)].slice(0, MAX_FOTOS_VEHICULO);
 }
 
+export function fotosVehiculo(vehiculo: Pick<VehiculoRow, "imagen_url">): string[] {
+  return normalizarFotoPaths(vehiculo.imagen_url ?? []);
+}
+
+export function imagenUrlParaDb(fotos: string[]): string[] {
+  return normalizarFotoPaths(fotos);
+}
+
 export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
+  const fotos = fotosVehiculo(row);
   return {
     ...row,
-    imagen_url: fotosVehiculo(row),
+    imagen_url: fotos,
   };
 }
 

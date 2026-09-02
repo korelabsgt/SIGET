@@ -14,6 +14,11 @@ import {
   type MecanicoOption,
 } from "./zod";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
+import {
+  canGestionarFallasMantenimiento,
+  canViewAllFallasMantenimiento,
+} from "../../lib/permissions";
+import { vehiculoDisponibleParaReporteFalla, evidenciasFalla, normalizeFallaRow } from "./helpers";
 
 const TABLE = "ter_fallas_mantenimiento";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/mantenimiento";
@@ -27,13 +32,16 @@ async function requireAuth() {
 
   if (!user) throw new Error("No autenticado.");
 
-  return { supabase, user };
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+
+  return { supabase, user, role };
 }
 
 export async function getFallasMantenimiento(): Promise<FallaRow[]> {
-  const { supabase } = await requireAuth();
+  const { supabase, user, role } = await requireAuth();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from(TABLE)
     .select(`
       *,
@@ -43,9 +51,15 @@ export async function getFallasMantenimiento(): Promise<FallaRow[]> {
     `)
     .order("created_at", { ascending: false });
 
+  if (!canViewAllFallasMantenimiento(role)) {
+    query = query.eq("reportado_por", user.id);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw new Error(error.message);
 
-  return data as FallaRow[];
+  return (data ?? []).map((row) => normalizeFallaRow(row as FallaRow));
 }
 
 export async function getVehiculosParaFallas(): Promise<VehiculoFallaOption[]> {
@@ -54,6 +68,7 @@ export async function getVehiculosParaFallas(): Promise<VehiculoFallaOption[]> {
   const { data, error } = await supabase
     .from("ter_vehiculos")
     .select("id, placa, marca, modelo, estado")
+    .neq("estado", "EN_MANTENIMIENTO")
     .order("placa", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -83,9 +98,38 @@ export async function createFalla(input: FallaMantenimientoFormData): Promise<vo
       throw new Error("Los datos de la avería no son válidos.");
     }
 
+    const { data: vehiculo, error: vehiculoError } = await supabase
+      .from("ter_vehiculos")
+      .select("estado")
+      .eq("id", parsed.data.vehiculo_id)
+      .maybeSingle();
+
+    if (vehiculoError || !vehiculo) {
+      throw new Error("Vehículo no encontrado.");
+    }
+
+    if (!vehiculoDisponibleParaReporteFalla(vehiculo.estado)) {
+      throw new Error("Este vehículo ya está en mantenimiento.");
+    }
+
+    const { count: fallasActivas, error: fallasError } = await supabase
+      .from(TABLE)
+      .select("id", { count: "exact", head: true })
+      .eq("vehiculo_id", parsed.data.vehiculo_id)
+      .in("estado", ["PENDIENTE", "EN_REPARACION"]);
+
+    if (fallasError) {
+      throw new Error("No se pudo verificar el estado del vehículo.");
+    }
+
+    if ((fallasActivas ?? 0) > 0) {
+      throw new Error("Este vehículo ya tiene una avería activa.");
+    }
+
     const { error } = await supabase.from(TABLE).insert([
       {
         ...parsed.data,
+        evidencia_url: evidenciasFalla(parsed.data),
         reportado_por: user.id,
         estado: "PENDIENTE",
       },
@@ -106,7 +150,11 @@ export async function createFalla(input: FallaMantenimientoFormData): Promise<vo
 }
 
 export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
-  const { supabase } = await requireAuth();
+  const { supabase, role } = await requireAuth();
+
+  if (!canGestionarFallasMantenimiento(role)) {
+    throw new Error("No tienes permisos para atender averías.");
+  }
 
   const parsed = AtenderFallaSchema.safeParse(input);
   if (!parsed.success) {
@@ -133,7 +181,11 @@ export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
 
 export async function solventarFalla(input: SolventarFallaFormData): Promise<void> {
   try {
-    const { supabase } = await requireAuth();
+    const { supabase, role } = await requireAuth();
+
+    if (!canGestionarFallasMantenimiento(role)) {
+      throw new Error("No tienes permisos para solventar averías.");
+    }
 
     const parsed = SolventarFallaSchema.safeParse(input);
     if (!parsed.success) {

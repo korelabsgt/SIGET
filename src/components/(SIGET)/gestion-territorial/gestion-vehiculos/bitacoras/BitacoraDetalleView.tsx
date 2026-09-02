@@ -5,13 +5,10 @@ import {
   Car,
   CarFront,
   ChevronLeft,
-  Fuel,
   MapPin,
-  Receipt,
+  MessageSquare,
   Route,
-  User,
 } from "lucide";
-import { MessageSquare } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGt } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
@@ -44,6 +41,30 @@ function ChipDato({
       <div className="min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
         <p className="mt-0.5 truncate text-sm font-semibold text-foreground">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function FilaDocumento({
+  icon,
+  hoverIcon,
+  label,
+  value,
+}: {
+  icon: typeof MapPin;
+  hoverIcon: typeof MapPin;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-t border-zinc-200 py-4 first:border-t-0 first:pt-0 dark:border-zinc-700">
+      <span className="mt-0.5 text-zinc-400 dark:text-zinc-500">
+        <GvMorphIcon icon={icon} hoverIcon={hoverIcon} size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="mt-1 text-sm leading-relaxed text-foreground">{value}</p>
       </div>
     </div>
   );
@@ -93,19 +114,19 @@ export function BitacoraDetalleView({
 
       <div className={cn("mt-4", GV_DETALLE_CARD_CLASS)}>
         <div className="min-w-0">
-          <span className="text-xs text-muted-foreground">
-            Registrado el {formatFechaHoraGt(bitacora.created_at)}
-          </span>
-          <h1 className="mt-3 flex items-start gap-2.5 text-3xl font-black tracking-tight text-foreground md:text-4xl">
+          <h1 className="flex items-start gap-2.5 text-3xl font-black tracking-tight text-foreground md:text-4xl">
             <span className="mt-1 shrink-0 text-celeste-trifinio">
               <GvMorphIcon icon={MapPin} size={28} morphOnHover={false} />
             </span>
             <span className="min-w-0 capitalize">{bitacora.destino}</span>
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">Conductor {conductor}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Conductor{" "}
+            <span className="font-semibold text-celeste-trifinio">{conductor}</span>
+          </p>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <ChipDato
             icon={Route}
             hoverIcon={MapPin}
@@ -113,67 +134,42 @@ export function BitacoraDetalleView({
             value={formatFechaHoraGt(bitacora.fecha)}
           />
           <ChipDato
-            icon={User}
-            hoverIcon={User}
-            label="Conductor"
-            value={conductor}
+            icon={Route}
+            hoverIcon={Route}
+            label="Km inicial"
+            value={`${bitacora.km_inicial.toLocaleString("es-GT")} km`}
           />
           <ChipDato
             icon={Route}
             hoverIcon={Route}
-            label="Recorrido"
-            value={`${bitacora.km_recorrido.toLocaleString("es-GT")} km`}
+            label="Km final"
+            value={`${bitacora.km_final.toLocaleString("es-GT")} km`}
           />
           <ChipDato
-            icon={Fuel}
-            hoverIcon={Receipt}
-            label="Combustible"
-            value={formatMontoCombustible(Number(bitacora.monto_combustible))}
+            icon={Route}
+            hoverIcon={MapPin}
+            label="Total recorrido"
+            value={`${bitacora.km_recorrido.toLocaleString("es-GT")} km`}
           />
         </div>
 
         <div className="mt-8 grid gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 dark:border-zinc-700">
           <section>
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Detalle del recorrido
-            </h2>
-            <div className={cn("mt-4", GV_DETALLE_NESTED_CLASS)}>
-              <FilaSimple
-                label="Kilometraje inicial"
-                value={`${bitacora.km_inicial.toLocaleString("es-GT")} km`}
-              />
-              <FilaSimple
-                label="Kilometraje final"
-                value={`${bitacora.km_final.toLocaleString("es-GT")} km`}
-              />
-              <FilaSimple
-                label="Total recorrido"
-                value={`${bitacora.km_recorrido.toLocaleString("es-GT")} km`}
-              />
-            </div>
-
-            <h2 className="mt-8 text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
               Comentarios
             </h2>
             {comentarios.length > 0 ? (
-              <ul className="mt-4 space-y-3">
+              <div className="mt-6">
                 {comentarios.map((c) => (
-                  <li
+                  <FilaDocumento
                     key={c.id}
-                    className={GV_DETALLE_CHIP_CLASS}
-                  >
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="mt-0.5 size-4 shrink-0 text-celeste-trifinio" />
-                      <div className="min-w-0">
-                        <p className="text-sm leading-relaxed text-foreground">{c.texto}</p>
-                        <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          {formatFechaHoraGt(c.fecha)}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
+                    icon={MessageSquare}
+                    hoverIcon={MessageSquare}
+                    label={formatFechaHoraGt(c.fecha)}
+                    value={c.texto}
+                  />
                 ))}
-              </ul>
+              </div>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">Sin comentarios registrados.</p>
             )}

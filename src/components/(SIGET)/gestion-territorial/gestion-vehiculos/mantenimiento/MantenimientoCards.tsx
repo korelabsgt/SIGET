@@ -21,9 +21,9 @@ export function MantenimientoCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {fallas.map((falla) => (
-        <FallaCard key={falla.id} falla={falla} onDetail={onDetail} />
+    <div className="grid grid-cols-1 gap-4">
+      {fallas.map((falla, index) => (
+        <FallaCard key={falla.id} falla={falla} onDetail={onDetail} index={index} />
       ))}
     </div>
   );

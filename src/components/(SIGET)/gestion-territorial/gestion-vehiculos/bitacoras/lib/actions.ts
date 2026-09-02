@@ -4,21 +4,30 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
 import { normalizeBitacoraRow } from "./helpers";
+import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
+import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 
 const TABLE = "ter_bitacoras";
 const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/bitacoras";
 
 async function requireAuth() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
-  return { supabase, user };
+
+  const role =
+    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+
+  return { supabase, user, role };
 }
 
 export async function getBitacoras(): Promise<BitacoraRow[]> {
   try {
-    const { supabase } = await requireAuth();
-    const { data, error } = await supabase
+    const { supabase, user, role } = await requireAuth();
+
+    let query = supabase
       .from(TABLE)
       .select(`
         *,
@@ -26,6 +35,12 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
         profiles:conductor_id (nombre)
       `)
       .order("fecha", { ascending: false });
+
+    if (!canViewAllBitacoras(role)) {
+      query = query.eq("conductor_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data ?? []).map((row) => normalizeBitacoraRow(row as BitacoraRow));
@@ -40,12 +55,13 @@ export async function createBitacora(input: BitacoraInput) {
     const { supabase, user } = await requireAuth();
     const parsed = bitacoraInputSchema.parse(input);
     const comentarios = toComentariosJsonbPayload(parsed.comentarios);
+    const solicitudId = parsed.solicitud_id?.trim() || null;
 
-    if (parsed.solicitud_id) {
+    if (solicitudId) {
       const { data: solicitud, error: solicitudError } = await supabase
         .from("ter_solicitudes")
         .select("id, solicitante_id, estado")
-        .eq("id", parsed.solicitud_id)
+        .eq("id", solicitudId)
         .maybeSingle();
 
       if (solicitudError || !solicitud) {
@@ -60,13 +76,12 @@ export async function createBitacora(input: BitacoraInput) {
     }
 
     const { error } = await supabase.from(TABLE).insert({
-      solicitud_id: parsed.solicitud_id || null,
+      solicitud_id: solicitudId,
       vehiculo_id: parsed.vehiculo_id,
       conductor_id: user.id,
       destino: parsed.destino,
       km_inicial: parsed.km_inicial,
       km_final: parsed.km_final,
-      km_recorrido: parsed.km_final - parsed.km_inicial,
       vale_combustible: parsed.vale_combustible || null,
       monto_combustible: parsed.monto_combustible,
       comentarios,
@@ -75,16 +90,35 @@ export async function createBitacora(input: BitacoraInput) {
 
     if (error) throw error;
 
-    // If it's linked to a mission, finish it
-    if (parsed.solicitud_id) {
+    const { error: kmError } = await supabase
+      .from("ter_vehiculos")
+      .update({ kilometraje_actual: parsed.km_final })
+      .eq("id", parsed.vehiculo_id);
+
+    if (kmError) {
+      console.error("Error updating vehiculo kilometraje:", kmError);
+    }
+
+    if (solicitudId) {
       const { error: updateError } = await supabase
         .from("ter_solicitudes")
         .update({ estado: "FINALIZADA" })
-        .eq("id", parsed.solicitud_id);
-      
-      if (updateError) throw updateError;
+        .eq("id", solicitudId)
+        .eq("solicitante_id", user.id)
+        .eq("estado", "EN_MISION");
+
+      if (updateError) {
+        console.error("Error finalizing solicitud:", updateError);
+        return {
+          success: false,
+          error:
+            "La bitácora se guardó, pero no se pudo finalizar la misión vinculada. Contacte al administrador.",
+        };
+      }
       revalidatePath("/siget/gestion-territorial/gestion-vehiculos/solicitudes");
     }
+
+    await sincronizarEstadoFlotaVehiculo(supabase, parsed.vehiculo_id);
 
     revalidatePath(REVALIDATE_ROUTE);
     revalidatePath("/siget/gestion-territorial/gestion-vehiculos/flota");
@@ -97,17 +131,21 @@ export async function createBitacora(input: BitacoraInput) {
 
 export async function getMetricasBitacoras() {
   try {
-    const { supabase } = await requireAuth();
-    
-    // Simplest approach: fetch this month's data and reduce
-    // Alternatively, could use an RPC, but we'll do it in JS for simplicity since volume is manageable
+    const { supabase, user, role } = await requireAuth();
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from(TABLE)
       .select("km_recorrido, monto_combustible")
       .gte("fecha", startOfMonth);
+
+    if (!canViewAllBitacoras(role)) {
+      query = query.eq("conductor_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -179,7 +217,12 @@ export async function getSolicitudesEnMision() {
 
 export async function getDatosReporteBitacora(mes: number, anio: number, vehiculo_id: string) {
   try {
-    const { supabase } = await requireAuth();
+    const { supabase, user, role } = await requireAuth();
+
+    if (!canExportBitacoraReporte(role)) {
+      return [];
+    }
+
     const startDate = new Date(anio, mes - 1, 1, 0, 0, 0, 0).toISOString();
     const endDate = new Date(anio, mes, 0, 23, 59, 59, 999).toISOString();
 
@@ -203,6 +246,10 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
 
     if (vehiculo_id && vehiculo_id !== "all") {
       query = query.eq("vehiculo_id", vehiculo_id);
+    }
+
+    if (!canViewAllBitacoras(role)) {
+      query = query.eq("conductor_id", user.id);
     }
 
     const { data, error } = await query;

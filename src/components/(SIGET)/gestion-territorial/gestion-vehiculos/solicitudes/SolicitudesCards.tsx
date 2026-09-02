@@ -21,9 +21,14 @@ export function SolicitudesCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3">
-      {solicitudes.map((solicitud) => (
-        <SolicitudCard key={solicitud.id} solicitud={solicitud} onDetail={onDetail} />
+    <div className="grid grid-cols-1 gap-4">
+      {solicitudes.map((solicitud, index) => (
+        <SolicitudCard
+          key={solicitud.id}
+          solicitud={solicitud}
+          onDetail={onDetail}
+          index={index}
+        />
       ))}
     </div>
   );

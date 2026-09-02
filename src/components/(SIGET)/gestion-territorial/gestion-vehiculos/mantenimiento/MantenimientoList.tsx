@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, Eye } from "lucide";
 import { Wrench } from "lucide-react";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { type FallaRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
   GestionVehiculosTableEmpty,
   GestionVehiculosThead,
+  GestionVehiculosActionCell,
+  gvTableActionTdClass,
+  gvTableActionThClass,
+  gvTableHeaderThClass,
 } from "../lib/table-ui";
-import { GvMorphIcon } from "../lib/morph-icon";
 import {
   estadoFallaBadgeClass,
+  FALLA_BADGE_BASE_CLASS,
   formatEstadoFallaLabel,
   formatSeveridadLabel,
   formatVehiculoFalla,
@@ -25,46 +29,38 @@ function FallaListRow({
   falla: FallaRow;
   onDetail: (falla: FallaRow) => void;
 }) {
-  const [rowHover, setRowHover] = useState(false);
-
   return (
-    <tr
-      className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20"
-      onMouseEnter={() => setRowHover(true)}
-      onMouseLeave={() => setRowHover(false)}
-    >
-      <td className="px-4 py-3 align-middle">
+    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
+      <td className="px-4 py-3 align-middle text-center">
         <p className="truncate font-semibold text-foreground">{formatVehiculoFalla(falla)}</p>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-middle">
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${severidadBadgeClass(falla.severidad)}`}
-        >
+      <td className="whitespace-nowrap px-4 py-3 align-middle text-center">
+        <span className={`${FALLA_BADGE_BASE_CLASS} ${severidadBadgeClass(falla.severidad)}`}>
           {formatSeveridadLabel(falla.severidad)}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-middle">
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoFallaBadgeClass(falla.estado)}`}
-        >
+      <td className="whitespace-nowrap px-4 py-3 align-middle text-center">
+        <span className={`${FALLA_BADGE_BASE_CLASS} ${estadoFallaBadgeClass(falla.estado)}`}>
           {formatEstadoFallaLabel(falla.estado)}
         </span>
       </td>
-      <td className="max-w-[28rem] px-4 py-3 align-middle">
+      <td className="max-w-[28rem] px-4 py-3 align-middle text-center">
         <p className="line-clamp-2 text-sm text-foreground" title={falla.descripcion}>
           {falla.descripcion}
         </p>
       </td>
-      <td className="px-4 py-3 text-center align-middle">
-        <button
-          type="button"
-          onClick={() => onDetail(falla)}
-          className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border-0 bg-celeste-trifinio px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-          aria-label={`Ver avería de ${formatVehiculoFalla(falla)}`}
-        >
-          <GvMorphIcon icon={Eye} hoverIcon={ArrowRight} size={14} externalHover={rowHover} />
-          Ver
-        </button>
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <SigetActionButton
+            label="Ver"
+            accentColor={sigetAccent.abrir}
+            morphFrom={Eye}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(falla)}
+            ariaLabel={`Ver avería de ${formatVehiculoFalla(falla)}`}
+            className="w-auto shrink-0"
+          />
+        </GestionVehiculosActionCell>
       </td>
     </tr>
   );
@@ -91,11 +87,11 @@ export function MantenimientoList({
     <GestionVehiculosTable minWidth={720}>
       <GestionVehiculosThead
         cells={[
-          { key: "vehiculo", label: "Vehículo" },
-          { key: "severidad", label: "Severidad" },
-          { key: "estado", label: "Estado" },
-          { key: "descripcion", label: "Descripción" },
-          { key: "acciones", label: "Acción", className: "text-center" },
+          { key: "vehiculo", label: "Vehículo", className: gvTableHeaderThClass },
+          { key: "severidad", label: "Severidad", className: gvTableHeaderThClass },
+          { key: "estado", label: "Estado", className: gvTableHeaderThClass },
+          { key: "descripcion", label: "Descripción", className: gvTableHeaderThClass },
+          { key: "acciones", label: "Acción", className: gvTableActionThClass },
         ]}
       />
       <tbody>

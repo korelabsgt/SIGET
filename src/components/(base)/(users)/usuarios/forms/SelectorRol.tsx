@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS } from "../lib/permissions";
@@ -39,6 +39,12 @@ export function SelectorRol({
 }: SelectorRolProps) {
   const [isCustomRole, setIsCustomRole] = useState(false);
 
+  const displayRoleOptions = useMemo(() => {
+    const trimmed = value.trim();
+    if (!trimmed || roleOptions.includes(trimmed)) return roleOptions;
+    return [...roleOptions, trimmed];
+  }, [roleOptions, value]);
+
   useEffect(() => {
     setIsCustomRole(false);
   }, [resetKey]);
@@ -47,20 +53,30 @@ export function SelectorRol({
     if (
       !isCustomRole &&
       !readOnly &&
-      roleOptions.length > 0 &&
+      displayRoleOptions.length > 0 &&
       value &&
-      !roleOptions.includes(value)
+      !displayRoleOptions.includes(value)
     ) {
       onChange(resolveKnownRole(roleOptions, preferredRole));
     }
-  }, [isCustomRole, readOnly, roleOptions, value, preferredRole, onChange]);
+  }, [
+    isCustomRole,
+    readOnly,
+    roleOptions,
+    displayRoleOptions,
+    value,
+    preferredRole,
+    onChange,
+  ]);
 
   const fieldClassName =
     "flex h-10 w-full rounded-lg border border-input bg-background/50 px-3 text-sm outline-none transition-all";
 
   const handleToggleCustom = () => {
     if (isCustomRole) {
-      onChange(resolveKnownRole(roleOptions, preferredRole));
+      if (!value.trim()) {
+        onChange(resolveKnownRole(roleOptions, preferredRole));
+      }
     } else {
       onChange("");
     }
@@ -103,7 +119,7 @@ export function SelectorRol({
                 {ROLE_LABELS[value] || value || "Usuario"}
               </option>
             ) : (
-              roleOptions.map((role) => (
+              displayRoleOptions.map((role) => (
                 <option key={role} value={role}>
                   {ROLE_LABELS[role] || role}
                 </option>
