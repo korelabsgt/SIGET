@@ -38,7 +38,7 @@ Icono: `@/components/ui/morph-hover-icon` + par Lucide `from` / `to` importados 
 | Padding | Simétrico (`px-2.5`) |
 | Altura | `h-9` |
 | Tipografía | `text-xs font-bold` |
-| Superficie | Fondo blanco, `border-2 border-border`, sin sombra |
+| Superficie | Fondo blanco, `border-2 border-border`, **sin sombra** (`shadow-none`; el componente ya lo incluye) |
 | Color | Misma tonalidad en **texto e icono** vía `accentColor` |
 | Ripple | Gris claro `#E5E7EB` salvo caso especial |
 | Cursor | `cursor-pointer`; deshabilitado → `opacity-60` |
@@ -50,6 +50,7 @@ Icono: `@/components/ui/morph-hover-icon` + par Lucide `from` / `to` importados 
 - Texto de más de una palabra en el label visible (usar `ariaLabel` para descripción larga).
 - Icono a la izquierda del texto.
 - Fondos semánticos de color en el botón (sky-100, emerald-100, etc.); solo blanco/card + acento en texto/icono.
+- **Sombras en botones.** Prohibido `shadow`, `shadow-sm`, `shadow-md`, `shadow-lg` o cualquier `drop-shadow` en `SigetActionButton` / `RippleButton` / `className`. La superficie es plana: solo borde.
 
 ## Paleta `sigetAccent`
 

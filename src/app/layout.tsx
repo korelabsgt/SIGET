@@ -54,14 +54,14 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className="h-full">
       <body
         suppressHydrationWarning
         style={{
           paddingTop: "var(--banner-height, 0px)",
           transition: "padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-full flex-col bg-background`}
       >
         <Providers>
           <ThemeProvider
@@ -71,11 +71,15 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <UserProvider user={user}>
-              <OfflineBanner />
-              <Header />
-              <main className="flex-1 w-full flex flex-col">{children}</main>
-              <ConditionalFooter />
-              <ObsToastContainer />
+              <div className="flex min-h-0 flex-1 flex-col w-full">
+                <OfflineBanner />
+                <main className="flex min-h-0 flex-1 w-full flex-col overflow-y-auto">
+                  <Header />
+                  <div className="flex flex-1 flex-col">{children}</div>
+                  <ConditionalFooter />
+                </main>
+                <ObsToastContainer />
+              </div>
             </UserProvider>
           </ThemeProvider>
         </Providers>

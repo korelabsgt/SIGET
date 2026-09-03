@@ -44,9 +44,9 @@ Prohibido dispersar lógica del módulo fuera de esa carpeta.
 
 ## Modales
 
-Implementación única en `components/ui/general-modal.tsx` (`ModalShell`, `ModalForm`, `ModalField`, `ModalInput`, `ModalFechaInput`, `ModalLabel`, `ModalTextarea`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`). Feedback con `toast` de react-toastify y `modalActionMessage` de `modal-toast.ts`.
+Implementación única en `components/ui/general-modal.tsx` (`ModalShell`, `ModalForm`, `ModalField`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalFechaInput`, `ModalCancelButton`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`, `modalAccentClass`).
 
-Comportamiento, overlay, superficies, campos y prohibiciones: ver `diseno-ux-ui.mdc`.
+Formato: header/contenido mismo fondo (`white` / `zinc-900`); footer diferenciado; título y labels azul Trifinio (`#2c5f9b` / `#6f9fd4`); `ModalField` `space-y-2.5`; fechas con `ModalFechaInput`. Detalle en skill `ui-modales` y `diseno-ux-ui.mdc`.
 
 ## Botones de acción
 

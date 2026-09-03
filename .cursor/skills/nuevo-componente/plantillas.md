@@ -341,15 +341,17 @@ Archivos especializados (`*-excel.ts`, `*-export.ts`) pueden coexistir; no reemp
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { fechaCalendarioGt } from "@/lib/fechas-gt";
 import {
   ModalShell,
   ModalLabel,
   ModalInput,
   ModalTextarea,
+  ModalForm,
+  ModalField,
   ModalSubmit,
   ModalFooter,
+  ModalCancelButton,
   modalActionMessage,
   toast,
 } from "@/components/ui/general-modal";
@@ -381,39 +383,33 @@ function CrearBody({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <motion.form
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      onSubmit={handleSubmit}
-      className="space-y-5"
-    >
-      <div className="grid gap-2">
+    <ModalForm onSubmit={handleSubmit}>
+      <ModalField>
         <ModalLabel htmlFor="nombre">Nombre</ModalLabel>
         <ModalInput
           id="nombre"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          required
           autoFocus
         />
-      </div>
+      </ModalField>
 
-      <div className="grid gap-2">
-        <ModalLabel htmlFor="descripcion">
-          Descripción <span className="font-normal text-muted-foreground">(opcional)</span>
-        </ModalLabel>
+      <ModalField>
+        <ModalLabel htmlFor="descripcion">Descripción (opcional)</ModalLabel>
         <ModalTextarea
           id="descripcion"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
+          rows={3}
         />
-      </div>
+      </ModalField>
 
       <ModalFooter>
-        <ModalSubmit disabled={crear.isPending}>
-          {crear.isPending ? <Loader2 className="size-4 animate-spin" /> : "Guardar"}
-        </ModalSubmit>
+        <ModalCancelButton onClick={onClose} disabled={crear.isPending} />
+        <ModalSubmit disabled={crear.isPending} />
       </ModalFooter>
-    </motion.form>
+    </ModalForm>
   );
 }
 
@@ -427,7 +423,7 @@ export function CrearEntidad({
   const onClose = () => onOpenChange(false);
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Nuevo registro" subtitle="Creación">
+    <ModalShell open={open} onClose={onClose} title="Nuevo registro" maxWidth="max-w-lg">
       {open && <CrearBody onClose={onClose} />}
     </ModalShell>
   );

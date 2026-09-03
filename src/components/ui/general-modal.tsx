@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Ban, Check, Save, Trash, Trash2, X } from "lucide";
@@ -20,6 +20,8 @@ export {
 
 export const modalFieldClass =
   "border border-zinc-200/80 dark:border-zinc-700 focus-visible:border-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400/25 dark:focus-visible:border-zinc-500 dark:focus-visible:ring-zinc-500/30";
+
+export const modalAccentClass = "font-bold text-[#2c5f9b] dark:text-[#6f9fd4]";
 
 const modalInputBaseClass =
   "flex h-10 w-full rounded-lg bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:outline-none";
@@ -46,7 +48,7 @@ export function ModalField({
   className?: string;
   children: React.ReactNode;
 }) {
-  return <div className={cn("space-y-2", className)}>{children}</div>;
+  return <div className={cn("space-y-2.5", className)}>{children}</div>;
 }
 
 export function ModalLabel({
@@ -56,10 +58,7 @@ export function ModalLabel({
   return (
     <label
       {...props}
-      className={cn(
-        "text-sm font-semibold leading-none text-foreground/70",
-        className,
-      )}
+      className={cn("text-sm leading-none", modalAccentClass, className)}
     />
   );
 }
@@ -265,6 +264,12 @@ export function ModalShell({
   maxWidth = "max-w-md",
   fullscreen = false,
   fullHeight = false,
+  contentClassName,
+  headerActions,
+  headerActionsAlign = "end",
+  headerClassName,
+  hideCloseButton = false,
+  hideHeaderOnMobile = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -274,6 +279,12 @@ export function ModalShell({
   maxWidth?: string;
   fullscreen?: boolean;
   fullHeight?: boolean;
+  contentClassName?: string;
+  headerActions?: ReactNode;
+  headerActionsAlign?: "start" | "end";
+  headerClassName?: string;
+  hideCloseButton?: boolean;
+  hideHeaderOnMobile?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -325,33 +336,73 @@ export function ModalShell({
                   "rounded-none border-0 shadow-none dark:bg-zinc-900 md:rounded-none",
               )}
             >
-              <div className="flex shrink-0 items-center justify-between border-b border-zinc-200/80 bg-zinc-100 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] dark:border-zinc-700 dark:bg-zinc-800 md:px-6 md:py-4">
-                <div className="min-w-0 pr-3">
-                  <h3 className="truncate text-lg font-bold tracking-tight text-foreground md:text-xl">
-                    {title}
-                  </h3>
-                  {subtitle ? (
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {subtitle}
-                    </p>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="-mr-1 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10"
-                  aria-label="Cerrar"
-                >
-                  <XIcon size={22} strokeWidth={2.25} />
-                </button>
+              <div
+                className={cn(
+                  "flex shrink-0 items-center gap-3 border-b border-zinc-200/80 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] dark:border-zinc-700 dark:bg-zinc-900 md:gap-4 md:px-6 md:py-4",
+                  hideHeaderOnMobile && "max-md:hidden",
+                  headerClassName,
+                )}
+              >
+                {title || subtitle ? (
+                  <div className="min-w-0 shrink">
+                    {title ? (
+                      <h3
+                        className={cn(
+                          "truncate text-lg tracking-tight md:text-xl",
+                          modalAccentClass,
+                        )}
+                      >
+                        {title}
+                      </h3>
+                    ) : null}
+                    {subtitle ? (
+                      <p
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-widest",
+                          modalAccentClass,
+                        )}
+                      >
+                        {subtitle}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {headerActions ? (
+                  <div
+                    className={cn(
+                      "flex min-w-0 items-center",
+                      headerActionsAlign === "end"
+                        ? "min-w-0 flex-1 justify-end"
+                        : "justify-start",
+                    )}
+                  >
+                    {headerActions}
+                  </div>
+                ) : null}
+                {!hideCloseButton ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className={cn(
+                      "-mr-1 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10",
+                      headerActionsAlign === "start" && "ml-auto",
+                    )}
+                    aria-label="Cerrar"
+                  >
+                    <XIcon size={22} strokeWidth={2.25} />
+                  </button>
+                ) : null}
               </div>
 
               <div
                 className={cn(
                   "min-h-0 flex-1 overflow-y-auto bg-white dark:bg-zinc-900",
-                  (fullscreen || fullHeight) &&
-                    "flex flex-col items-center justify-center p-4 md:p-6",
-                  !fullscreen && !fullHeight && "p-4 md:p-6",
+                  contentClassName ??
+                    cn(
+                      (fullscreen || fullHeight) &&
+                        "flex flex-col items-center justify-center p-4 md:p-6",
+                      !fullscreen && !fullHeight && "p-4 md:p-6",
+                    ),
                 )}
               >
                 {children}

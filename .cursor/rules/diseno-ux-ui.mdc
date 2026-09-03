@@ -12,13 +12,21 @@ alwaysApply: true
 
 ## Prohibiciones globales
 
-- Botones de acción: **solo** `SigetActionButton` (`@/components/ui/siget-action-button`) — RippleButton + MorphHoverIcon, una palabra, icono a la derecha, contenido centrado. Ver skill `ui-tema-botones`. Sin excepciones (pantallas, modales, listas).
+- Botones de acción: **solo** `SigetActionButton` (`@/components/ui/siget-action-button`) — RippleButton + MorphHoverIcon, una palabra, icono a la derecha, contenido centrado, **sin sombra**. Ver skill `ui-tema-botones`. Sin excepciones (pantallas, modales, listas).
 - Formularios flotantes: solo `ModalShell`. Prohibido `Dialog` de shadcn.
 - Feedback: solo `react-toastify`; un `ToastContainer` global.
 - SweetAlert solo **fuera** de `ModalShell`; dentro → `ModalConfirmDelete`.
 - Listas dinámicas: `AnimatePresence` + `motion` con `layout`.
 - Conexión: un solo `OfflineBanner` global; respetar `--banner-height`.
 - Menús flotantes (`DropdownMenu`, popovers, menús de 3 puntos): **fondo opaco sólido**. Prohibido dejar solo `bg-popover` si se ve transparente. Usar `bg-white dark:bg-zinc-900`, `opacity-100` y `z` alto (p. ej. `z-[200]`) para que no se transparente contenido detrás (paginación, filas, etc.).
+
+## Modales (`ModalShell`)
+
+- Formulario: `ModalForm` + `ModalField` + `ModalLabel` + `ModalInput` / `ModalTextarea` / `ModalFechaInput`.
+- Superficies: header y contenido `white` / `dark:zinc-900`; footer `zinc-100` / `dark:zinc-800` con borde superior.
+- Título y labels: `modalAccentClass` (`#2c5f9b` claro, `#6f9fd4` oscuro, `font-bold`).
+- Campos: borde zinc (`modalFieldClass`); fecha manual con `ModalFechaInput` (sin calendario).
+- Footer: `ModalCancelButton` + `ModalSubmit`; skill `ui-modales` para plantilla completa.
 
 ## Skills UI (cargar según necesidad)
 

@@ -1,4 +1,7 @@
--- Migración para alinear asist_registros con el código actual
+-- Histórico. Ya aplicado cuando las tablas se llamaban asist_*.
+-- No ejecutar. El esquema vigente usa act_actividades / act_registros.
+
+-- Migración para alinear registros con el código actual
 -- Ejecutar en Supabase SQL Editor
 
 -- 1) Columnas nuevas en actividades (si falta fecha_realizacion)

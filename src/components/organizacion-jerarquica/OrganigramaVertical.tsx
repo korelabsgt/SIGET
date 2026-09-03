@@ -7,9 +7,11 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   type MouseEvent,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -22,30 +24,30 @@ import type {
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Briefcase,
-  Check,
-  Clipboard,
-  Eye,
-  EyeOff,
   ListTree,
-  Loader2,
   Pencil,
   UserPlus,
   UserMinus,
   UserRound,
   ArrowRightLeft,
-  X,
 } from "lucide-react";
+import { modalAccentClass } from "@/components/ui/general-modal";
+import { Check, Clipboard, Eye, EyeOff, X, Ban } from "lucide";
+import type { IconNode } from "lucide";
 import { cn } from "@/lib/utils";
+import { SigetActionIcon, sigetAccent } from "@/components/ui/siget-action-button";
+import { RippleButton } from "@/components/ui/ripple-button";
 import {
   OrgActionButton,
   type AdminHandlers,
 } from "./lib/org-actions";
 import type { NodoOrganizacion } from "./lib/zod";
 import { toast } from "react-toastify";
-import { OrganigramaIcon } from "./OrganigramaIcon";
+import { ModalShell } from "@/components/ui/general-modal";
 import {
   OrganigramaExportMenu,
   organigramaExportIcons,
+  type OrganigramaToolbarHint,
 } from "./OrganigramaExportMenu";
 import {
   copyOrganigramaToClipboard,
@@ -97,6 +99,9 @@ const ORG_RAIZ_CARD_H = 104;
 const ORG_RAIZ_LOGO_H = 88;
 const ORG_RAIZ_LOGO_W = Math.round(ORG_RAIZ_LOGO_H * (1654 / 1863));
 
+const ORG_ZOOM_MIN = 0.5;
+const ORG_ZOOM_MAX = 2;
+
 const ORG_LEYENDA = [
   {
     swatch: "bg-azul-trifinio",
@@ -116,7 +121,6 @@ const ORG_LEYENDA = [
 ] as const;
 
 const ORG_ACTIONS_EASE = [0.33, 1, 0.68, 1] as const;
-const ORG_MODAL_MS = 320;
 const ORG_CARD_ANIM_MS = 360;
 
 function orgNodeStrideY(gapY = ORG_GAP_Y) {
@@ -145,6 +149,11 @@ function forkOffset(
     current = current.parent ?? null;
   }
   return offset;
+}
+
+function profundidadNodo(nodo: NodoOrganizacion): number {
+  if (!nodo.hijos?.length) return 1;
+  return 1 + Math.max(...nodo.hijos.map(profundidadNodo));
 }
 
 function orgStepPath(link: TreeLinkDatum, forkBoost: number) {
@@ -179,7 +188,9 @@ function useOrgMenuClose() {
 function isOrgInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(
-    target.closest("[data-org-card]") || target.closest("[data-org-actions]"),
+    target.closest("[data-org-toolbar]") ||
+      target.closest("[data-org-card]") ||
+      target.closest("[data-org-actions]"),
   );
 }
 
@@ -300,9 +311,26 @@ function toDatum(nodo: NodoOrganizacion): RawNodeDatum {
   };
 }
 
+function rd3tTransformToCss(transform: string | null): string | undefined {
+  if (!transform) return undefined;
+  const parts: string[] = [];
+  const translate = transform.match(
+    /translate\(\s*([-\d.eE]+)\s*[, ]\s*([-\d.eE]+)\s*\)/,
+  );
+  if (translate) {
+    parts.push(`translate(${translate[1]}px, ${translate[2]}px)`);
+  }
+  const scale = transform.match(/scale\(\s*([-\d.eE]+)\s*\)/);
+  if (scale) {
+    parts.push(`scale(${scale[1]})`);
+  }
+  return parts.length > 0 ? parts.join(" ") : undefined;
+}
+
 function useCenteredTree(active: boolean) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [canvasReady, setCanvasReady] = useState(false);
 
   useEffect(() => {
@@ -315,9 +343,10 @@ function useCenteredTree(active: boolean) {
     if (!el) return;
 
     const sync = () => {
-      const { width } = el.getBoundingClientRect();
-      if (width > 0) {
-        setTranslate({ x: width / 2, y: 160 });
+      const { width, height } = el.getBoundingClientRect();
+      if (width > 0 && height > 0) {
+        setDimensions({ width, height });
+        setTranslate({ x: width / 2, y: Math.max(120, Math.min(160, height * 0.15)) });
         setCanvasReady(true);
       }
     };
@@ -328,7 +357,7 @@ function useCenteredTree(active: boolean) {
     return () => observer.disconnect();
   }, [active]);
 
-  return { containerRef, translate, canvasReady };
+  return { containerRef, translate, dimensions, canvasReady };
 }
 
 function stopPropagation(e: MouseEvent) {
@@ -848,11 +877,246 @@ export type OrganigramaVerticalHandle = {
   closeMenus: () => void;
 };
 
+type OrganigramaToolbarConfig = {
+  mostrarNombres: boolean;
+  onToggleNombres: () => void;
+  copyState: "idle" | "copying" | "copied";
+  onCopy: () => void;
+  exportOptions: ComponentProps<typeof OrganigramaExportMenu>["options"];
+};
+
+export type { OrganigramaToolbarConfig };
+
+const ORG_TOOLBAR_SEGMENT =
+  "flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-none border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80";
+
+const ORG_TOOLBAR_SEGMENT_COMPACT =
+  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-none border-0 bg-transparent shadow-none transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80";
+
+function OrganigramaToolbarSegment({
+  hint,
+  accentColor,
+  morphFrom,
+  morphTo,
+  onClick,
+  disabled,
+  ariaLabel,
+  ariaBusy,
+  onHintChange,
+  className,
+  segmentClass = ORG_TOOLBAR_SEGMENT,
+}: {
+  hint: string;
+  accentColor: string;
+  morphFrom: IconNode;
+  morphTo: IconNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  ariaLabel?: string;
+  ariaBusy?: boolean;
+  onHintChange: (hint: OrganigramaToolbarHint) => void;
+  className?: string;
+  segmentClass?: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <RippleButton
+      type="button"
+      rippleColor="#E5E7EB"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel ?? hint}
+      aria-busy={ariaBusy || undefined}
+      onPointerEnter={() => {
+        setHovered(true);
+        onHintChange({ label: hint, color: accentColor });
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        onHintChange(null);
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={cn(
+        segmentClass,
+        disabled && "pointer-events-none opacity-60",
+        className,
+      )}
+    >
+      <SigetActionIcon
+        from={morphFrom}
+        to={morphTo}
+        color={accentColor}
+        hovered={hovered}
+      />
+    </RippleButton>
+  );
+}
+
+function OrganigramaCanvasToolbar({
+  mostrarNombres,
+  onToggleNombres,
+  copyState,
+  onCopy,
+  exportOptions,
+  inline = false,
+  onClose,
+}: OrganigramaToolbarConfig & { inline?: boolean; onClose?: () => void }) {
+  const [hoverHint, setHoverHint] = useState<OrganigramaToolbarHint>(null);
+  const ocultarHint = mostrarNombres ? "Ocultar nombres" : "Mostrar nombres";
+  const copiarHint =
+    copyState === "copied"
+      ? "Copiado"
+      : copyState === "copying"
+        ? "Copiando"
+        : "Copiar";
+  const segmentClass = inline ? ORG_TOOLBAR_SEGMENT_COMPACT : ORG_TOOLBAR_SEGMENT;
+
+  const titleLabel = (
+    <AnimatePresence mode="wait">
+      {hoverHint ? (
+        <motion.span
+          key={hoverHint.label}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+          className="text-sm font-bold tracking-tight whitespace-nowrap md:text-base"
+          style={{ color: hoverHint.color }}
+          aria-live="polite"
+        >
+          {hoverHint.label}
+        </motion.span>
+      ) : (
+        <motion.span
+          key="organigrama"
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+          className={cn(
+            "text-sm font-bold tracking-tight md:text-base",
+            modalAccentClass,
+          )}
+        >
+          Organigrama
+        </motion.span>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <div
+      className={cn(
+        inline ? "w-full" : "mt-3 border-t border-border/50 pt-2.5",
+      )}
+      data-org-toolbar=""
+    >
+      <div
+        className={cn(
+          "flex items-center",
+          inline ? "w-full justify-between gap-2" : "gap-2.5",
+        )}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {inline ? (
+          <div className="min-h-5 min-w-0 flex-1 overflow-hidden">
+            {titleLabel}
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            inline ? "shrink-0" : undefined,
+          )}
+        >
+          {!inline ? (
+            <div className="flex min-h-5 min-w-[5rem] items-center justify-end">
+              <AnimatePresence mode="wait">
+                {hoverHint ? (
+                  <motion.span
+                    key={hoverHint.label}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                    className="text-xs font-bold whitespace-nowrap"
+                    style={{ color: hoverHint.color }}
+                    aria-live="polite"
+                  >
+                    {hoverHint.label}
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
+            </div>
+          ) : null}
+          <div
+            className={cn(
+              "flex items-stretch overflow-hidden rounded-lg border-2 border-border bg-white dark:border-zinc-700 dark:bg-card",
+              inline && "h-8",
+            )}
+          >
+          <OrganigramaExportMenu
+            options={exportOptions}
+            iconOnly
+            segmented
+            compact={inline}
+            onHintChange={setHoverHint}
+          />
+          <OrganigramaToolbarSegment
+            hint={copiarHint}
+            accentColor={sigetAccent.enlace}
+            morphFrom={Clipboard}
+            morphTo={Check}
+            onClick={onCopy}
+            disabled={copyState === "copying"}
+            ariaBusy={copyState === "copying"}
+            ariaLabel="Copiar organigrama"
+            onHintChange={setHoverHint}
+            segmentClass={segmentClass}
+            className="border-l border-border dark:border-zinc-700"
+          />
+          <OrganigramaToolbarSegment
+            hint={ocultarHint}
+            accentColor={sigetAccent.editar}
+            morphFrom={mostrarNombres ? EyeOff : Eye}
+            morphTo={mostrarNombres ? Eye : EyeOff}
+            onClick={onToggleNombres}
+            ariaLabel={
+              mostrarNombres ? "Ocultar nombres" : "Mostrar nombres"
+            }
+            onHintChange={setHoverHint}
+            segmentClass={segmentClass}
+            className="border-l border-border dark:border-zinc-700"
+          />
+          {onClose ? (
+            <OrganigramaToolbarSegment
+              hint="Cerrar"
+              accentColor={sigetAccent.quitar}
+              morphFrom={X}
+              morphTo={Ban}
+              onClick={onClose}
+              ariaLabel="Cerrar organigrama"
+              onHintChange={setHoverHint}
+              segmentClass={segmentClass}
+              className="border-l border-border dark:border-zinc-700"
+            />
+          ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { OrganigramaCanvasToolbar };
+
 export const OrganigramaVertical = forwardRef<
   OrganigramaVerticalHandle,
   {
     estructura: NodoOrganizacion;
     fullHeight?: boolean;
+    modal?: boolean;
     admin?: AdminHandlers;
     mostrarNombres?: boolean;
     usarLogoRaiz?: boolean;
@@ -862,6 +1126,7 @@ export const OrganigramaVertical = forwardRef<
   {
     estructura,
     fullHeight = false,
+    modal = false,
     admin,
     mostrarNombres = true,
     usarLogoRaiz = true,
@@ -870,7 +1135,9 @@ export const OrganigramaVertical = forwardRef<
   ref,
 ) {
   const [mounted, setMounted] = useState(false);
-  const { containerRef, translate, canvasReady } = useCenteredTree(mounted);
+  const [panCss, setPanCss] = useState<string | undefined>();
+  const { containerRef, translate, dimensions, canvasReady } =
+    useCenteredTree(mounted);
   const closeHandlers = useRef(new Set<() => void>());
 
   const registerClose = useCallback((fn: () => void) => {
@@ -896,7 +1163,24 @@ export const OrganigramaVertical = forwardRef<
   const layout = espaciadoAmplio ? ORG_LAYOUT_AMPLIO : ORG_LAYOUT_COMPACT;
   const nodeSizeX = ORG_CARD_W + layout.gapX;
   const nodeStrideY = orgNodeStrideY(layout.gapY);
+  const altoArbol = useMemo(
+    () => 200 + profundidadNodo(estructura) * nodeStrideY,
+    [estructura, nodeStrideY],
+  );
+  const treeDimensions = useMemo(() => {
+    if (dimensions.width <= 0 || dimensions.height <= 0) {
+      return dimensions;
+    }
+    const contentHeight = Math.max(
+      dimensions.height,
+      Math.round(altoArbol),
+    );
+    return { width: dimensions.width, height: contentHeight };
+  }, [dimensions, altoArbol]);
   const [logoHref, setLogoHref] = useState<string | null>(null);
+  const [treeTranslate, setTreeTranslate] = useState<{ x: number; y: number } | null>(
+    null,
+  );
 
   const stepPath = useCallback(
     (link: TreeLinkDatum) => orgStepPath(link, layout.forkBoost),
@@ -922,6 +1206,11 @@ export const OrganigramaVertical = forwardRef<
   }, []);
 
   useEffect(() => {
+    if (!canvasReady) return;
+    setTreeTranslate(translate);
+  }, [canvasReady, translate.x, translate.y]);
+
+  useEffect(() => {
     if (!usarLogoRaiz) {
       setLogoHref(null);
       return;
@@ -941,33 +1230,15 @@ export const OrganigramaVertical = forwardRef<
     const el = containerRef.current;
     if (!el || !canvasReady) return;
 
-    const onWheel = () => closeAllMenus();
-
-    let panning = false;
     const onPointerDown = (e: PointerEvent) => {
       if (isOrgInteractiveTarget(e.target)) return;
-      panning = true;
       closeAllMenus();
     };
-    const onPointerMove = () => {
-      if (panning) closeAllMenus();
-    };
-    const endPan = () => {
-      panning = false;
-    };
 
-    el.addEventListener("wheel", onWheel, { passive: true });
     el.addEventListener("pointerdown", onPointerDown);
-    el.addEventListener("pointermove", onPointerMove);
-    el.addEventListener("pointerup", endPan);
-    el.addEventListener("pointercancel", endPan);
 
     return () => {
-      el.removeEventListener("wheel", onWheel);
       el.removeEventListener("pointerdown", onPointerDown);
-      el.removeEventListener("pointermove", onPointerMove);
-      el.removeEventListener("pointerup", endPan);
-      el.removeEventListener("pointercancel", endPan);
     };
   }, [canvasReady, closeAllMenus]);
 
@@ -978,13 +1249,21 @@ export const OrganigramaVertical = forwardRef<
     const group = el.querySelector("g.rd3t-g");
     if (!group) return;
 
-    const observer = new MutationObserver(() => closeAllMenus());
+    const syncTransform = () => {
+      if (modal) {
+        setPanCss(rd3tTransformToCss(group.getAttribute("transform")));
+      }
+      closeAllMenus();
+    };
+
+    syncTransform();
+    const observer = new MutationObserver(syncTransform);
     observer.observe(group, {
       attributes: true,
       attributeFilter: ["transform"],
     });
     return () => observer.disconnect();
-  }, [canvasReady, closeAllMenus, mostrarNombres]);
+  }, [canvasReady, closeAllMenus, mostrarNombres, modal]);
 
   if (!estructura.hijos?.length) {
     return (
@@ -996,71 +1275,94 @@ export const OrganigramaVertical = forwardRef<
 
   const data = toDatum(estructura);
 
+  const legendPanel = modal ? (
+    <div className="org-export-hide pointer-events-none absolute left-3 top-3 z-20 w-auto overflow-visible rounded-xl border border-border/50 bg-card/95 p-2.5 shadow-sm backdrop-blur">
+      <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+        Descripción
+      </p>
+      <ul className="space-y-1.5">
+        {ORG_LEYENDA.map((item) => (
+          <li key={item.label} className="flex items-center gap-2">
+            <span
+              className={cn("size-3 shrink-0 rounded-[4px]", item.swatch)}
+            />
+            <span
+              className={cn(
+                "text-[10px] font-semibold leading-tight",
+                item.text,
+              )}
+            >
+              {item.label}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
+  const treeViewport = (
+    <>
+      {mounted && canvasReady && treeTranslate && treeDimensions.height > 0 && (
+        <Tree
+          data={data}
+          dimensions={treeDimensions}
+          orientation="vertical"
+          translate={treeTranslate}
+          pathFunc={stepPath}
+          nodeSize={{ x: nodeSizeX, y: nodeStrideY }}
+          separation={{
+            siblings: layout.sepSiblings,
+            nonSiblings: layout.sepNonSiblings,
+          }}
+          renderCustomNodeElement={renderNode}
+          collapsible={false}
+          zoomable={modal}
+          draggable={modal}
+          zoom={1}
+          scaleExtent={{ min: ORG_ZOOM_MIN, max: ORG_ZOOM_MAX }}
+          pathClassFunc={(link) => {
+            const target = link.target.data.attributes ?? {};
+            if (String(target.cadena ?? "") === "1") {
+              return "org-link org-link--cadena";
+            }
+            return "org-link";
+          }}
+        />
+      )}
+      {!modal ? (
+        <p className="org-export-hide pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-card/80 px-3 py-1 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+          Clic en tarjeta para acciones
+        </p>
+      ) : null}
+    </>
+  );
+
   return (
     <OrgMenuCloseContext.Provider value={{ registerClose }}>
       <div
         ref={containerRef}
         className={cn(
-          "org-canvas relative overflow-hidden bg-zinc-50/60 dark:bg-zinc-900/40",
-          fullHeight
-            ? "org-canvas--full h-full w-full"
-            : "-mx-4 rounded-xl border border-border/50 md:mx-0",
+          "org-canvas relative bg-zinc-50/60 dark:bg-zinc-900/40",
+          modal
+            ? "org-canvas--modal w-full min-h-0 flex-1"
+            : fullHeight
+              ? "org-canvas--panel w-full min-h-0 flex-1"
+              : "-mx-4 overflow-hidden rounded-xl border border-border/50 md:mx-0",
         )}
       >
-        {mounted && canvasReady && (
-          <Tree
-            data={data}
-            orientation="vertical"
-            translate={translate}
-            pathFunc={stepPath}
-            nodeSize={{ x: nodeSizeX, y: nodeStrideY }}
-            separation={{
-              siblings: layout.sepSiblings,
-              nonSiblings: layout.sepNonSiblings,
+        {treeViewport}
+        {legendPanel ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-20 overflow-visible"
+            style={{
+              transform: panCss,
+              transformOrigin: "0 0",
+              willChange: "transform",
             }}
-            renderCustomNodeElement={renderNode}
-            collapsible={false}
-            zoomable
-            draggable
-            zoom={1}
-            scaleExtent={{ min: 0.2, max: 1.5 }}
-            pathClassFunc={(link) => {
-              const target = link.target.data.attributes ?? {};
-              if (String(target.cadena ?? "") === "1") {
-                return "org-link org-link--cadena";
-              }
-              return "org-link";
-            }}
-          />
-        )}
-        <div className="org-export-hide pointer-events-none absolute left-3 top-3 rounded-xl border border-border/50 bg-card/85 p-2.5 shadow-sm backdrop-blur">
-          <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-            Descripción
-          </p>
-          <ul className="space-y-1.5">
-            {ORG_LEYENDA.map((item) => (
-              <li key={item.label} className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "size-3 shrink-0 rounded-[4px]",
-                    item.swatch,
-                  )}
-                />
-                <span
-                  className={cn(
-                    "text-[10px] font-semibold leading-tight",
-                    item.text,
-                  )}
-                >
-                  {item.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="org-export-hide pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-card/80 px-3 py-1 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur">
-          Arrastra para mover · rueda para zoom · clic en tarjeta para acciones
-        </p>
+          >
+            {legendPanel}
+          </div>
+        ) : null}
       </div>
     </OrgMenuCloseContext.Provider>
   );
@@ -1081,7 +1383,6 @@ export function OrganigramaModal({
   usarLogoRaiz?: boolean;
   espaciadoAmplio?: boolean;
 }) {
-  const [mounted, setMounted] = useState(false);
   const [mostrarNombres, setMostrarNombres] = useState(true);
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">(
     "idle",
@@ -1089,6 +1390,17 @@ export function OrganigramaModal({
   const organigramaRef = useRef<OrganigramaVerticalHandle>(null);
 
   const exportBasename = organigramaExportBasename(estructura.nombre);
+
+  const requireCanvas = () => {
+    const canvas = organigramaRef.current?.getCanvas();
+    if (!canvas?.querySelector("svg.rd3t-svg")) {
+      throw new Error(
+        "No se pudo capturar el organigrama. Espere a que termine de cargar e intente de nuevo.",
+      );
+    }
+    organigramaRef.current?.closeMenus();
+    return canvas;
+  };
 
   const copiarImagen = async () => {
     if (copyState === "copying") return;
@@ -1107,17 +1419,6 @@ export function OrganigramaModal({
           : "No se pudo copiar la imagen.";
       toast.error(message);
     }
-  };
-
-  const requireCanvas = () => {
-    const canvas = organigramaRef.current?.getCanvas();
-    if (!canvas?.querySelector("svg.rd3t-svg")) {
-      throw new Error(
-        "No se pudo capturar el organigrama. Espere a que termine de cargar e intente de nuevo.",
-      );
-    }
-    organigramaRef.current?.closeMenus();
-    return canvas;
   };
 
   const exportOptions = [
@@ -1163,116 +1464,39 @@ export function OrganigramaModal({
     },
   ];
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, onClose]);
-
-  if (!mounted) return null;
-
-  return createPortal(
-    <AnimatePresence>
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      title=""
+      fullscreen
+      hideCloseButton
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+      headerActionsAlign="end"
+      headerClassName="min-h-10 gap-2 px-3 !py-0 pt-[max(0.25rem,env(safe-area-inset-top))] md:px-4"
+      headerActions={
+        <OrganigramaCanvasToolbar
+          inline
+          onClose={onClose}
+          mostrarNombres={mostrarNombres}
+          onToggleNombres={() => setMostrarNombres((prev) => !prev)}
+          copyState={copyState}
+          onCopy={() => void copiarImagen()}
+          exportOptions={exportOptions}
+        />
+      }
+    >
       {open ? (
-        <motion.div
-          key="organigrama-modal"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
-          transition={{ duration: ORG_MODAL_MS / 1000, ease: ORG_ACTIONS_EASE }}
-          className={cn(
-            "fixed left-0 right-0 bottom-0 z-[90] flex flex-col bg-background",
-            "top-[calc(var(--banner-height,0px)+var(--header-row-height)+var(--breadcrumb-row-height))]",
-            "h-[calc(100dvh-var(--banner-height,0px)-var(--header-row-height)-var(--breadcrumb-row-height))]",
-          )}
-        >
-          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-zinc-100 px-4 py-3 md:px-6 dark:bg-zinc-800">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-celeste-trifinio/30 bg-card text-celeste-trifinio">
-                <OrganigramaIcon className="size-4.5" />
-              </span>
-              <h2 className="truncate text-sm font-black text-foreground md:text-base">
-                Organigrama · {estructura.nombre}
-              </h2>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <OrganigramaExportMenu options={exportOptions} />
-              <button
-                type="button"
-                onClick={copiarImagen}
-                disabled={copyState === "copying"}
-                className={cn(
-                  "flex cursor-pointer items-center gap-1.5 rounded-xl border border-celeste-trifinio/40 bg-card px-2.5 py-2 text-[10px] font-bold uppercase tracking-wide text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10 md:px-3 md:text-xs",
-                  copyState === "copying" && "cursor-not-allowed opacity-60",
-                )}
-              >
-                {copyState === "copying" ? (
-                  <Loader2 className="size-4 shrink-0 animate-spin" />
-                ) : copyState === "copied" ? (
-                  <Check className="size-4 shrink-0" />
-                ) : (
-                  <Clipboard className="size-4 shrink-0" />
-                )}
-                <span className="hidden sm:inline">
-                  {copyState === "copying"
-                    ? "Copiando..."
-                    : copyState === "copied"
-                      ? "Copiado"
-                      : "Copiar imagen"}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMostrarNombres((prev) => !prev)}
-                aria-pressed={mostrarNombres}
-                className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-celeste-trifinio/40 bg-card px-2.5 py-2 text-[10px] font-bold uppercase tracking-wide text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10 md:px-3 md:text-xs"
-              >
-                {mostrarNombres ? (
-                  <EyeOff className="size-4 shrink-0" />
-                ) : (
-                  <Eye className="size-4 shrink-0" />
-                )}
-                <span className="hidden sm:inline">
-                  {mostrarNombres ? "Ocultar nombres" : "Mostrar nombres"}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Cerrar organigrama"
-                className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
-          </header>
-
-          <div className="min-h-0 flex-1">
-            <OrganigramaVertical
-              ref={organigramaRef}
-              estructura={estructura}
-              fullHeight
-              admin={admin}
-              mostrarNombres={mostrarNombres}
-              usarLogoRaiz={usarLogoRaiz}
-              espaciadoAmplio={espaciadoAmplio}
-            />
-          </div>
-        </motion.div>
+        <OrganigramaVertical
+          ref={organigramaRef}
+          estructura={estructura}
+          modal
+          admin={admin}
+          mostrarNombres={mostrarNombres}
+          usarLogoRaiz={usarLogoRaiz}
+          espaciadoAmplio={espaciadoAmplio}
+        />
       ) : null}
-    </AnimatePresence>,
-    document.body,
+    </ModalShell>
   );
 }

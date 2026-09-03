@@ -550,10 +550,9 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
               aria-hidden={!isOpen}
               onClick={() => setIsOpen(false)}
               className={cn(
-                "fixed right-0 bottom-0 left-0 z-[105] cursor-pointer transition-opacity duration-500",
+                "fixed right-0 bottom-0 left-0 z-[105] cursor-pointer",
                 "top-[calc(var(--banner-height,0px)+var(--header-row-height))]",
-                "bg-white/55 backdrop-blur-md dark:bg-black/55",
-                isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+                isOpen ? "pointer-events-auto" : "pointer-events-none",
               )}
             />
             <aside
@@ -756,19 +755,11 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
               © 2026 SIGET
             </p>
-            <div className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 flex items-center gap-1 mt-1">
-              Powered by{" "}
-              <a
-                href="https://www.oscar27jimenez.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline cursor-pointer transition-all inline-flex items-center text-zinc-900 dark:text-zinc-100"
-              >
-                <AuroraText className="text-xs whitespace-nowrap">
-                  Kore | Ing. de Software
-                </AuroraText>
-              </a>
-            </div>
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+              <AuroraText className="text-xs whitespace-nowrap">
+                Plan Trifinio
+              </AuroraText>
+            </p>
           </div>
         </div>
       </aside>

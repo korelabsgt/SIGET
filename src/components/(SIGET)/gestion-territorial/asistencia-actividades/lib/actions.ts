@@ -6,15 +6,30 @@ import {
   actividadFormSchema,
   registroPublicoSchema,
   registroEditSchema,
+  minutaGuardarSchema,
+  ACT_TABLAS,
   type ActividadFormValues,
   type ActividadRecord,
   type ParticipanteRecord,
   type RegistroAsistenciaRecord,
   type RegistroPublicoValues,
   type RegistroEditValues,
+  type MinutaGuardarValues,
+  type MinutaMencionValues,
   resolverInstitucion,
   esTrifinioDesdeTipo,
 } from "./zod";
+import {
+  crearActividadBloqueVacio,
+  crearMinutaVacia,
+  extraerMenciones,
+  MINUTA_ANEXOS_BUCKET,
+  type MinutaAcuerdo,
+  type MinutaActividadBloque,
+  type MinutaAnexo,
+  type MinutaMencionTipo,
+  type MinutaRecord,
+} from "./minuta";
 import {
   canEliminarActividadAsistencia,
   esUuidActividad,
@@ -244,7 +259,7 @@ async function generarSlugUnico(
 
   while (true) {
     let query = supabase
-      .from("asist_actividades")
+      .from(ACT_TABLAS.actividades)
       .select("id")
       .eq("slug", candidato)
       .limit(1);
@@ -268,7 +283,7 @@ async function persistirSlugSiFalta(
 
   const slug = await generarSlugUnico(supabase, nombre, id);
   const { error } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .update({ slug })
     .eq("id", id);
   if (error?.message?.includes("slug")) return slug;
@@ -303,7 +318,7 @@ async function fetchActividadRowByRef(
 
   if (esUuidActividad(ref)) {
     const { data } = await supabase
-      .from("asist_actividades")
+      .from(ACT_TABLAS.actividades)
       .select("*")
       .eq("id", ref)
       .maybeSingle();
@@ -311,7 +326,7 @@ async function fetchActividadRowByRef(
   }
 
   const { data: porSlug } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .select("*")
     .eq("slug", ref)
     .maybeSingle();
@@ -319,7 +334,7 @@ async function fetchActividadRowByRef(
   const filaSlug = await resolverFila(porSlug as Record<string, unknown> | null);
   if (filaSlug) return filaSlug;
 
-  let query = supabase.from("asist_actividades").select("*");
+  let query = supabase.from(ACT_TABLAS.actividades).select("*");
   if (!privileged) query = query.eq("created_by", user.id);
   const { data: filas } = await query;
 
@@ -392,8 +407,8 @@ export async function getActividades(): Promise<ActividadRecord[]> {
   const privileged = isPrivilegedAsistenciaRole(role);
 
   let query = auth.supabase
-    .from("asist_actividades")
-    .select("*, asist_registros(count)")
+    .from(ACT_TABLAS.actividades)
+    .select(`*, ${ACT_TABLAS.registros}(count)`)
     .order("created_at", { ascending: false });
 
   if (!privileged) {
@@ -409,8 +424,8 @@ export async function getActividades(): Promise<ActividadRecord[]> {
   );
 
   return data.map((row) => {
-    const count = Array.isArray(row.asist_registros)
-      ? (row.asist_registros[0] as { count: number } | undefined)?.count ?? 0
+    const count = Array.isArray(row.act_registros)
+      ? (row.act_registros[0] as { count: number } | undefined)?.count ?? 0
       : 0;
     const createdBy =
       typeof row.created_by === "string" ? row.created_by : null;
@@ -435,7 +450,7 @@ export async function getActividadPublica(
 
   if (esUuidActividad(ref)) {
     const { data, error } = await supabase
-      .from("asist_actividades")
+      .from(ACT_TABLAS.actividades)
       .select("*")
       .eq("id", ref)
       .eq("activo", true)
@@ -445,7 +460,7 @@ export async function getActividadPublica(
   }
 
   const { data: porSlug } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .select("*")
     .eq("slug", ref)
     .eq("activo", true)
@@ -455,7 +470,7 @@ export async function getActividadPublica(
   if (filaSlug) return filaSlug;
 
   const { data: filas } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .select("*")
     .eq("activo", true);
 
@@ -496,7 +511,7 @@ export async function getParticipantePorDpi(
 
   const supabase = createPublicClient();
   const { data, error } = await supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .select("*")
     .eq("dpi", digits)
     .order("created_at", { ascending: false })
@@ -516,7 +531,7 @@ export async function buscarDpisRegistrados(
 
   const supabase = createPublicClient();
   const { data, error } = await supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .select("dpi, nombre, created_at")
     .not("dpi", "is", null)
     .like("dpi", `${digits}%`)
@@ -552,7 +567,7 @@ export async function getRegistrosActividad(
   if (!actividad) return [];
 
   const { data, error } = await auth.supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .select("*")
     .eq("actividad_id", actividad.id)
     .order("created_at", { ascending: false });
@@ -584,14 +599,14 @@ export async function createActividad(
   };
 
   let { data, error } = await auth.supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .insert({ ...basePayload, slug })
     .select("id, slug")
     .single();
 
   if (error?.message?.includes("slug")) {
     ({ data, error } = await auth.supabase
-      .from("asist_actividades")
+      .from(ACT_TABLAS.actividades)
       .insert(basePayload)
       .select("id")
       .single());
@@ -615,7 +630,7 @@ async function assertPuedeMutarActividad(
   if (isPrivilegedAsistenciaRole(role)) return null;
 
   const { data, error } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .select("created_by")
     .eq("id", id)
     .maybeSingle();
@@ -654,7 +669,7 @@ export async function updateActividad(
   );
 
   const { error } = await auth.supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .update({
       nombre: parsed.data.nombre,
       slug,
@@ -670,7 +685,7 @@ export async function updateActividad(
 
   if (error?.message?.includes("slug")) {
     const retry = await auth.supabase
-      .from("asist_actividades")
+      .from(ACT_TABLAS.actividades)
       .update({
         nombre: parsed.data.nombre,
         descripcion: parsed.data.descripcion || null,
@@ -702,7 +717,7 @@ export async function deleteActividad(id: string): Promise<ActionResult> {
   }
 
   const { error } = await auth.supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .delete()
     .eq("id", id);
 
@@ -720,7 +735,7 @@ export async function registrarAsistencia(
   const data = parsed.data;
 
   const { data: actividad } = await supabase
-    .from("asist_actividades")
+    .from(ACT_TABLAS.actividades)
     .select("id, activo, departamento, municipio")
     .eq("id", data.actividad_id)
     .eq("activo", true)
@@ -739,7 +754,7 @@ export async function registrarAsistencia(
   }
 
   const { data: existente, error: dupError } = await supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .select("id")
     .eq("actividad_id", data.actividad_id)
     .eq("dpi", data.dpi)
@@ -775,7 +790,7 @@ export async function registrarAsistencia(
   };
 
   const { error } = await supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .insert(registroPayload);
 
   if (error) return mapDbError(error);
@@ -795,7 +810,7 @@ export async function updateRegistro(
   const data = parsed.data;
 
   const { data: existente, error: dupError } = await auth.supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .select("id")
     .eq("actividad_id", data.actividad_id)
     .eq("dpi", data.dpi)
@@ -829,7 +844,7 @@ export async function updateRegistro(
   };
 
   const { error } = await auth.supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .update(payload)
     .eq("id", data.id);
 
@@ -842,10 +857,322 @@ export async function deleteRegistro(id: string): Promise<ActionResult> {
   if (!auth.supabase) return { success: false, error: auth.error };
 
   const { error } = await auth.supabase
-    .from("asist_registros")
+    .from(ACT_TABLAS.registros)
     .delete()
     .eq("id", id);
 
   if (error) return mapDbError(error);
+  return { success: true, error: null };
+}
+
+export type MinutaUsuarioOpcion = {
+  tipo: MinutaMencionTipo;
+  id: string;
+  mencionId: string;
+  nombre: string;
+  detalle: string;
+  dependencia: string;
+};
+
+export type MinutaElaboro = {
+  nombre: string;
+  puesto: string;
+};
+
+export async function getElaboroMinuta(): Promise<MinutaElaboro | null> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) return null;
+
+  const meta = auth.user.user_metadata ?? {};
+  const { data: profile } = await auth.supabase
+    .from("profiles")
+    .select("nombre, puesto_id")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  const nombre = String(
+    meta.nombre ?? profile?.nombre ?? "",
+  ).trim();
+
+  if (!nombre) return null;
+
+  const puestoId = (profile?.puesto_id as string | null) ?? null;
+  if (!puestoId) return { nombre, puesto: "" };
+
+  const { data: puesto } = await auth.supabase
+    .from("puestos")
+    .select("nombre")
+    .eq("id", puestoId)
+    .maybeSingle();
+
+  return { nombre, puesto: String(puesto?.nombre ?? "").trim() };
+}
+
+export async function getUsuariosParaMinuta(): Promise<MinutaUsuarioOpcion[]> {
+  const auth = await requireAuth();
+  if (!auth.supabase) return [];
+
+  const { data, error } = await auth.supabase
+    .from("vw_minuta_menciones")
+    .select("tipo, referencia_id, mencion_id, nombre, detalle, dependencia")
+    .order("nombre");
+
+  if (error || !data) return [];
+
+  return data
+    .map((row) => ({
+      tipo: String(row.tipo) as MinutaMencionTipo,
+      id: String(row.referencia_id),
+      mencionId: String(row.mencion_id),
+      nombre: String(row.nombre ?? "").trim(),
+      detalle: String(row.detalle ?? "").trim(),
+      dependencia: String(row.dependencia ?? "").trim(),
+    }))
+    .filter((row) => row.nombre.length > 0);
+}
+
+function minutaDesdeRow(
+  row: Record<string, unknown>,
+  actividad: { id: string; nombre: string; fecha_realizacion: string },
+): MinutaRecord {
+  const actividades = Array.isArray(row.actividades_realizadas)
+    ? (row.actividades_realizadas as MinutaActividadBloque[])
+    : [];
+
+  return {
+    id: String(row.id),
+    actividadId: actividad.id,
+    fecha: actividad.fecha_realizacion,
+    actividadNombre: actividad.nombre,
+    institucion: String(row.institucion ?? ""),
+    elaboro: String(row.elaboro ?? ""),
+    estado: row.estado === "finalizada" ? "finalizada" : "borrador",
+    introduccion: String(row.introduccion ?? ""),
+    actividadesRealizadas: actividades.length
+      ? actividades
+      : [crearActividadBloqueVacio()],
+    acuerdos: Array.isArray(row.acuerdos)
+      ? (row.acuerdos as MinutaAcuerdo[])
+      : [],
+    compromisosGenerales: String(row.compromisos_generales ?? ""),
+    anexosNota: String(row.anexos_nota ?? ""),
+    anexos: Array.isArray(row.anexos) ? (row.anexos as MinutaAnexo[]) : [],
+    updatedAt: String(row.updated_at ?? row.created_at ?? ""),
+  };
+}
+
+export async function getMinuta(
+  actividadRef: string,
+): Promise<MinutaRecord | null> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) return null;
+
+  const actividadRow = await fetchActividadRowByRef(
+    auth.supabase,
+    auth.user,
+    actividadRef,
+  );
+  if (!actividadRow) return null;
+
+  const actividad = {
+    id: String(actividadRow.id),
+    nombre: String(actividadRow.nombre ?? ""),
+    fecha_realizacion: String(
+      actividadRow.fecha_realizacion ?? actividadRow.created_at ?? "",
+    ).split("T")[0],
+  };
+
+  const { data, error } = await auth.supabase
+    .from(ACT_TABLAS.minutas)
+    .select("*")
+    .eq("actividad_id", actividad.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    return crearMinutaVacia({
+      id: actividad.id,
+      nombre: actividad.nombre,
+      fecha_realizacion: actividad.fecha_realizacion,
+    } as ActividadRecord);
+  }
+
+  return minutaDesdeRow(data as Record<string, unknown>, actividad);
+}
+
+/**
+ * Aplana las menciones de la minuta para reconstruir act_minuta_responsables.
+ * Cada fila conserva dónde se hizo la mención para poder consultar después
+ * "qué compromisos tiene asignados una persona o una dependencia".
+ */
+function filasResponsables(
+  minutaId: string,
+  values: MinutaGuardarValues,
+): Array<Record<string, unknown>> {
+  const filas: Array<Record<string, unknown>> = [];
+  const vistos = new Set<string>();
+
+  const agregar = (
+    seccion: string,
+    bloqueId: string | null,
+    itemIndice: number | null,
+    mencion: MinutaMencionValues,
+  ) => {
+    const clave = [
+      seccion,
+      bloqueId ?? "",
+      itemIndice ?? -1,
+      mencion.tipo,
+      mencion.id,
+    ].join("|");
+    if (vistos.has(clave)) return;
+    vistos.add(clave);
+
+    filas.push({
+      minuta_id: minutaId,
+      seccion,
+      bloque_id: bloqueId,
+      item_indice: itemIndice,
+      tipo: mencion.tipo,
+      profile_id: mencion.tipo === "usuario" ? mencion.id : null,
+      departamento_id: mencion.tipo === "departamento" ? mencion.id : null,
+      puesto_id: mencion.tipo === "puesto" ? mencion.id : null,
+      nombre: mencion.nombre,
+    });
+  };
+
+  for (const mencion of extraerMenciones(values.introduccion)) {
+    agregar("introduccion", null, null, mencion);
+  }
+
+  for (const bloque of values.actividadesRealizadas) {
+    bloque.items.forEach((item, indice) => {
+      for (const mencion of extraerMenciones(item)) {
+        agregar("actividad", bloque.id, indice, mencion);
+      }
+    });
+  }
+
+  for (const acuerdo of values.acuerdos) {
+    for (const mencion of acuerdo.responsables) {
+      agregar("acuerdo", acuerdo.id, null, mencion);
+    }
+    acuerdo.items.forEach((item, indice) => {
+      for (const mencion of extraerMenciones(item)) {
+        agregar("compromiso", acuerdo.id, indice, mencion);
+      }
+    });
+  }
+
+  for (const mencion of extraerMenciones(values.compromisosGenerales)) {
+    agregar("compromisos_generales", null, null, mencion);
+  }
+
+  return filas;
+}
+
+export async function guardarMinuta(
+  values: MinutaGuardarValues,
+): Promise<ActionResultWithId> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const parsed = minutaGuardarSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: "VALIDATION",
+      detail: parsed.error.issues[0]?.message ?? "Datos de minuta inválidos.",
+    };
+  }
+  const data = parsed.data;
+
+  const actividadRow = await fetchActividadRowByRef(
+    auth.supabase,
+    auth.user,
+    data.actividadId,
+  );
+  if (!actividadRow) {
+    return { success: false, error: "FORBIDDEN", detail: "Actividad no disponible." };
+  }
+
+  const payload = {
+    actividad_id: data.actividadId,
+    institucion: data.institucion,
+    elaboro: data.elaboro,
+    elaboro_por: auth.user.id,
+    estado: data.estado,
+    introduccion: data.introduccion,
+    actividades_realizadas: data.actividadesRealizadas,
+    acuerdos: data.acuerdos,
+    compromisos_generales: data.compromisosGenerales,
+    anexos_nota: data.anexosNota,
+    anexos: data.anexos,
+    updated_by: auth.user.id,
+  };
+
+  const { data: existente } = await auth.supabase
+    .from(ACT_TABLAS.minutas)
+    .select("id")
+    .eq("actividad_id", data.actividadId)
+    .maybeSingle();
+
+  const guardado = existente?.id
+    ? await auth.supabase
+        .from(ACT_TABLAS.minutas)
+        .update(payload)
+        .eq("id", existente.id)
+        .select("id")
+        .single()
+    : await auth.supabase
+        .from(ACT_TABLAS.minutas)
+        .insert({ ...payload, created_by: auth.user.id })
+        .select("id")
+        .single();
+
+  if (guardado.error) return mapDbError(guardado.error);
+  if (!guardado.data) {
+    return {
+      success: false,
+      error: "DB_ERROR",
+      detail: "No se pudo guardar la minuta.",
+    };
+  }
+
+  const minutaId = String(guardado.data.id);
+
+  await auth.supabase
+    .from(ACT_TABLAS.responsables)
+    .delete()
+    .eq("minuta_id", minutaId);
+
+  const filas = filasResponsables(minutaId, data);
+  if (filas.length > 0) {
+    const { error: errorResponsables } = await auth.supabase
+      .from(ACT_TABLAS.responsables)
+      .insert(filas);
+    if (errorResponsables) return mapDbError(errorResponsables);
+  }
+
+  return { success: true, error: null, id: minutaId };
+}
+
+export async function eliminarAnexosMinutaStorage(
+  paths: string[],
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (!auth.supabase) return { success: false, error: auth.error };
+
+  const limpias = paths.map((p) => p.trim()).filter(Boolean);
+  if (limpias.length === 0) return { success: true, error: null };
+
+  const { error } = await auth.supabase.storage
+    .from(MINUTA_ANEXOS_BUCKET)
+    .remove(limpias);
+
+  if (error) {
+    return { success: false, error: "STORAGE_ERROR", detail: error.message };
+  }
   return { success: true, error: null };
 }

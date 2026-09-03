@@ -7,23 +7,49 @@ description: Implementa formularios y ventanas flotantes con ModalShell de gener
 
 Implementación única: `@/components/ui/general-modal.tsx`.
 
-Componentes: `ModalShell`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalFechaInput`, `ModalForm`, `ModalField`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`.
+Componentes: `ModalShell`, `ModalForm`, `ModalField`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalFechaInput`, `ModalCancelButton`, `ModalSubmit`, `ModalFooter`, `ModalConfirmDelete`, `modalFieldClass`, `modalAccentClass`.
+
+## Formato visual
+
+### Superficies
+
+| Zona | Claro | Oscuro |
+|------|-------|--------|
+| Marco (`ModalFrame`) | `zinc-100` | `zinc-800` |
+| Header + contenido | `white` (mismo fondo → título y labels se ven igual) | `zinc-900` |
+| Footer | `zinc-100` + `border-t` | `zinc-800` + `border-t` |
+| Separador header | `border-b zinc-200/80` | `border-b zinc-700` |
+
+### Tipografía
+
+- **Título:** solo el `title` de `ModalShell` (sin `subtitle` salvo caso excepcional).
+- **Título y labels:** `modalAccentClass` → `font-bold text-[#2c5f9b] dark:text-[#6f9fd4]`.
+- **Espaciado label → input:** `ModalField` con `space-y-2.5`.
+- **Espaciado entre campos:** `ModalForm` con `space-y-4`.
+
+### Campos
+
+- Inputs y textareas: borde zinc (`modalFieldClass`), fondo transparente, focus ring zinc.
+- Fechas de calendario: **solo** `ModalFechaInput` (`DD/MM/AAAA`, manual, sin icono ni popover). Valor ISO `YYYY-MM-DD` vía `fechas-gt.ts`.
+- Prohibido `CalendarDatePicker`, `<input type="date">` y placeholders genéricos (excepto `DD/MM/AAAA` en fecha).
+
+### Footer
+
+- `ModalFooter` + `ModalCancelButton` + `ModalSubmit` (SigetActionButton, skill `ui-tema-botones`).
+- Botones compactos (`w-auto`), centrados; padding vertical reducido.
 
 ## Comportamiento
 
 - Portal al `body` con `createPortal`; `z-[200]`; bloquear scroll del body.
-- **Escritorio:** centrado, overlay `bg-zinc-700/20 backdrop-blur-sm`, borde animado celeste, `rounded-3xl`, sombra ligera.
-- **Teléfono:** pantalla completa `100dvh`, fondo zinc sólido, sin blur ni borde animado.
-- Campos: borde zinc (`modalFieldClass`); fondo transparente; focus ring zinc. Fecha manual con `ModalFechaInput` (`DD/MM/AAAA`, sin calendario).
-- Layout formulario: `ModalForm` (`space-y-4`) + `ModalField` (`space-y-2` por campo).
-- Footer: acciones con `SigetActionButton` (skill `ui-tema-botones`): Cancelar + Guardar, una palabra cada uno, icono morph a la derecha.
-- Safe area superior e inferior en teléfono.
+- **Escritorio:** centrado, overlay oscuro con blur, `rounded-3xl`, sombra ligera.
+- **Teléfono:** pantalla completa `100dvh`, fondo zinc sólido, safe area arriba/abajo.
+- Cerrar con X celeste en header.
 
 ## Prohibido
 
 - `Dialog` de shadcn u otros modales ad hoc para formularios.
 - SweetAlert dentro de `ModalShell` (usar `ModalConfirmDelete`).
-- `ModalSubmit`, `<button>` suelto o cualquier botón que no sea `SigetActionButton`.
+- Botones de acción que no sean `SigetActionButton` / `ModalCancelButton` / `ModalSubmit`.
 
 ## Plantilla
 
@@ -31,6 +57,7 @@ Componentes: `ModalShell`, `ModalLabel`, `ModalInput`, `ModalTextarea`, `ModalFe
 "use client";
 
 import { useState } from "react";
+import { fechaCalendarioGt } from "@/lib/fechas-gt";
 import {
   ModalShell,
   ModalLabel,
@@ -53,12 +80,13 @@ export function EjemploModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const onClose = () => onOpenChange(false);
-  const [campo, setCampo] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [fecha, setFecha] = useState(fechaCalendarioGt);
   const [pending, setPending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!campo.trim()) {
+    if (!nombre.trim() || !fecha) {
       toast.warn("Revisa los datos del formulario.");
       return;
     }
@@ -70,16 +98,26 @@ export function EjemploModal({
   };
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Título">
+    <ModalShell open={open} onClose={onClose} title="Título" maxWidth="max-w-lg">
       {open && (
         <ModalForm onSubmit={handleSubmit}>
           <ModalField>
-            <ModalLabel htmlFor="campo">Campo</ModalLabel>
+            <ModalLabel htmlFor="nombre">Nombre</ModalLabel>
             <ModalInput
-              id="campo"
-              value={campo}
-              onChange={(e) => setCampo(e.target.value)}
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
               autoFocus
+            />
+          </ModalField>
+          <ModalField>
+            <ModalLabel htmlFor="fecha">Fecha</ModalLabel>
+            <ModalFechaInput
+              id="fecha"
+              value={fecha}
+              onChange={setFecha}
+              required
             />
           </ModalField>
           <ModalFooter>
@@ -118,4 +156,4 @@ import { ModalConfirmDelete } from "@/components/ui/general-modal";
 )}
 ```
 
-Feedback con toast: skill `ui-toastify`.
+Feedback con toast: skill `ui-toastify`. Fechas: skill `componente-fechas-gt`.
