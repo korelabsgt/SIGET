@@ -233,14 +233,14 @@ export function Dashboard() {
                 }
               >
                 <div className="w-full h-full min-h-[300px] flex flex-col justify-center items-center p-6 outline-none relative z-10 rounded-[inherit] overflow-hidden">
-                  <div
-                    className={cn(
-                      "absolute top-0 left-0 w-full h-[calc(100%-70px)] origin-bottom scale-y-0 transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:scale-y-100 pointer-events-none z-0 rounded-t-[inherit]",
-                      isActive && "scale-y-100",
-                    )}
+                  <motion.div
+                    className="absolute top-0 left-0 w-full h-[calc(100%-70px)] origin-bottom pointer-events-none z-0 rounded-t-[inherit]"
                     style={{
                       backgroundImage: `linear-gradient(to top, ${mod.hoverGradientFrom ?? "#2c5f9b"}, ${mod.hoverGradientTo ?? "#1a95d3"})`,
                     }}
+                    initial={false}
+                    animate={{ scaleY: (hoveredCard === mod.id || isActive) ? 1 : 0 }}
+                    transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
                   />
                   <div className="absolute inset-0 rounded-[inherit] border border-border dark:border-white/10 pointer-events-none z-20" />
                   <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-30 pointer-events-none">
