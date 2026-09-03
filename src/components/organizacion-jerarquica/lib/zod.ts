@@ -5,8 +5,9 @@ export const nodoOrganizacionSchema: z.ZodType<{
   nombre: string;
   tipo: "raiz" | "nivel" | "institucion" | "unidad";
   descripcion?: string;
-  tiene_jefaturas?: boolean;
-  titular?: string;
+    tiene_jefaturas?: boolean;
+    es_territorio?: boolean;
+    titular?: string;
   titular_id?: string;
   hijos?: NodoOrganizacion[];
 }> = z.lazy(() =>
@@ -16,6 +17,7 @@ export const nodoOrganizacionSchema: z.ZodType<{
     tipo: z.enum(["raiz", "nivel", "institucion", "unidad"]),
     descripcion: z.string().optional(),
     tiene_jefaturas: z.boolean().optional(),
+    es_territorio: z.boolean().optional(),
     titular: z.string().optional(),
     titular_id: z.string().uuid().optional(),
     hijos: z.array(nodoOrganizacionSchema).optional(),
@@ -23,6 +25,16 @@ export const nodoOrganizacionSchema: z.ZodType<{
 );
 
 export type NodoOrganizacion = z.infer<typeof nodoOrganizacionSchema>;
+
+const TERRITORIOS_TRIFINIO = new Set([
+  "guatemala",
+  "el salvador",
+  "honduras",
+]);
+
+export function esNombreTerritorioTrifinio(nombre: string): boolean {
+  return TERRITORIOS_TRIFINIO.has(nombre.trim().toLowerCase());
+}
 
 export const ESTRUCTURA_VACIA: NodoOrganizacion = {
   id: "plan-trifinio",

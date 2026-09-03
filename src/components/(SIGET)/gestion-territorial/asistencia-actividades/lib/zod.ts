@@ -6,6 +6,13 @@ export type Genero = (typeof GENEROS)[number];
 export const INSTITUCION_PLAN_TRIFINIO = "Plan Trifinio";
 export const INSTITUCION_SIN = "Sin Institución";
 
+export const ACT_TABLAS = {
+  actividades: "act_actividades",
+  registros: "act_registros",
+  minutas: "act_minutas",
+  responsables: "act_minuta_responsables",
+} as const;
+
 export const TIPOS_INSTITUCION = ["sin", "plan_trifinio", "otras"] as const;
 export type TipoInstitucion = (typeof TIPOS_INSTITUCION)[number];
 
@@ -262,6 +269,76 @@ export function formatUbicacionActividad(actividad: {
   ].filter(Boolean);
   return partes.join(" · ");
 }
+
+export const MINUTA_MENCION_TIPOS = [
+  "usuario",
+  "departamento",
+  "puesto",
+] as const;
+
+export const MINUTA_ANEXO_TIPOS = ["imagen", "pdf", "enlace"] as const;
+
+export const MINUTA_ESTADOS = ["borrador", "finalizada"] as const;
+
+export const minutaMencionSchema = z.object({
+  tipo: z.enum(MINUTA_MENCION_TIPOS),
+  id: z.string().uuid("Referencia de mención inválida"),
+  nombre: z.string().trim().min(1, "La mención necesita nombre"),
+});
+
+export const minutaAnexoSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    tipo: z.enum(MINUTA_ANEXO_TIPOS),
+    titulo: z.string().trim().max(300).default(""),
+    url: z.string().trim().url("El anexo necesita una URL válida"),
+    bucket: z.string().trim().nullable().default(null),
+    path: z.string().trim().nullable().default(null),
+    nombreArchivo: z.string().trim().nullable().default(null),
+    mime: z.string().trim().nullable().default(null),
+    tamano: z.number().int().nonnegative().nullable().default(null),
+  })
+  .superRefine((anexo, ctx) => {
+    if (anexo.tipo === "enlace") return;
+    if (!anexo.path) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["path"],
+        message: "Los archivos requieren la ruta de Storage",
+      });
+    }
+  });
+
+export const minutaActividadBloqueSchema = z.object({
+  id: z.string().trim().min(1),
+  titulo: z.string().max(500).default(""),
+  items: z.array(z.string().max(20000)).default([]),
+});
+
+export const minutaAcuerdoSchema = z.object({
+  id: z.string().trim().min(1),
+  titulo: z.string().max(20000).default(""),
+  responsablesTexto: z.string().max(20000).default(""),
+  responsables: z.array(minutaMencionSchema).default([]),
+  items: z.array(z.string().max(20000)).default([]),
+});
+
+export const minutaGuardarSchema = z.object({
+  actividadId: z.string().uuid("Actividad inválida"),
+  institucion: z.string().trim().max(300).default(""),
+  elaboro: z.string().trim().max(300).default(""),
+  estado: z.enum(MINUTA_ESTADOS).default("borrador"),
+  introduccion: z.string().max(100000).default(""),
+  actividadesRealizadas: z.array(minutaActividadBloqueSchema).default([]),
+  acuerdos: z.array(minutaAcuerdoSchema).default([]),
+  compromisosGenerales: z.string().max(100000).default(""),
+  anexosNota: z.string().max(100000).default(""),
+  anexos: z.array(minutaAnexoSchema).default([]),
+});
+
+export type MinutaMencionValues = z.infer<typeof minutaMencionSchema>;
+export type MinutaAnexoValues = z.infer<typeof minutaAnexoSchema>;
+export type MinutaGuardarValues = z.infer<typeof minutaGuardarSchema>;
 
 export function formatFechaActividad(fecha: string): string {
   try {

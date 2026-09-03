@@ -48,6 +48,7 @@
   --radius: 0.625rem;
   --azul-trifinio: #2c5f9b;
   --azul-trifinio-hero: #2c5f9b;
+  --azul-trifinio-modal: #6f9fd4;
   --estructura-card-surface: #f4f4f5;
   --modal-surface: #f4f4f5;
 
@@ -91,6 +92,7 @@
   --input: oklch(0.274 0.006 286);
   --ring: oklch(0.442 0.017 286);
   --azul-trifinio: #6f9fd4;
+  --azul-trifinio-modal: #6f9fd4;
   --estructura-card-surface: #27272a;
   --modal-surface: #27272a;
 
@@ -102,6 +104,7 @@
 @theme inline {
   --color-azul-trifinio: var(--azul-trifinio);
   --color-azul-trifinio-hero: var(--azul-trifinio-hero);
+  --color-azul-trifinio-modal: var(--azul-trifinio-modal);
   --color-celeste-trifinio: #1a95d3;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -172,11 +175,6 @@
     transition: padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
-  header.fixed {
-    top: var(--banner-height) !important;
-    transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-
   @media (min-width: 768px) {
     :root {
       --header-row-height: 4rem;
@@ -219,4 +217,59 @@
   box-shadow: none !important;
   font-weight: 700 !important;
   font-size: 0.8125rem !important;
+}
+
+.minuta-editor-shell .tiptap {
+  min-height: var(--minuta-editor-min-h, 4.5rem);
+}
+
+.minuta-editor-shell.minuta-editor-resize {
+  overflow: auto;
+  resize: vertical;
+  min-height: var(--minuta-editor-min-h, 4.5rem);
+}
+
+.minuta-editor-shell.minuta-editor-resize .tiptap {
+  min-height: 100%;
+}
+
+.minuta-editor-shell .tiptap p {
+  margin: 0.15em 0;
+}
+
+.minuta-editor-shell .tiptap ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+}
+
+.minuta-editor-shell .tiptap ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+}
+
+.minuta-editor-shell .tiptap li p {
+  margin: 0;
+}
+
+.minuta-editor-shell .minuta-mention {
+  font-weight: 700;
+  color: #2c5f9b;
+}
+
+.dark .minuta-editor-shell .minuta-mention {
+  color: #6f9fd4;
+}
+
+.minuta-editor-shell.minuta-editor-negrita .tiptap,
+.minuta-editor-shell.minuta-editor-negrita .tiptap p,
+.minuta-editor-shell.minuta-editor-negrita .tiptap li {
+  font-weight: 700;
+}
+
+.minuta-editor-shell .tiptap p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }

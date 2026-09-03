@@ -2,9 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronLeft } from "lucide";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@/components/(base)/providers/UserProvider";
+import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 
 import { cn } from "@/lib/utils";
 
@@ -33,9 +35,6 @@ function formatBreadcrumbLabel(segment: string): string {
   if (UUID_SEGMENT.test(segment)) return "detalles";
   return segment.replace(/-/g, " ");
 }
-
-const iconMotion =
-  "transition-transform duration-500 ease-out group-hover:scale-125";
 
 const crumbRow =
   "flex min-w-0 w-full items-center gap-1 overflow-x-auto text-[9px] font-medium text-muted-foreground sm:text-[10px] md:pt-0.5 md:text-xs";
@@ -104,7 +103,16 @@ export function BreadcrumbNav() {
             className={cn(crumbIconLink, "mr-0.5")}
             title="Atrás"
           >
-            <ArrowLeft className={cn("size-3.5 md:size-4", iconMotion, "group-hover:-translate-x-1")} />
+            <span className="inline-flex size-3.5 items-center justify-center md:size-4 [&_svg]:block">
+              <MorphHoverIcon
+                from={ArrowLeft}
+                to={ChevronLeft}
+                size={14}
+                color="currentColor"
+                strokeWidth={2}
+                spring="snappy"
+              />
+            </span>
           </Link>
         </motion.div>
 
@@ -144,7 +152,10 @@ export function BreadcrumbNav() {
                     href={href}
                     className={cn(
                       isLast
-                        ? cn(crumbActive, "capitalize whitespace-nowrap underline underline-offset-4 pointer-events-none text-[10px] md:text-xs")
+                        ? cn(
+                            crumbActive,
+                            "pointer-events-none whitespace-nowrap text-[10px] font-bold capitalize underline underline-offset-4 md:text-xs",
+                          )
                         : crumbTextLink,
                     )}
                   >

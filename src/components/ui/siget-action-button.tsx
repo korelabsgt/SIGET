@@ -65,6 +65,7 @@ export function SigetActionButton({
   ariaBusy,
   morphOnHover = true,
   type = "button",
+  iconOnly = false,
 }: {
   label: string;
   accentColor: string;
@@ -80,6 +81,7 @@ export function SigetActionButton({
   ariaBusy?: boolean;
   morphOnHover?: boolean;
   type?: "button" | "submit";
+  iconOnly?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -97,15 +99,22 @@ export function SigetActionButton({
       onPointerLeave={morphOnHover ? () => setHovered(false) : undefined}
       className={cn(
         sigetBtnSurface,
-        "w-full",
+        iconOnly ? "size-9 w-9 shrink-0 px-0" : "w-full",
         disabled && "pointer-events-none opacity-60",
         className,
       )}
     >
-      <span className="inline-flex w-full max-w-full items-center justify-center gap-1 leading-none">
-        <span className="truncate leading-none" style={{ color: accentColor }}>
-          {label}
-        </span>
+      <span
+        className={cn(
+          "inline-flex max-w-full items-center justify-center leading-none",
+          !iconOnly && "w-full gap-1",
+        )}
+      >
+        {!iconOnly ? (
+          <span className="truncate leading-none" style={{ color: accentColor }}>
+            {label}
+          </span>
+        ) : null}
         <SigetActionIcon
           from={morphFrom}
           to={morphTo}

@@ -21,20 +21,17 @@ import {
   modalActionMessage,
 } from "./EstructuraFormShell";
 import { JefaturasField } from "./JefaturasField";
-import { DEMO_GUARDAR_MENSAJE } from "../lib/estructura-simulada";
 
 function CrearBody({
   tipo,
   presetParentId,
   presetDepartamentoId,
   onClose,
-  modoDemo = false,
 }: {
   tipo: "departamento" | "puesto";
   presetParentId: string | null;
   presetDepartamentoId?: string;
   onClose: () => void;
-  modoDemo?: boolean;
 }) {
   const crearDepartamento = useCrearDepartamento();
   const crearPuesto = useCrearPuesto();
@@ -70,11 +67,6 @@ function CrearBody({
         toast.warn("Escribe un nombre válido para el departamento.");
         return;
       }
-      if (modoDemo) {
-        toast.warn(DEMO_GUARDAR_MENSAJE);
-        onClose();
-        return;
-      }
       const values = departamentoFormSchema.safeParse({
         nombre,
         parent_id: presetParentId,
@@ -101,7 +93,6 @@ function CrearBody({
     }
 
     if (
-      !modoDemo &&
       jefaturaIds.length === 0 &&
       !departamentoTieneJefe(puestos, presetDepartamentoId)
     ) {
@@ -115,11 +106,6 @@ function CrearBody({
 
     if (!nombre.trim()) {
       toast.warn("Escribe un nombre válido para el puesto.");
-      return;
-    }
-    if (modoDemo) {
-      toast.warn(DEMO_GUARDAR_MENSAJE);
-      onClose();
       return;
     }
 
@@ -173,7 +159,7 @@ function CrearBody({
         </div>
       )}
 
-      {tipo === "puesto" && !modoDemo && (
+      {tipo === "puesto" && (
         <>
           {requiereJefatura && (
             <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
@@ -191,12 +177,6 @@ function CrearBody({
         </>
       )}
 
-      {tipo === "puesto" && modoDemo && (
-        <p className="text-xs text-muted-foreground">
-          En producción aquí se asignan las jefaturas del nuevo puesto.
-        </p>
-      )}
-
       <FormFooter>
         <FormSubmitButton disabled={guardando} label="Guardar" />
       </FormFooter>
@@ -210,19 +190,14 @@ export function CrearEstructura({
   tipo,
   presetParentId = null,
   presetDepartamentoId,
-  modoDemo = false,
-  nombreEmpresaDemo,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tipo: "departamento" | "puesto";
   presetParentId?: string | null;
   presetDepartamentoId?: string;
-  modoDemo?: boolean;
-  nombreEmpresaDemo?: string;
 }) {
   const onClose = () => onOpenChange(false);
-  const empresaLabel = nombreEmpresaDemo ?? "Plan Trifinio";
 
   return (
     <EstructuraFormShell
@@ -230,23 +205,20 @@ export function CrearEstructura({
       onClose={onClose}
       title={tipo === "departamento" ? "Nuevo departamento" : "Nuevo puesto"}
       subtitle={
-        modoDemo
-          ? "Vista demo · sin guardar cambios"
-          : tipo === "departamento"
-            ? presetParentId
-              ? "Dentro de unidad existente"
-              : `Dentro de ${empresaLabel}`
-            : "Asignación de puesto"
+        tipo === "departamento"
+          ? presetParentId
+            ? "Dentro de unidad existente"
+            : "Dentro de Plan Trifinio"
+          : "Asignación de puesto"
       }
     >
       {open && (
         <CrearBody
-          key={`${tipo}-${presetParentId ?? "root"}-${presetDepartamentoId ?? ""}-${modoDemo ? "demo" : "live"}`}
+          key={`${tipo}-${presetParentId ?? "root"}-${presetDepartamentoId ?? ""}`}
           tipo={tipo}
           presetParentId={presetParentId}
           presetDepartamentoId={presetDepartamentoId}
           onClose={onClose}
-          modoDemo={modoDemo}
         />
       )}
     </EstructuraFormShell>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, SquarePen } from "lucide";
 import { ChevronLeft, Loader2, Calendar, MapPin } from "lucide-react";
-import { useActividad, useEditarActividad, useRegistrosActividad } from "./lib/hooks";
+import { useActividad, useEditarActividad, useMinutaBorrador, useRegistrosActividad } from "./lib/hooks";
 import { rutaDetalleActividadAsistencia, slugActividadDesdeRecord } from "./lib/helpers";
 import {
   actividadFormSchema,
@@ -24,17 +24,44 @@ import { QrActividad } from "./QrActividad";
 import { GraficasAsistencia } from "./GraficasAsistencia";
 import { TablaRegistros } from "./TablaRegistros";
 import { VerEditarActividad } from "./forms/VerEditar";
+import { Minuta } from "./Minuta";
+import { MinutaEditor } from "./forms/MinutaEditor";
+import { saveVistaMinuta, loadVistaMinuta } from "./lib/minuta";
 
 export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const { data: actividad, isLoading: loadingAct } = useActividad(actividadRef);
+  const {
+    minuta,
+    setMinuta,
+    listo: minutaListo,
+    guardarMinuta,
+    guardando: minutaGuardando,
+  } = useMinutaBorrador(actividad ?? undefined);
   const { data: registros = [], isLoading: loadingReg } =
     useRegistrosActividad(actividadRef, !!actividadRef);
   const editar = useEditarActividad();
   const [editarOpen, setEditarOpen] = useState(false);
+  const [vistaMinuta, setVistaMinuta] = useState(false);
   const [activoObjetivo, setActivoObjetivo] = useState<boolean | null>(null);
   const [guardandoActivo, setGuardandoActivo] = useState(false);
+
+  const abrirMinuta = () => {
+    if (actividad) saveVistaMinuta(actividad.id, true);
+    setVistaMinuta(true);
+  };
+
+  const cerrarMinuta = () => {
+    guardarMinuta();
+    if (actividad) saveVistaMinuta(actividad.id, false);
+    setVistaMinuta(false);
+  };
+
+  useEffect(() => {
+    if (!actividad?.id) return;
+    setVistaMinuta(loadVistaMinuta(actividad.id));
+  }, [actividad?.id]);
 
   useEffect(() => {
     if (actividad?.slug && actividad.slug !== actividadRef) {
@@ -130,8 +157,36 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
 
   const activoConfirmado = actividad.activo;
 
+  if (vistaMinuta) {
+    return (
+      <div className="w-full overflow-x-hidden px-2 pb-8 sm:px-3 lg:px-4">
+        <div className="flex items-center py-2.5">
+          <button
+            type="button"
+            onClick={cerrarMinuta}
+            className="inline-flex cursor-pointer items-center gap-0.5 text-sm font-bold text-azul-trifinio hover:underline"
+          >
+            <ChevronLeft className="size-4 shrink-0" strokeWidth={2.25} />
+            <span className="translate-y-px">Volver a actividad</span>
+          </button>
+        </div>
+
+        <MinutaEditor
+          minuta={minuta}
+          setMinuta={setMinuta}
+          listo={minutaListo}
+          guardando={minutaGuardando}
+          onSave={(estado) => {
+            guardarMinuta(estado);
+            cerrarMinuta();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full overflow-x-hidden px-4 pb-8 pt-1 sm:px-6 lg:px-8">
+    <div className="w-full overflow-x-hidden px-2 pb-8 pt-1 sm:px-3 lg:px-4">
       <Link
         href="/siget/gestion-territorial/asistencia-actividades"
         className="mb-4 inline-flex cursor-pointer items-center gap-1 text-sm font-bold text-azul-trifinio hover:underline"
@@ -201,14 +256,11 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
           </div>
 
           <div className="flex min-h-[420px] min-w-0 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card lg:min-w-0 lg:basis-[66%]">
-            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-              Minuta de reunión
-            </p>
-            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300/80 bg-zinc-50/60 p-6 dark:border-zinc-700 dark:bg-zinc-800/30">
-              <p className="text-center text-sm text-muted-foreground">
-                Contenido disponible próximamente.
-              </p>
-            </div>
+            <Minuta
+              minuta={minuta}
+              listo={minutaListo}
+              onAbrir={abrirMinuta}
+            />
           </div>
         </div>
 

@@ -2,15 +2,43 @@
   --org-line: color-mix(in srgb, #2c5f9b 55%, transparent);
   width: 100%;
   height: min(78vh, 880px);
-  cursor: grab;
+  cursor: default;
 }
 
 .org-canvas--full {
-  height: 100%;
+  height: 100% !important;
+  min-height: 20rem;
 }
 
-.org-canvas:active {
+.org-canvas--panel {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: min(calc(100dvh - 13rem), 840px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  cursor: default;
+}
+
+.org-canvas--scroll {
+  height: auto !important;
+  min-height: 100%;
+}
+
+.org-canvas--modal {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.org-canvas--modal:active {
   cursor: grabbing;
+}
+
+.org-canvas--modal .rd3t-tree-container {
+  cursor: inherit;
 }
 
 .dark .org-canvas {
@@ -37,5 +65,5 @@
 
 .org-canvas .rd3t-tree-container {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
 }

@@ -92,12 +92,8 @@ export default function Header() {
 
   return (
     <>
-      <div
-        aria-hidden
-        className="pointer-events-none shrink-0 transition-[height] duration-200 h-[calc(var(--header-row-height)+var(--breadcrumb-row-height))]"
-      />
-      <header className="fixed left-0 z-[100] w-full border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800">
-        <div className="mx-auto flex h-[var(--header-row-height)] items-center justify-between gap-2 pl-3 pr-1 md:gap-4 md:pl-8 md:pr-2.5">
+      <header className="relative z-[100] w-full shrink-0 border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800">
+        <div className="mx-auto flex h-[var(--header-row-height)] items-center justify-between gap-2 px-1 md:gap-4 md:px-2.5">
           <button
             type="button"
             id="observatorio-header-brand"
@@ -108,7 +104,7 @@ export default function Header() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              className="shrink-0 cursor-pointer text-lg leading-none font-extrabold tracking-tighter text-azul-trifinio sm:text-xl md:text-4xl dark:text-white"
+              className="shrink-0 cursor-pointer text-3xl leading-none font-extrabold tracking-tighter text-azul-trifinio md:text-4xl dark:text-white"
             >
               SIGET
             </motion.h1>
@@ -120,7 +116,7 @@ export default function Header() {
                 delay: 0.2,
                 ease: [0.25, 1, 0.5, 1],
               }}
-              className="cursor-pointer border-l border-border/60 pl-1.5 text-left text-[7px] leading-[1.05] font-black tracking-[0.08em] text-celeste-trifinio uppercase sm:text-[10px] sm:tracking-[0.12em] md:pl-3 md:text-sm md:leading-[1.15] md:tracking-widest"
+              className="hidden cursor-pointer border-l border-border/60 pl-1 text-left text-[5px] leading-[1.35] font-black tracking-[0.06em] text-celeste-trifinio uppercase sm:text-[7px] sm:leading-[1.4] sm:tracking-[0.08em] md:block md:pl-1.5 md:text-[9px] md:leading-[1.45] md:tracking-[0.1em]"
             >
               SISTEMA INTEGRAL DE
               <br />

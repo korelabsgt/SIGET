@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/(base)/theme/provider";
@@ -8,8 +9,17 @@ import Providers from "@/components/(base)/providers/QueryProviders";
 import { UserProvider } from "@/components/(base)/providers/UserProvider";
 import ConditionalFooter from "@/components/(base)/layout/ConditionalFooter";
 import OfflineBanner from "@/components/OfflineBanner";
-import ObsToastContainer from "@/components/(SIGET)/observatorio/lib/ObsToastContainer";
-import { safeGetUser } from "@/utils/supabase/auth";
+import ObsToastContainer from "@/components/(SIGET)/observatorio/forms/ObsToastContainer";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -38,23 +48,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let user = null;
-  try {
-    const supabase = await createClient();
-    user = await safeGetUser(supabase);
-  } catch {
-    user = null;
-  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className="h-full">
       <body
         suppressHydrationWarning
         style={{
           paddingTop: "var(--banner-height, 0px)",
           transition: "padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
-        className="antialiased min-h-screen bg-background flex flex-col font-sans"
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-full flex-col bg-background`}
       >
         <Providers>
           <ThemeProvider
@@ -64,11 +71,15 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <UserProvider user={user}>
-              <OfflineBanner />
-              <Header />
-              <main className="flex min-h-0 w-full flex-1 flex-col">{children}</main>
-              <ConditionalFooter />
-              <ObsToastContainer />
+              <div className="flex min-h-0 flex-1 flex-col w-full">
+                <OfflineBanner />
+                <main className="flex min-h-0 flex-1 w-full flex-col overflow-y-auto">
+                  <Header />
+                  <div className="flex flex-1 flex-col">{children}</div>
+                  <ConditionalFooter />
+                </main>
+                <ObsToastContainer />
+              </div>
             </UserProvider>
           </ThemeProvider>
         </Providers>

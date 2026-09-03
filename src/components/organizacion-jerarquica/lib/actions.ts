@@ -6,6 +6,7 @@ import {
   asignarPersonaSchema,
   departamentoFormSchema,
   ESTRUCTURA_VACIA,
+  esNombreTerritorioTrifinio,
   puestoFormSchema,
   type AsignarPersonaValues,
   type DepartamentoFormValues,
@@ -396,6 +397,8 @@ function construirArbol(
       id: dep.id,
       nombre: dep.nombre,
       tipo: "nivel",
+      es_territorio:
+        dep.parent_id === null && esNombreTerritorioTrifinio(dep.nombre),
       descripcion: dep.descripcion ?? undefined,
       hijos: [...nodosPuesto, ...subDepartamentosSueltos],
     };

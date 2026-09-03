@@ -1,26 +1,22 @@
--- ============================================================
--- Organización jerárquica: departamentos, puestos, puesto_jefaturas
--- puesto_jefaturas cruza dos puestos (subordinado → jefatura).
--- Idempotente: se puede ejecutar varias veces sin romper datos.
--- ============================================================
+-- Organización jerárquica alineada con Supabase:
+--   departamentos (id, nombre, parent_id, descripcion)
+--   puestos (id, nombre, departamento_id, es_jefatura)
+--   puesto_jefaturas (puesto_id, departamento_id)
+--   profiles.puesto_id → puestos.id
+-- Idempotente. No agregar activo/orden/created_at: no existen en producción.
 
 create table if not exists public.departamentos (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
   parent_id uuid,
-  descripcion text,
-  orden int not null default 0,
-  activo bool not null default true,
-  created_at timestamptz not null default now()
+  descripcion text
 );
 
 create table if not exists public.puestos (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
   departamento_id uuid,
-  orden int not null default 0,
-  activo bool not null default true,
-  created_at timestamptz not null default now()
+  es_jefatura boolean default false
 );
 
 create table if not exists public.puesto_jefaturas (
@@ -31,16 +27,11 @@ create table if not exists public.puesto_jefaturas (
 
 alter table public.departamentos
   add column if not exists parent_id uuid,
-  add column if not exists descripcion text,
-  add column if not exists orden int not null default 0,
-  add column if not exists activo bool not null default true,
-  add column if not exists created_at timestamptz not null default now();
+  add column if not exists descripcion text;
 
 alter table public.puestos
   add column if not exists departamento_id uuid,
-  add column if not exists orden int not null default 0,
-  add column if not exists activo bool not null default true,
-  add column if not exists created_at timestamptz not null default now();
+  add column if not exists es_jefatura boolean default false;
 
 alter table public.profiles
   add column if not exists puesto_id uuid;

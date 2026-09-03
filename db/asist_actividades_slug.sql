@@ -1,4 +1,7 @@
--- Slug legible en URL para asist_actividades (ej. presentacion-de-avances-ot-agosto)
+-- Histórico. Ya aplicado cuando la tabla se llamaba asist_actividades.
+-- No ejecutar. El slug vive en act_actividades.
+
+-- Slug legible en URL (ej. presentacion-de-avances-ot-agosto)
 
 alter table public.asist_actividades
   add column if not exists slug text;

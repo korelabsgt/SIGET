@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createActividad,
@@ -13,10 +14,22 @@ import {
   registrarAsistencia,
   updateActividad,
   updateRegistro,
+  getUsuariosParaMinuta,
+  getElaboroMinuta,
+  getMinuta as getMinutaAction,
+  guardarMinuta as guardarMinutaAction,
 } from "./actions";
-import type { ActividadFormValues, RegistroPublicoValues, RegistroEditValues } from "./zod";
+import type {
+  ActividadFormValues,
+  RegistroPublicoValues,
+  RegistroEditValues,
+  ActividadRecord,
+  MinutaGuardarValues,
+} from "./zod";
+import type { MinutaEstado, MinutaRecord } from "./minuta";
 
 const ACTIVIDADES_KEY = ["asist-actividades"];
+const MINUTA_KEY = ["asist-minuta"];
 
 export function useActividades() {
   return useQuery({
@@ -119,4 +132,169 @@ export function useEditarRegistro(actividadId: string) {
       qc.invalidateQueries({ queryKey: ACTIVIDADES_KEY });
     },
   });
+}
+
+export function useUsuariosMinuta(enabled = true) {
+  return useQuery({
+    queryKey: ["minuta-usuarios"],
+    queryFn: getUsuariosParaMinuta,
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useElaboroMinuta(enabled = true) {
+  return useQuery({
+    queryKey: ["minuta-elaboro"],
+    queryFn: getElaboroMinuta,
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+function minutaAValores(
+  minuta: MinutaRecord,
+  estado?: MinutaEstado,
+): MinutaGuardarValues {
+  return {
+    actividadId: minuta.actividadId,
+    institucion: minuta.institucion,
+    elaboro: minuta.elaboro,
+    estado: estado ?? minuta.estado,
+    introduccion: minuta.introduccion,
+    actividadesRealizadas: minuta.actividadesRealizadas,
+    acuerdos: minuta.acuerdos,
+    compromisosGenerales: minuta.compromisosGenerales,
+    anexosNota: minuta.anexosNota,
+    anexos: minuta.anexos,
+  };
+}
+
+export function useMinutaBorrador(actividad: ActividadRecord | undefined) {
+  const qc = useQueryClient();
+  const actividadId = actividad?.id ?? "";
+
+  const { data: remota } = useQuery({
+    queryKey: [...MINUTA_KEY, actividadId],
+    queryFn: () => getMinutaAction(actividadId),
+    enabled: !!actividadId,
+    staleTime: 30_000,
+  });
+
+  const guardar = useMutation({
+    mutationFn: ({
+      minuta,
+      estado,
+    }: {
+      minuta: MinutaRecord;
+      estado?: MinutaEstado;
+    }) => guardarMinutaAction(minutaAValores(minuta, estado)),
+  });
+
+  const [minuta, setMinutaState] = useState<MinutaRecord | null>(null);
+  const [listo, setListo] = useState(false);
+  const minutaRef = useRef<MinutaRecord | null>(null);
+  const sucioRef = useRef(false);
+  const hidratadaRef = useRef("");
+  const guardarRef = useRef(guardar.mutate);
+  guardarRef.current = guardar.mutate;
+
+  useEffect(() => {
+    if (!actividadId) {
+      hidratadaRef.current = "";
+      minutaRef.current = null;
+      sucioRef.current = false;
+      setMinutaState(null);
+      setListo(false);
+    }
+  }, [actividadId]);
+
+  // Hidrata una sola vez por actividad para que un refetch no pise ediciones.
+  useEffect(() => {
+    if (!remota || !actividadId) return;
+    if (hidratadaRef.current === actividadId) return;
+    hidratadaRef.current = actividadId;
+    minutaRef.current = remota;
+    sucioRef.current = false;
+    setMinutaState(remota);
+    setListo(true);
+  }, [remota, actividadId]);
+
+  // Mantiene sincronizados los datos que vienen de la actividad.
+  useEffect(() => {
+    if (!actividad?.id || !listo) return;
+    setMinutaState((prev) => {
+      if (!prev) return prev;
+      if (
+        prev.actividadId === actividad.id &&
+        prev.fecha === actividad.fecha_realizacion &&
+        prev.actividadNombre === actividad.nombre
+      ) {
+        return prev;
+      }
+      const next = {
+        ...prev,
+        actividadId: actividad.id,
+        fecha: actividad.fecha_realizacion,
+        actividadNombre: actividad.nombre,
+      };
+      minutaRef.current = next;
+      return next;
+    });
+  }, [actividad?.id, actividad?.fecha_realizacion, actividad?.nombre, listo]);
+
+  const persistir = useCallback(
+    (estado?: MinutaEstado) => {
+      const actual = minutaRef.current;
+      if (!actual?.actividadId) return;
+      if (!sucioRef.current && !estado) return;
+      sucioRef.current = false;
+      guardarRef.current(
+        { minuta: actual, estado },
+        {
+          onSuccess: () => {
+            qc.invalidateQueries({
+              queryKey: [...MINUTA_KEY, actual.actividadId],
+            });
+          },
+        },
+      );
+    },
+    [qc],
+  );
+
+  useEffect(() => {
+    if (!listo || !minuta || !sucioRef.current) return;
+    const id = window.setTimeout(() => persistir(), 1200);
+    return () => clearTimeout(id);
+  }, [minuta, listo, persistir]);
+
+  useEffect(() => {
+    return () => {
+      if (sucioRef.current) persistir();
+    };
+  }, [persistir]);
+
+  const setMinuta = useCallback((updater: SetStateAction<MinutaRecord>) => {
+    setMinutaState((prev) => {
+      if (!prev) return prev;
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      minutaRef.current = next;
+      sucioRef.current = true;
+      return next;
+    });
+  }, []);
+
+  const guardarMinuta = useCallback(
+    (estado?: MinutaEstado) => persistir(estado ?? "borrador"),
+    [persistir],
+  );
+
+  return {
+    minuta,
+    setMinuta: setMinuta as Dispatch<SetStateAction<MinutaRecord>>,
+    listo,
+    guardarMinuta,
+    guardando: guardar.isPending,
+  };
 }

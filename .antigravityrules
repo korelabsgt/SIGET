@@ -68,13 +68,15 @@ export default function Page() {
 
 ### Modales
 
-- Usar `ModalShell` (`general-modal.tsx`) con portal (`createPortal` al `body`); `z-[200]` sobre el header.
-- Escritorio: overlay `bg-zinc-700/20` + `backdrop-blur-sm`, modal centrado, borde celeste animado.
-- Teléfono: pantalla completa (`100dvh`), panel zinc plano sin borde animado.
-- Fondo: claro `zinc-100` uniforme; oscuro header/footer `zinc-800`, campos `zinc-900`.
-- Cerrar solo con X celeste. Campos sin placeholder, borde celeste. Guardar outline esmeralda centrado.
-- Confirmaciones destructivas: `ModalConfirmDelete` dentro del modal; no SweetAlert.
-- Prohibido: `Dialog` de shadcn, `ToastContainer` duplicado por página.
+- Usar `ModalShell` (`general-modal.tsx`) con portal (`createPortal` al `body`); `z-[200]`.
+- Escritorio: overlay oscuro + blur; teléfono: pantalla completa `100dvh`.
+- Superficies: header + contenido `white` / `zinc-900`; footer `zinc-100` / `zinc-800` con `border-t`; header con `border-b`.
+- Formulario: `ModalForm` → `ModalField` → `ModalLabel` + campo (`ModalInput`, `ModalTextarea`, `ModalFechaInput`).
+- Título y labels: `modalAccentClass` (`font-bold`, `#2c5f9b` claro, `#6f9fd4` oscuro). Sin `subtitle` por defecto.
+- Campos: borde zinc (`modalFieldClass`); fecha solo manual (`ModalFechaInput`, `DD/MM/AAAA`).
+- Footer: `ModalCancelButton` + `ModalSubmit` (SigetActionButton). Skill `ui-modales`.
+- Confirmaciones destructivas: `ModalConfirmDelete`; no SweetAlert dentro del modal.
+- Prohibido: `Dialog` de shadcn, `CalendarDatePicker` en modales.
 
 ### Toastify
 
