@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Bell, BellRing, CalendarClock, Clock } from "lucide";
+import { Bell, BellRing, CalendarClock, Clock } from "lucide";
+import { AlertTriangle } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import {
   DropdownMenu,
