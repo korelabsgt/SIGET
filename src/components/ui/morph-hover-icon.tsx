@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { MorphIcon } from "morphicons/react";
+import { useEffect, useRef, useState } from "react";
+import { MorphIcon, type MorphHandle } from "morphicons/react";
 import type { IconNode } from "lucide";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +26,26 @@ export function MorphHoverIcon({
   spring = "smooth",
   hovered,
 }: MorphHoverIconProps) {
+  const morphRef = useRef<MorphHandle>(null);
+  const fromRef = useRef(from);
+  const toRef = useRef(to);
   const [localHovered, setLocalHovered] = useState(false);
   const active = hovered ?? localHovered;
+
+  fromRef.current = from;
+  toRef.current = to;
+
+  useEffect(() => {
+    const handle = morphRef.current;
+    if (!handle) return;
+
+    if (active) {
+      handle.morphTo(toRef.current, spring);
+      return;
+    }
+
+    handle.morphTo(fromRef.current, spring);
+  }, [active, spring]);
 
   return (
     <span
@@ -40,7 +58,8 @@ export function MorphHoverIcon({
       }
     >
       <MorphIcon
-        icon={active ? to : from}
+        ref={morphRef}
+        icon={from}
         size={size}
         color={color}
         strokeWidth={strokeWidth}
