@@ -22,6 +22,7 @@ import {
   User as UserIcon,
   KeyRound,
 } from "lucide-react";
+import { ArrowRight, MoveRight } from "lucide";
 import {
   DASHBOARD_MODULES,
   getVisibleDashboardModules,
@@ -36,6 +37,7 @@ const DASHBOARD_ICON_PLATE_CLASS =
 const DASHBOARD_DOTTED_BG_CLASS =
   "pointer-events-none [background-size:12px_12px] bg-[radial-gradient(#71717a_1px,transparent_1px)] opacity-50 dark:bg-[radial-gradient(oklch(72%_0_0)_1px,transparent_1px)] dark:opacity-40 [mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)] [-webkit-mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)]";
 
+
 export function Dashboard() {
   const { user, effectiveRole } = useUserContext();
   const { data: appSettings } = useAppSettings();
@@ -49,7 +51,7 @@ export function Dashboard() {
   const router = useRouter();
 
   const { scrollY } = useScroll();
-  const logoY = useTransform(scrollY, [0, 600], [0, -300]);
+  const logoY = useTransform(scrollY, [0, 600], [24, -276]);
   const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const bgScaleRaw = useTransform(scrollY, [0, 800], [1, 1.05]);
   const bgScale = useSpring(bgScaleRaw, {
@@ -241,11 +243,20 @@ export function Dashboard() {
                     }}
                   />
                   <div className="absolute inset-0 rounded-[inherit] border border-border dark:border-white/10 pointer-events-none z-20" />
-                  <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-10 pointer-events-none">
-                    <span className="flex items-center gap-2 font-black uppercase text-xs tracking-[0.25em] text-[var(--card-accent)]">
+                  <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-30 pointer-events-none">
+                    <span className="flex items-center gap-2 font-black normal-case text-xs tracking-normal transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:uppercase group-hover:tracking-[0.25em] text-[var(--card-accent)]">
                       {isActive
                         ? "Toca de nuevo para entrar"
                         : "Haz click para entrar"}
+                      <MorphHoverIcon
+                        from={ArrowRight}
+                        to={MoveRight}
+                        hovered={hoveredCard === mod.id || isActive}
+                        size={14}
+                        color="currentColor"
+                        strokeWidth={2.5}
+                        spring="snappy"
+                      />
                     </span>
                   </div>
                   <motion.div
@@ -317,9 +328,7 @@ export function Dashboard() {
                       )}
                     </div>
                     <div className="relative z-10 w-full flex flex-col items-start text-left space-y-4 transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-2">
-                      <h3
-                        className="text-[1.25rem] lg:text-[1.4rem] font-black tracking-tight uppercase leading-[1.05] w-full break-words transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]"
-                      >
+                      <h3 className="text-[1.25rem] lg:text-[1.4rem] font-black tracking-tight uppercase leading-[1.05] w-full break-words transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]">
                         <span
                           className="text-foreground transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white"
                           style={{ color: isActive ? "#ffffff" : undefined }}
@@ -338,9 +347,7 @@ export function Dashboard() {
                       </h3>
                       <p
                         className="text-[12px] lg:text-[13px] text-muted-foreground font-bold italic leading-snug pr-2 transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white/80"
-                        style={{
-                          color: isActive ? "rgba(255,255,255,0.8)" : undefined,
-                        }}
+                        style={{ color: isActive ? "rgba(255,255,255,0.8)" : undefined }}
                       >
                         {mod.desc}
                       </p>
@@ -421,7 +428,7 @@ export function Dashboard() {
             )}
           />
           <div className="relative z-20 w-full px-8 lg:px-12 pt-10 pb-6">
-            <div className="w-full max-w-[min(100%,1600px)] mx-auto -mt-[160px]">
+            <div className="w-full max-w-[min(100%,1600px)] mx-auto -mt-[80px]">
               <CardsGrid />
             </div>
           </div>

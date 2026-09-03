@@ -9,7 +9,7 @@ import Providers from "@/components/(base)/providers/QueryProviders";
 import { UserProvider } from "@/components/(base)/providers/UserProvider";
 import ConditionalFooter from "@/components/(base)/layout/ConditionalFooter";
 import OfflineBanner from "@/components/OfflineBanner";
-import ObsToastContainer from "@/components/(SIGET)/observatorio/forms/ObsToastContainer";
+import ObsToastContainer from "@/components/(SIGET)/observatorio/lib/ObsToastContainer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
