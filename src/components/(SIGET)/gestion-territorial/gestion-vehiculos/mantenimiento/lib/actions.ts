@@ -19,10 +19,11 @@ import {
   canViewAllFallasMantenimiento,
 } from "../../lib/permissions";
 import { vehiculoDisponibleParaReporteFalla, evidenciasFalla, normalizeFallaRow } from "./helpers";
+import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ter_fallas_mantenimiento";
-const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/mantenimiento";
-const VEHICULOS_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
+const REVALIDATE_ROUTE = GV_BASE_ROUTE;
+const VEHICULOS_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
   const supabase = await createClient();

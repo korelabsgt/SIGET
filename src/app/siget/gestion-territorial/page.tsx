@@ -116,7 +116,7 @@ const GT_CARDS = [
   },
   {
     id: "card-vehiculos",
-    href: "/siget/gestion-territorial/gestion-vehiculos/flota",
+    href: "/siget/gestion-territorial/gestion-vehiculos",
     badge: "Gestión de Flota",
     title: "Gestión de Vehículos",
     description: "Control y asignación de la flota vehicular de la institución.",

@@ -58,6 +58,62 @@ export function normalizeFallaRow(row: FallaRow): FallaRow {
   };
 }
 
+export type FallaAlertItem = {
+  id: string;
+  falla: FallaRow;
+  severidad: "error" | "warn";
+  titulo: string;
+  detalle: string;
+};
+
+export function getMantenimientoAlerts(fallas: FallaRow[]): FallaAlertItem[] {
+  const alertas: FallaAlertItem[] = [];
+
+  for (const falla of fallas) {
+    if (falla.estado === "SOLVENTADA") continue;
+
+    const placa = falla.vehiculo?.placa?.trim() || "Vehículo";
+    const descripcion = falla.descripcion?.trim() || "Sin descripción";
+
+    if (falla.severidad === "ALTA") {
+      alertas.push({
+        id: falla.id,
+        falla,
+        severidad: "error",
+        titulo: "Avería de severidad alta",
+        detalle: `${placa} · ${formatEstadoFallaLabel(falla.estado)}`,
+      });
+      continue;
+    }
+
+    if (falla.estado === "PENDIENTE") {
+      alertas.push({
+        id: falla.id,
+        falla,
+        severidad: "warn",
+        titulo: "Avería pendiente de atención",
+        detalle: `${placa} · ${descripcion.slice(0, 80)}${descripcion.length > 80 ? "…" : ""}`,
+      });
+      continue;
+    }
+
+    if (falla.estado === "EN_REPARACION") {
+      alertas.push({
+        id: falla.id,
+        falla,
+        severidad: "warn",
+        titulo: "En reparación",
+        detalle: `${placa} · ${descripcion.slice(0, 80)}${descripcion.length > 80 ? "…" : ""}`,
+      });
+    }
+  }
+
+  return alertas.sort((a, b) => {
+    if (a.severidad !== b.severidad) return a.severidad === "error" ? -1 : 1;
+    return new Date(b.falla.created_at).getTime() - new Date(a.falla.created_at).getTime();
+  });
+}
+
 export function filtrarFallasMantenimiento(
   fallas: FallaRow[],
   filtro: TabMantenimientoFallas,

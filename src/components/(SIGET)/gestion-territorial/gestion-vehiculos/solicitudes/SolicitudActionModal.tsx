@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  GV_MODAL_CONTENT_CLASS,
+  GvModalShell,
+  GV_MODAL_INSET_CLASS,
+  ModalFooter,
+  ModalCancelButton,
+} from "../lib/gv-modal-shell";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -148,7 +148,6 @@ export function SolicitudActionModal({
     : null;
 
   const meta = actionType ? ACTION_META[actionType] : null;
-  const Icon = meta?.icon ?? CheckCircle;
 
   const handleSubmit = () => {
     if (!solicitud || !actionType) return;
@@ -182,37 +181,22 @@ export function SolicitudActionModal({
     (actionType === "APROBAR" &&
       (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo));
 
+  const onClose = () => onOpenChange(false);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-md gap-0 overflow-hidden rounded-2xl border-border p-0 sm:max-w-md"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        {meta && <div className={cn("h-1 w-full", meta.accentBar)} />}
+    <GvModalShell
+      open={open && Boolean(meta)}
+      onClose={onClose}
+      title={meta?.title ?? ""}
+      subtitle={meta?.description}
+      maxWidth="max-w-md"
+      contentClassName={GV_MODAL_CONTENT_CLASS}
+    >
+      {meta ? (
+        <div className="flex min-h-0 flex-1 flex-col max-md:min-h-full">
+          <div className={cn("h-1 w-full shrink-0", meta.accentBar)} />
 
-        <div className="space-y-5 bg-zinc-100 p-6 dark:bg-zinc-900">
-          <DialogHeader className="space-y-4 text-left">
-            <div className="flex items-start gap-4 pr-6">
-              <div
-                className={cn(
-                  "flex size-12 shrink-0 items-center justify-center rounded-xl",
-                  meta?.iconWrap,
-                )}
-              >
-                <Icon className={cn("size-6", meta?.iconColor)} />
-              </div>
-              <div className="min-w-0 space-y-1.5">
-                <DialogTitle className="text-xl font-bold tracking-tight">
-                  {meta?.title}
-                </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed">
-                  {meta?.description}
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
+          <div className={cn(GV_MODAL_INSET_CLASS, "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain")}>
           {actionType === "APROBAR" && (
             <div className="space-y-4">
               {vehiculoPreferido ? (
@@ -324,31 +308,25 @@ export function SolicitudActionModal({
               </p>
             </div>
           )}
-        </div>
+          </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-border bg-zinc-100 px-6 py-4 sm:flex-row sm:justify-end dark:bg-zinc-800">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-            className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={confirmDisabled}
-            className={cn(
-              "inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 px-6 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-              meta?.confirmBtn,
-            )}
-          >
-            {isPending && <Loader2 className="size-4 animate-spin" />}
-            {meta?.confirmLabel}
-          </button>
+          <ModalFooter>
+            <ModalCancelButton onClick={onClose} disabled={isPending} />
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={confirmDisabled}
+              className={cn(
+                "inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 px-6 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                meta.confirmBtn,
+              )}
+            >
+              {isPending && <Loader2 className="size-4 animate-spin" />}
+              {meta.confirmLabel}
+            </button>
+          </ModalFooter>
         </div>
-      </DialogContent>
-    </Dialog>
+      ) : null}
+    </GvModalShell>
   );
 }

@@ -1,6 +1,10 @@
-import { redirect } from "next/navigation";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Gestión de Vehículos - SIGET",
+  description: "Control de flota, solicitudes, bitácoras y mantenimiento vehicular",
+};
 
 export default function GestionVehiculosPage() {
-  // Redirigir por defecto a la pestaña de "Flota"
-  redirect("/siget/gestion-territorial/gestion-vehiculos/flota");
+  return null;
 }

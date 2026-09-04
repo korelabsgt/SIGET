@@ -10,9 +10,10 @@ import {
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
 import { canManageFlota } from "../../lib/permissions";
+import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ter_vehiculos";
-const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
+const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
   const supabase = await createClient();

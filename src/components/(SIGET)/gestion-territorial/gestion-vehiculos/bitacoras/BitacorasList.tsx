@@ -2,7 +2,7 @@
 
 import { ArrowRight, Eye } from "lucide";
 import { BookOpen, Fuel, Route } from "lucide-react";
-import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { type BitacoraRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
@@ -12,7 +12,8 @@ import {
   gvTableActionTdClass,
   gvTableActionThClass,
 } from "../lib/table-ui";
-import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
+import { GvTableMorphRow } from "../lib/gv-table-morph-row";
+import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { formatMontoCombustibleBitacora } from "./lib/helpers";
 
 function BitacoraListRow({
@@ -23,16 +24,11 @@ function BitacoraListRow({
   onDetail: (bitacora: BitacoraRow) => void;
 }) {
   return (
-    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
+    <GvTableMorphRow>
       <td className="px-4 py-3 align-middle">
-        <div className="tabular-nums">
-          <p className="text-sm font-bold text-foreground">
-            {formatFechaTablaGt(bitacora.fecha)}
-          </p>
-          <p className="text-sm font-semibold text-celeste-trifinio">
-            {formatHoraTablaGt(bitacora.fecha)}
-          </p>
-        </div>
+        <p className="text-sm font-bold tabular-nums text-foreground">
+          {formatFechaHoraGv(bitacora.fecha)}
+        </p>
       </td>
       <td className="px-4 py-3 align-middle">
         <p
@@ -60,7 +56,7 @@ function BitacoraListRow({
       </td>
       <td className={gvTableActionTdClass}>
         <GestionVehiculosActionCell>
-          <SigetActionButton
+          <GvSigetActionButton
             label="Ver"
             accentColor={sigetAccent.abrir}
             morphFrom={Eye}
@@ -71,7 +67,7 @@ function BitacoraListRow({
           />
         </GestionVehiculosActionCell>
       </td>
-    </tr>
+    </GvTableMorphRow>
   );
 }
 

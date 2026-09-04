@@ -1,23 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Loader2, ChevronLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 
-import { SubmodulosNav } from "../../SubmodulosNav";
 import { SolicitudesPanel } from "./SolicitudesPanel";
+import { SolicitudesNotificaciones } from "./SolicitudesNotificaciones";
 import { Crear } from "./forms/Crear";
 import { SolicitudActionModal } from "./SolicitudActionModal";
-import { GestionVehiculosTableShell } from "../lib/table-ui";
+import { GestionVehiculosTableShell, gvTableShellVisibleRows } from "../lib/table-ui";
+import { useGvTablePagination } from "../lib/table-pagination";
 import { GvTabFilter } from "../lib/gv-tab-filter";
 
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
-import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
 import { GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
@@ -43,14 +44,13 @@ export function Solicitudes() {
   const canManage = canVerFiltros;
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
-  const [inDetailView, setInDetailView] = useState(false);
-  const router = useRouter();
 
   const [formOpen, setFormOpen] = useState(false);
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudRow | null>(null);
   const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | null>(null);
   const [misionPendiente, setMisionPendiente] = useState(false);
+  const [detailSolicitud, setDetailSolicitud] = useState<SolicitudRow | null>(null);
 
   const handleAction = async (solicitud: SolicitudRow, action: AccionSolicitud) => {
     if (action === "INICIAR" || action === "FINALIZAR") {
@@ -90,43 +90,45 @@ export function Solicitudes() {
     });
   }, [solicitudes, periodoFilter, canVerFiltros, tabActiva]);
 
+  const paginacionKey = `${tabActiva}|${periodoFilter}`;
+  const {
+    pageItems: solicitudesPaginadas,
+    pageSafe,
+    totalPages,
+    pageSize,
+    setPage,
+    setPageSize,
+  } = useGvTablePagination(filtradas, paginacionKey);
+
+  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
+
+  const headerExtras = useMemo(
+    () =>
+      canManage ? (
+        <SolicitudesNotificaciones solicitudes={solicitudes} />
+      ) : null,
+    [canManage, solicitudes],
+  );
+
+  useGvPanelChrome("solicitudes", { headerExtras });
+
   return (
-    <div className={GV_MODULO_PAGE_CLASS}>
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
-      {!inDetailView ? <SubmodulosNav /> : null}
-
-      {!inDetailView ? (
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/siget")}
-              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-accent"
-            >
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-celeste-trifinio">
-                Gestión Territorial
-              </p>
-              <h1 className="text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
-                Solicitudes
-              </h1>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div>
+    <>
+      <GvTableSectionMotion panelId="solicitudes">
         <GestionVehiculosTableShell
-          className={
-            inDetailView
-              ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
-              : undefined
-          }
+          visibleRows={tableVisibleRows}
+          pagination={{
+            pageSafe,
+            totalPages,
+            pageSize,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
           toolbar={
-            !inDetailView ? (
-              <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex w-full items-stretch gap-2 lg:contents">
                   {canVerFiltros ? (
                     <GvTabFilter
@@ -144,7 +146,7 @@ export function Solicitudes() {
                   <GvMonthPicker
                     value={periodoFilter}
                     onChange={setPeriodoFilter}
-                    className="!h-9 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
+                    className="!h-11 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
                   />
                 </div>
 
@@ -166,28 +168,29 @@ export function Solicitudes() {
                   >
                     <Plus className="size-4 shrink-0" />
                     <span className="lg:hidden">Nueva</span>
-                    <span className="hidden lg:inline">Nueva Solicitud</span>
+                    <span className="hidden lg:inline">Nueva solicitud</span>
                   </button>
                 </div>
               </div>
-            ) : undefined
           }
         >
           {loading ? (
-            <div className="flex justify-center py-20">
+            <div className="flex min-h-full items-center justify-center py-20">
               <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
             </div>
           ) : (
             <SolicitudesPanel
-              solicitudes={filtradas}
+              solicitudes={solicitudesPaginadas}
+              catalogo={filtradas}
               canManage={canManage}
               onAction={handleAction}
               misionPendiente={misionPendiente}
-              onDetailViewChange={setInDetailView}
+              detail={detailSolicitud}
+              onDetailChange={setDetailSolicitud}
             />
           )}
         </GestionVehiculosTableShell>
-      </div>
+      </GvTableSectionMotion>
 
       <Crear open={formOpen} onOpenChange={setFormOpen} onSaved={invalidate} />
 
@@ -198,6 +201,6 @@ export function Solicitudes() {
         actionType={actionType}
         onSaved={invalidate}
       />
-    </div>
+    </>
   );
 }

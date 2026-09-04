@@ -1,9 +1,73 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { MorphIcon, type MorphHandle } from "morphicons/react";
 import type { IconNode } from "lucide";
 import { cn } from "@/lib/utils";
+import { useGvTableRowMorphHover } from "./gv-table-morph-row";
+
+export const GV_MORPH_HOVER_SCOPE = "data-morph-hover-scope";
+
+export function resolveMorphHoverScope(el: Element | null): Element | null {
+  if (!el) return null;
+  return (
+    el.closest(`tr[${GV_MORPH_HOVER_SCOPE}]`) ??
+    el.closest(`button, a, [role='button'], label, [${GV_MORPH_HOVER_SCOPE}]`) ??
+    el
+  );
+}
+
+function attachMorphHoverListeners(
+  scope: Element,
+  onEnter: () => void,
+  onLeave: () => void,
+) {
+  const onPointerDown = (event: Event) => {
+    if (event instanceof PointerEvent && event.pointerType === "touch") onEnter();
+  };
+  const onPointerUp = (event: Event) => {
+    if (event instanceof PointerEvent && event.pointerType === "touch") onLeave();
+  };
+
+  scope.addEventListener("pointerenter", onEnter);
+  scope.addEventListener("pointerleave", onLeave);
+  scope.addEventListener("pointerdown", onPointerDown);
+  scope.addEventListener("pointerup", onPointerUp);
+  scope.addEventListener("pointercancel", onPointerUp);
+
+  return () => {
+    scope.removeEventListener("pointerenter", onEnter);
+    scope.removeEventListener("pointerleave", onLeave);
+    scope.removeEventListener("pointerdown", onPointerDown);
+    scope.removeEventListener("pointerup", onPointerUp);
+    scope.removeEventListener("pointercancel", onPointerUp);
+  };
+}
+
+export function useMorphHoverScope(
+  ref: RefObject<HTMLElement | null>,
+  enabled: boolean,
+  externalHover?: boolean,
+): boolean {
+  const [internalHover, setInternalHover] = useState(false);
+  const useExternalHover = externalHover !== undefined;
+
+  useEffect(() => {
+    if (!enabled || useExternalHover) return;
+
+    const el = ref.current;
+    if (!el) return;
+
+    const scope = resolveMorphHoverScope(el);
+    if (!scope) return;
+
+    return attachMorphHoverListeners(scope, () => setInternalHover(true), () =>
+      setInternalHover(false),
+    );
+  }, [enabled, useExternalHover]);
+
+  return useExternalHover ? Boolean(externalHover) : internalHover;
+}
 
 export function GvMorphIcon({
   icon,
@@ -26,45 +90,21 @@ export function GvMorphIcon({
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const iconRef = useRef(icon);
   const hoverIconRef = useRef(hoverIcon);
-  const [internalHover, setInternalHover] = useState(false);
+  const rowMorphHover = useGvTableRowMorphHover();
+  const scopeHover = useMorphHoverScope(
+    wrapperRef,
+    morphOnHover && rowMorphHover === null,
+    externalHover,
+  );
+  const isHovered =
+    externalHover !== undefined
+      ? externalHover
+      : rowMorphHover !== null
+        ? rowMorphHover
+        : scopeHover;
 
   iconRef.current = icon;
   hoverIconRef.current = hoverIcon;
-
-  const useExternalHover = externalHover !== undefined;
-  const isHovered = useExternalHover ? externalHover : internalHover;
-
-  useEffect(() => {
-    if (!morphOnHover || !hoverIconRef.current || useExternalHover) return;
-
-    const el = wrapperRef.current;
-    if (!el) return;
-
-    const scope =
-      el.closest("button, a, [role='button'], label, [data-morph-hover-scope]") ?? el;
-    const onEnter = () => setInternalHover(true);
-    const onLeave = () => setInternalHover(false);
-    const onPointerDown = (event: Event) => {
-      if (event instanceof PointerEvent && event.pointerType === "touch") onEnter();
-    };
-    const onPointerUp = (event: Event) => {
-      if (event instanceof PointerEvent && event.pointerType === "touch") onLeave();
-    };
-
-    scope.addEventListener("pointerenter", onEnter);
-    scope.addEventListener("pointerleave", onLeave);
-    scope.addEventListener("pointerdown", onPointerDown);
-    scope.addEventListener("pointerup", onPointerUp);
-    scope.addEventListener("pointercancel", onPointerUp);
-
-    return () => {
-      scope.removeEventListener("pointerenter", onEnter);
-      scope.removeEventListener("pointerleave", onLeave);
-      scope.removeEventListener("pointerdown", onPointerDown);
-      scope.removeEventListener("pointerup", onPointerUp);
-      scope.removeEventListener("pointercancel", onPointerUp);
-    };
-  }, [morphOnHover, useExternalHover]);
 
   useEffect(() => {
     if (!morphOnHover || !hoverIconRef.current) return;

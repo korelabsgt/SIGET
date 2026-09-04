@@ -13,19 +13,14 @@ export type GvSubmoduloId =
   | "bitacoras"
   | "mantenimiento";
 
-type GvTabContextValue = {
-  tab: GvSubmoduloId;
-  selectTab: (id: GvSubmoduloId) => void;
+type GvSectionContextValue = {
+  section: GvSubmoduloId;
+  selectSection: (id: GvSubmoduloId) => void;
 };
 
-const GvTabContext = createContext<GvTabContextValue | null>(null);
+const GvSectionContext = createContext<GvSectionContextValue | null>(null);
 
-export function tabFromPathname(pathname: string): GvSubmoduloId {
-  if (pathname.includes("/solicitudes")) return "solicitudes";
-  if (pathname.includes("/bitacoras")) return "bitacoras";
-  if (pathname.includes("/mantenimiento")) return "mantenimiento";
-  return "flota";
-}
+export const GV_MODULE_TITLE = "Gestión de Vehículos - SIGET";
 
 export const GV_SUBMODULO_TITLES: Record<GvSubmoduloId, string> = {
   flota: "Gestión de Flota Vehicular - SIGET",
@@ -34,19 +29,19 @@ export const GV_SUBMODULO_TITLES: Record<GvSubmoduloId, string> = {
   mantenimiento: "Mantenimiento y Averías - SIGET",
 };
 
-export function GvTabProvider({
-  tab,
-  selectTab,
+export function GvSectionProvider({
+  section,
+  selectSection,
   children,
 }: {
-  tab: GvSubmoduloId;
-  selectTab: (id: GvSubmoduloId) => void;
+  section: GvSubmoduloId;
+  selectSection: (id: GvSubmoduloId) => void;
   children: ReactNode;
 }) {
-  const value = useMemo(() => ({ tab, selectTab }), [tab, selectTab]);
-  return <GvTabContext.Provider value={value}>{children}</GvTabContext.Provider>;
+  const value = useMemo(() => ({ section, selectSection }), [section, selectSection]);
+  return <GvSectionContext.Provider value={value}>{children}</GvSectionContext.Provider>;
 }
 
-export function useGvSubmoduloTab() {
-  return useContext(GvTabContext);
+export function useGvSection() {
+  return useContext(GvSectionContext);
 }

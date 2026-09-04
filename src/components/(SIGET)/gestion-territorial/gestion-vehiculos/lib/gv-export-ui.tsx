@@ -1,12 +1,8 @@
 "use client";
 
-import { Download, Loader2 } from "lucide-react";
-
+import { ArrowDownToLine, FileSpreadsheet } from "lucide";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { cn } from "@/lib/utils";
-import { GV_TOOLBAR_BUTTON_BASE_CLASS } from "./gv-header-ui";
-
-export const GV_EXPORT_REPORTE_BUTTON_CLASS =
-  `${GV_TOOLBAR_BUTTON_BASE_CLASS} border border-emerald-300 bg-transparent text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:text-emerald-400 dark:hover:bg-emerald-950/40`;
 
 export function GvExportReporteButton({
   onClick,
@@ -19,23 +15,16 @@ export function GvExportReporteButton({
   loading?: boolean;
   className?: string;
 }) {
-  const isDisabled = disabled || loading;
-
   return (
-    <button
-      type="button"
+    <SigetActionButton
+      label="Excel"
+      accentColor={sigetAccent.excel}
+      morphFrom={FileSpreadsheet}
+      morphTo={ArrowDownToLine}
       onClick={onClick}
-      disabled={isDisabled}
-      className={cn(
-        GV_EXPORT_REPORTE_BUTTON_CLASS,
-        isDisabled &&
-          "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
-        className,
-      )}
-    >
-      {loading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4 shrink-0" />}
-      <span className="lg:hidden">Reporte</span>
-      <span className="hidden lg:inline">Exportar Reporte</span>
-    </button>
+      disabled={disabled || loading}
+      ariaLabel="Exportar reporte"
+      className={cn("h-11 w-auto shrink-0 rounded-xl px-4", className)}
+    />
   );
 }

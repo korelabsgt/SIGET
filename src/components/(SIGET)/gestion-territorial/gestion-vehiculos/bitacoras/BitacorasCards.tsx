@@ -2,6 +2,7 @@ import { BookOpen } from "lucide-react";
 import { type BitacoraRow } from "./lib/zod";
 import { BitacoraCard } from "./BitacoraCard";
 import { GestionVehiculosTableEmpty } from "../lib/table-ui";
+import { GvMobileRecordList } from "../lib/gv-mobile-record";
 
 export function BitacorasCards({
   bitacoras,
@@ -21,15 +22,10 @@ export function BitacorasCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {bitacoras.map((bitacora, index) => (
-        <BitacoraCard
-          key={bitacora.id}
-          bitacora={bitacora}
-          onDetail={onDetail}
-          index={index}
-        />
+    <GvMobileRecordList>
+      {bitacoras.map((bitacora) => (
+        <BitacoraCard key={bitacora.id} bitacora={bitacora} onDetail={onDetail} />
       ))}
-    </div>
+    </GvMobileRecordList>
   );
 }

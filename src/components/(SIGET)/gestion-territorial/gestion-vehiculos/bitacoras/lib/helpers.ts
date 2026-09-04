@@ -67,6 +67,56 @@ export function computeMetricasBitacorasMes(
   };
 }
 
+export type BitacoraAlertItem = {
+  id: string;
+  bitacora: BitacoraRow;
+  severidad: "error" | "warn";
+  titulo: string;
+  detalle: string;
+};
+
+export function bitacoraSinCombustible(bitacora: BitacoraRow): boolean {
+  if ((bitacora.km_recorrido ?? 0) <= 0) return false;
+  const monto = Number(bitacora.monto_combustible) || 0;
+  const vale = bitacora.vale_combustible?.trim();
+  return monto <= 0 && !vale;
+}
+
+export function bitacoraSinSolicitud(bitacora: BitacoraRow): boolean {
+  return !bitacora.solicitud_id && (bitacora.km_recorrido ?? 0) > 0;
+}
+
+export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[] {
+  const alertas: BitacoraAlertItem[] = [];
+
+  for (const bitacora of bitacoras) {
+    if (bitacoraSinCombustible(bitacora)) {
+      const placa = bitacora.ter_vehiculos?.placa ?? "Vehículo";
+      alertas.push({
+        id: `${bitacora.id}-combustible`,
+        bitacora,
+        severidad: (bitacora.km_recorrido ?? 0) >= 100 ? "error" : "warn",
+        titulo: "Sin combustible registrado",
+        detalle: `${placa} · ${bitacora.km_recorrido} km sin vale ni monto`,
+      });
+    } else if (bitacoraSinSolicitud(bitacora)) {
+      const placa = bitacora.ter_vehiculos?.placa ?? "Vehículo";
+      alertas.push({
+        id: `${bitacora.id}-solicitud`,
+        bitacora,
+        severidad: "warn",
+        titulo: "Viaje sin solicitud vinculada",
+        detalle: `${placa} · ${bitacora.destino}`,
+      });
+    }
+  }
+
+  return alertas.sort((a, b) => {
+    if (a.severidad !== b.severidad) return a.severidad === "error" ? -1 : 1;
+    return new Date(b.bitacora.fecha).getTime() - new Date(a.bitacora.fecha).getTime();
+  });
+}
+
 export function extractVehiculosVinculadosBitacoras(bitacoras: BitacoraRow[]) {
   const map = new Map<
     string,

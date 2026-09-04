@@ -113,13 +113,13 @@ function esFechaCalendarioValida(y: number, m: number, d: number): boolean {
 }
 
 export function maskFechaManual(raw: string): string {
-  let { day, month, year } = extraerSlotsFecha(raw, false);
-  if (!day && !month && !year) return "";
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length > 8) digits = digits.slice(0, 8);
+  if (!digits) return "";
 
-  month = clampPar(month, 1, 12);
-  day = clampDia(day, month, year);
-
-  return ensamblarFechaHoraSlots(day, month, year, "", "", false);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
 export function maskFechaHoraManual(raw: string): string {
@@ -139,12 +139,29 @@ export function aplicarMascaraEnInput(
   mask: (raw: string) => string,
 ): void {
   const caret = input.selectionStart ?? input.value.length;
-  const raw = input.value;
-  const masked = mask(raw);
+  const digitsBefore = input.value.slice(0, caret).replace(/\D/g, "").length;
+  const masked = mask(input.value);
   input.value = masked;
-  const inserted = masked.length - raw.length;
-  const next = Math.max(0, Math.min(masked.length, caret + Math.max(inserted, 0)));
-  input.setSelectionRange(next, next);
+
+  if (!masked) {
+    input.setSelectionRange(0, 0);
+    return;
+  }
+
+  let digitCount = 0;
+  let nextCaret = masked.length;
+  for (let i = 0; i < masked.length; i += 1) {
+    const ch = masked[i]!;
+    if (ch >= "0" && ch <= "9") {
+      digitCount += 1;
+      if (digitCount === digitsBefore) {
+        nextCaret = i + 1;
+        break;
+      }
+    }
+  }
+
+  input.setSelectionRange(nextCaret, nextCaret);
 }
 
 export function formatFechaManualInput(

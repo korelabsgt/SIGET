@@ -386,3 +386,14 @@ export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
   };
 }
 
+export function formatEstadoVehiculoLabel(estado: VehiculoRow["estado"]): string {
+  switch (estado) {
+    case "LIBRE":
+      return "Libre";
+    case "RESERVADO":
+      return "Reservado";
+    case "EN_MANTENIMIENTO":
+      return "Mantenimiento";
+  }
+}
+

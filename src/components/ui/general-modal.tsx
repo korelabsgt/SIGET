@@ -12,6 +12,29 @@ import {
 } from "@/lib/fechas-gt";
 import { cn } from "@/lib/utils";
 
+const MODAL_SHELL_EASE = [0.22, 1, 0.36, 1] as const;
+
+const MODAL_SHELL_TRANSITION = {
+  duration: 0.24,
+  ease: MODAL_SHELL_EASE,
+} as const;
+
+function lockBodyScroll() {
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  const prevOverflow = document.body.style.overflow;
+  const prevPaddingRight = document.body.style.paddingRight;
+
+  document.body.style.overflow = "hidden";
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+  }
+
+  return () => {
+    document.body.style.overflow = prevOverflow;
+    document.body.style.paddingRight = prevPaddingRight;
+  };
+}
+
 export {
   modalActionMessage,
   MODAL_ACTION_ERRORS,
@@ -196,7 +219,9 @@ export function ModalFooter({
   return (
     <div
       className={cn(
-        "mt-3 -mx-4 md:-mx-6 -mb-4 md:-mb-6 flex w-[calc(100%+2rem)] flex-wrap items-center justify-center gap-3 rounded-b-3xl border-t border-zinc-200/80 bg-zinc-100 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] max-md:rounded-b-none dark:border-zinc-700 dark:bg-zinc-800 md:w-[calc(100%+3rem)] md:px-6 md:pb-4",
+        "mt-auto flex shrink-0 flex-wrap items-center justify-center gap-3 border-t border-zinc-200/80 bg-zinc-100 px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-zinc-700 dark:bg-zinc-800",
+        "max-md:w-full max-md:rounded-b-none",
+        "md:mt-3 md:-mx-6 md:-mb-6 md:w-[calc(100%+3rem)] md:rounded-b-3xl md:pb-4",
         className,
       )}
     >
@@ -286,23 +311,37 @@ export function ModalShell({
   hideCloseButton?: boolean;
   hideHeaderOnMobile?: boolean;
 }) {
+  const [contentScrollable, setContentScrollable] = useState(false);
+
   useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    if (!open) {
+      setContentScrollable(false);
+      return;
+    }
+    setContentScrollable(false);
+    return lockBodyScroll();
   }, [open]);
 
   if (typeof document === "undefined") return null;
+
+  const shellEnter = fullscreen
+    ? { opacity: 0 }
+    : fullHeight
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.97 };
+  const shellAnimate = fullscreen
+    ? { opacity: 1 }
+    : fullHeight
+      ? { opacity: 1 }
+      : { opacity: 1, scale: 1 };
+  const shellExit = shellEnter;
 
   return createPortal(
     <AnimatePresence>
       {open ? (
         <div
           className={cn(
-            "fixed inset-0 z-[200] flex flex-col",
+            "fixed inset-0 z-[200] flex flex-col overflow-hidden",
             fullscreen
               ? "bg-zinc-100 dark:bg-zinc-900"
               : fullHeight
@@ -317,23 +356,32 @@ export function ModalShell({
             />
           ) : null}
           <motion.div
-            initial={{ opacity: 0, scale: fullscreen || fullHeight ? 1 : 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: fullscreen || fullHeight ? 1 : 0.95 }}
-            transition={{ duration: 0.2 }}
+            initial={shellEnter}
+            animate={shellAnimate}
+            exit={shellExit}
+            transition={MODAL_SHELL_TRANSITION}
+            onAnimationComplete={() => {
+              setContentScrollable(true);
+            }}
             className={cn(
               "relative z-10 flex min-h-0 w-full flex-col",
               fullscreen && "h-dvh max-w-none",
               fullHeight &&
-                "h-dvh w-full max-w-none md:mx-auto md:w-full md:max-w-lg",
-              !fullscreen && !fullHeight && "max-md:h-dvh max-md:max-w-none",
-              !fullscreen && !fullHeight && maxWidth,
+                cn(
+                  "max-md:h-dvh max-md:min-h-0 max-md:flex-1 max-md:max-w-none",
+                  "md:mx-auto md:h-auto md:max-h-[calc(100dvh-2rem)] md:w-full",
+                  maxWidth,
+                ),
+              !fullscreen &&
+                !fullHeight &&
+                cn("max-md:h-dvh max-md:min-h-0 max-md:flex-1 max-md:max-w-none", maxWidth),
             )}
           >
             <ModalFrame
               className={cn(
                 fullscreen &&
                   "rounded-none border-0 shadow-none dark:bg-zinc-900 md:rounded-none",
+                fullHeight && "max-md:h-full md:h-auto",
               )}
             >
               <div
@@ -396,11 +444,13 @@ export function ModalShell({
 
               <div
                 className={cn(
-                  "min-h-0 flex-1 overflow-y-auto bg-white dark:bg-zinc-900",
+                  "min-h-0 flex-1 overflow-x-hidden bg-white dark:bg-zinc-900",
+                  contentScrollable ? "overflow-y-auto overscroll-contain" : "overflow-hidden",
                   contentClassName ??
                     cn(
-                      (fullscreen || fullHeight) &&
+                      fullscreen &&
                         "flex flex-col items-center justify-center p-4 md:p-6",
+                      fullHeight && "flex min-h-0 flex-1 flex-col p-4 md:p-6",
                       !fullscreen && !fullHeight && "p-4 md:p-6",
                     ),
                 )}

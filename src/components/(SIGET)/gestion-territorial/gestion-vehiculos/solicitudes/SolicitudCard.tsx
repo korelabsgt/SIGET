@@ -1,110 +1,84 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowRight, Play } from "lucide";
-import { CalendarRange, Car } from "lucide-react";
-import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
-import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
+import { ArrowRight, Eye } from "lucide";
+import { Car, MapPin } from "lucide-react";
+import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
+import { formatFechaHoraGv } from "../lib/gv-fechas";
 import {
-  GV_LIST_CARD_CHIP_CLASS,
-  GV_LIST_CARD_CLASS,
-  GV_LIST_CARD_FOOTER_CLASS,
-  GV_LIST_CARD_ICON_BOX_CLASS,
-  GV_LIST_CARD_SECTION_CLASS,
-} from "../lib/detalle-ui";
+  GvMobileRecordBadge,
+  GvMobileRecordFooter,
+  GvMobileRecordHeader,
+  GvMobileRecordMeta,
+  GvMobileRecordMetaRow,
+  GvMobileRecordRow,
+} from "../lib/gv-mobile-record";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 import { type SolicitudRow } from "./lib/zod";
 
 export function SolicitudCard({
   solicitud,
   onDetail,
-  index = 0,
 }: {
   solicitud: SolicitudRow;
   onDetail: (solicitud: SolicitudRow) => void;
-  index?: number;
 }) {
   const vehiculo = solicitud.vehiculo;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className={GV_LIST_CARD_CLASS}
-      data-morph-hover-scope
-    >
-      <div className="flex items-start gap-3">
-        <div className={GV_LIST_CARD_ICON_BOX_CLASS}>
-          <CalendarRange className="h-5 w-5 text-sky-500" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">
+    <GvMobileRecordRow>
+      <GvMobileRecordHeader
+        title={
+          <p className="truncate font-semibold text-foreground">
             {solicitud.solicitante?.nombre || "Desconocido"}
           </p>
-          <div className="mt-0.5 tabular-nums">
-            <p className="text-xs font-semibold text-foreground">
-              {formatFechaTablaGt(solicitud.fecha_inicio)}
-            </p>
-            <p className="text-xs font-semibold text-celeste-trifinio">
-              {formatHoraTablaGt(solicitud.fecha_inicio)}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${estadoBadgeClass(solicitud.estado)}`}
-          >
+        }
+        badge={
+          <GvMobileRecordBadge className={estadoBadgeClass(solicitud.estado)}>
             {formatEstadoLabel(solicitud.estado)}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
-              vehiculo
-                ? "bg-zinc-100 text-foreground dark:bg-zinc-800"
-                : "bg-zinc-100 text-muted-foreground dark:bg-zinc-800"
-            }`}
-          >
-            <Car className="size-3 shrink-0 text-celeste-trifinio" />
-            {vehiculo ? vehiculo.placa : "Sin asignar"}
-          </span>
-        </div>
-      </div>
+          </GvMobileRecordBadge>
+        }
+      />
 
-      <div className={GV_LIST_CARD_SECTION_CLASS}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Destino</p>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <p
-            className="min-w-0 flex-1 truncate text-base font-semibold leading-snug text-foreground"
-            title={solicitud.destino}
-          >
+      <GvMobileRecordMeta>
+        <GvMobileRecordMetaRow icon={<MapPin className="size-3.5 text-celeste-trifinio" />}>
+          <span className="line-clamp-2" title={solicitud.destino}>
             {solicitud.destino}
-          </p>
+          </span>
+        </GvMobileRecordMetaRow>
+        <GvMobileRecordMetaRow icon={<Car className="size-3.5 text-celeste-trifinio" />}>
           {vehiculo ? (
-            <span className={GV_LIST_CARD_CHIP_CLASS}>
-              <Car className="size-3 shrink-0 text-celeste-trifinio" />
-              <span className="truncate">
-                {vehiculo.placa} · {vehiculo.marca} {vehiculo.modelo}
+            <>
+              <span className="font-semibold">{vehiculo.placa}</span>
+              <span className="text-xs text-muted-foreground">
+                {vehiculo.marca} {vehiculo.modelo}
               </span>
-            </span>
+            </>
           ) : (
-            <span className="ml-auto shrink-0 rounded-lg bg-zinc-100 px-2 py-0.5 text-xs italic text-muted-foreground dark:bg-zinc-800">
-              Sin asignar
-            </span>
+            <span className="italic text-muted-foreground">Sin asignar</span>
           )}
-        </div>
-      </div>
+        </GvMobileRecordMetaRow>
+      </GvMobileRecordMeta>
 
-      <div className={GV_LIST_CARD_FOOTER_CLASS}>
-        <SigetActionButton
-          label="Ejecutar"
-          accentColor={sigetAccent.abrir}
-          morphFrom={Play}
-          morphTo={ArrowRight}
-          onClick={() => onDetail(solicitud)}
-          ariaLabel={`Ejecutar solicitud a ${solicitud.destino}`}
-          className="w-auto shrink-0"
-        />
-      </div>
-    </motion.div>
+      <GvMobileRecordFooter
+        left={
+          <>
+            <span className="tabular-nums font-semibold text-foreground">
+              {formatFechaHoraGv(solicitud.fecha_inicio)}
+            </span>
+          </>
+        }
+        right={
+          <GvSigetActionButton
+            label="Ver"
+            accentColor={sigetAccent.abrir}
+            morphFrom={Eye}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(solicitud)}
+            ariaLabel={`Ver solicitud a ${solicitud.destino}`}
+            className="h-8 w-auto shrink-0 rounded-lg px-3"
+          />
+        }
+      />
+    </GvMobileRecordRow>
   );
 }

@@ -66,7 +66,7 @@ function switchBoxClasses(active: boolean, tone: GvSwitchTone, variant: GvSwitch
 
 function switchLineBg(active: boolean, tone: GvSwitchTone) {
   if (!active) return "bg-transparent";
-  if (tone === "danger") return "bg-celeste-trifinio dark:bg-celeste-trifinio";
+  if (tone === "danger") return "bg-red-500 dark:bg-red-400";
   if (tone === "amber") return "bg-amber-500 dark:bg-amber-400";
   return "bg-azul-trifinio dark:bg-celeste-trifinio";
 }
@@ -179,11 +179,11 @@ export function GvSwitchItem({
   const variant = useContext(GvSwitchVariantContext);
   const sizeClass =
     variant === "field"
-      ? "h-full min-h-0 px-1 py-1 text-[8px] font-bold uppercase leading-none tracking-tight sm:text-[9px] sm:tracking-wider"
+      ? "h-full min-h-0 px-1 py-1 text-[8px] font-bold leading-none tracking-tight sm:text-[9px]"
       : size === "sm"
         ? fill
-          ? "w-full min-w-0 gap-0 px-0.5 py-1 text-[8px] font-semibold uppercase leading-none tracking-tight md:w-auto md:gap-2 md:px-3 md:py-2 md:text-xs md:font-bold md:leading-normal md:tracking-wider"
-          : "px-3 py-2 text-xs uppercase tracking-wider"
+          ? "w-full min-w-0 gap-0 px-0.5 py-1 text-[8px] font-semibold leading-none tracking-tight md:w-auto md:gap-2 md:px-3 md:py-2 md:text-xs md:font-bold md:leading-normal"
+          : "px-3 py-2 text-xs"
         : fill
           ? "w-full min-w-0 px-2 py-2.5 text-sm md:w-auto md:px-4"
           : "px-4 py-2.5 text-sm";

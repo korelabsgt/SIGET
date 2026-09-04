@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight, Play } from "lucide";
+import { ArrowRight, Eye } from "lucide";
 import { CalendarRange } from "lucide-react";
-import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { type SolicitudRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
@@ -12,7 +12,8 @@ import {
   gvTableActionTdClass,
   gvTableActionThClass,
 } from "../lib/table-ui";
-import { formatFechaTablaGt, formatHoraTablaGt } from "@/lib/fechas-gt";
+import { GvTableMorphRow } from "../lib/gv-table-morph-row";
+import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
 function SolicitudListRow({
@@ -23,7 +24,7 @@ function SolicitudListRow({
   onDetail: (solicitud: SolicitudRow) => void;
 }) {
   return (
-    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
+    <GvTableMorphRow>
       <td className="px-4 py-3 align-middle">
         <div className="min-w-0">
           <p className="truncate font-semibold text-foreground">
@@ -35,14 +36,9 @@ function SolicitudListRow({
         </div>
       </td>
       <td className="px-4 py-3 align-middle">
-        <div className="tabular-nums">
-          <p className="text-sm font-bold text-foreground">
-            {formatFechaTablaGt(solicitud.fecha_inicio)}
-          </p>
-          <p className="text-sm font-semibold text-celeste-trifinio">
-            {formatHoraTablaGt(solicitud.fecha_inicio)}
-          </p>
-        </div>
+        <p className="text-sm font-bold tabular-nums text-foreground">
+          {formatFechaHoraGv(solicitud.fecha_inicio)}
+        </p>
       </td>
       <td className="whitespace-nowrap px-4 py-3 align-middle">
         <span
@@ -65,18 +61,18 @@ function SolicitudListRow({
       </td>
       <td className={gvTableActionTdClass}>
         <GestionVehiculosActionCell>
-          <SigetActionButton
-            label="Ejecutar"
+          <GvSigetActionButton
+            label="Ver"
             accentColor={sigetAccent.abrir}
-            morphFrom={Play}
+            morphFrom={Eye}
             morphTo={ArrowRight}
             onClick={() => onDetail(solicitud)}
-            ariaLabel={`Ejecutar solicitud a ${solicitud.destino}`}
+            ariaLabel={`Ver solicitud a ${solicitud.destino}`}
             className="w-auto shrink-0"
           />
         </GestionVehiculosActionCell>
       </td>
-    </tr>
+    </GvTableMorphRow>
   );
 }
 
@@ -98,7 +94,7 @@ export function SolicitudesList({
   }
 
   return (
-    <GestionVehiculosTable minWidth={900}>
+    <GestionVehiculosTable>
       <GestionVehiculosThead
         cells={[
           { key: "solicitante", label: "Solicitante" },

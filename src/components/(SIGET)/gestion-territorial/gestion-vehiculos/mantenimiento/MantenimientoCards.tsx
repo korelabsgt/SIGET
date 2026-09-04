@@ -2,6 +2,7 @@ import { Wrench } from "lucide-react";
 import { type FallaRow } from "./lib/zod";
 import { FallaCard } from "./FallaCard";
 import { GestionVehiculosTableEmpty } from "../lib/table-ui";
+import { GvMobileRecordList } from "../lib/gv-mobile-record";
 
 export function MantenimientoCards({
   fallas,
@@ -21,10 +22,10 @@ export function MantenimientoCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {fallas.map((falla, index) => (
-        <FallaCard key={falla.id} falla={falla} onDetail={onDetail} index={index} />
+    <GvMobileRecordList>
+      {fallas.map((falla) => (
+        <FallaCard key={falla.id} falla={falla} onDetail={onDetail} />
       ))}
-    </div>
+    </GvMobileRecordList>
   );
 }

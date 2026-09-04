@@ -115,7 +115,7 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     id: "gestion-vehiculos",
     title: "Registro de Vehículos",
     desc: "Control y asignación de la flota vehicular de la institución.",
-    href: "/siget/gestion-territorial/gestion-vehiculos/flota",
+    href: "/siget/gestion-territorial/gestion-vehiculos",
     animatedIcon: "cdxxgczv",
   },
 ] as const;

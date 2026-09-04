@@ -25,7 +25,7 @@ export const GV_LIST_CARD_ICON_BOX_CLASS =
 export const GV_LIST_CARD_CHIP_CLASS =
   "inline-flex max-w-[55%] shrink-0 items-center gap-1.5 rounded-lg bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-foreground dark:bg-zinc-800";
 
-export const GV_STATS_KPI_GRID_CLASS = "mb-6 grid items-stretch gap-2 sm:gap-4";
+export const GV_STATS_KPI_GRID_CLASS = "grid shrink-0 items-stretch gap-2 sm:gap-4";
 
 export const GV_STATS_KPI_CARD_CLASS =
   "flex h-full min-w-0 flex-col items-center gap-1.5 rounded-2xl border bg-card p-2.5 text-center shadow-sm dark:bg-zinc-900/30 sm:flex-row sm:items-center sm:gap-4 sm:p-5 sm:text-left";

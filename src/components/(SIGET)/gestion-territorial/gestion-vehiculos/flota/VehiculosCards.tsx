@@ -1,32 +1,38 @@
 import { type VehiculoRow } from "./lib/zod";
 import { VehiculoCard } from "./VehiculoCard";
+import { GvMobileRecordList } from "../lib/gv-mobile-record";
 
 export function VehiculosCards({
   vehiculos,
-  onDetail,
   onEdit,
+  onOpenGaleria,
+  onExportExcel,
+  exportingVehiculoId = null,
   onDelete,
   canManage,
 }: {
   vehiculos: VehiculoRow[];
-  onDetail: (vehiculo: VehiculoRow) => void;
   onEdit: (vehiculo: VehiculoRow) => void;
+  onOpenGaleria: (vehiculo: VehiculoRow) => void;
+  onExportExcel: (vehiculo: VehiculoRow) => void;
+  exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => void;
   canManage: boolean;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {vehiculos.map((vehiculo, index) => (
+    <GvMobileRecordList>
+      {vehiculos.map((vehiculo) => (
         <VehiculoCard
           key={vehiculo.id}
           vehiculo={vehiculo}
-          onDetail={() => onDetail(vehiculo)}
           onEdit={() => onEdit(vehiculo)}
+          onOpenGaleria={() => onOpenGaleria(vehiculo)}
+          onExportExcel={() => onExportExcel(vehiculo)}
+          exporting={exportingVehiculoId === (vehiculo.id ?? vehiculo.placa)}
           onDelete={() => onDelete(vehiculo)}
           canManage={canManage}
-          index={index}
         />
       ))}
-    </div>
+    </GvMobileRecordList>
   );
 }

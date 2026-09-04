@@ -7,12 +7,16 @@ import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../li
 import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
 import { createClient } from "@/utils/supabase/client";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  GvModalForm,
+  GvModalFormBody,
+  GvModalShell,
+  GV_MODAL_SELECT_CONTENT_CLASS,
+  GV_MODAL_SELECT_ITEM_CLASS,
+  GV_MODAL_SELECT_TRIGGER_CLASS,
+  ModalCancelButton,
+  ModalFooter,
+  ModalSubmit,
+} from "../../lib/gv-modal-shell";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -130,39 +134,42 @@ export function Crear() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className={GV_DANGER_OUTLINE_BUTTON_CLASS}
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span className="lg:hidden">Avería</span>
-          <span className="hidden lg:inline">Reportar Avería</span>
-        </button>
-      </DialogTrigger>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Reportar Avería o Mantenimiento</DialogTitle>
-        </DialogHeader>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={GV_DANGER_OUTLINE_BUTTON_CLASS}
+      >
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <span className="lg:hidden">Avería</span>
+        <span className="hidden lg:inline">Reportar avería</span>
+      </button>
 
+      <GvModalShell
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Reportar Avería o Mantenimiento"
+        maxWidth="max-w-lg"
+      >
+        {open ? (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+          <GvModalForm onSubmit={form.handleSubmit(onSubmit)}>
+            <GvModalFormBody className="space-y-4">
             <FormField
               control={form.control}
               name="vehiculo_id"
               render={({ field }) => (
-                <FormItem className="relative z-[100]">
+                <FormItem>
                   <FormLabel>Vehículo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
-                      <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+                      <SelectTrigger className={GV_MODAL_SELECT_TRIGGER_CLASS}>
                         <SelectValue placeholder="Seleccione un vehículo" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper" className="bg-white dark:bg-zinc-950 border border-border shadow-md z-[100]">
+                    <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
                       {vehiculos.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
+                        <SelectItem key={v.id} value={v.id} className={GV_MODAL_SELECT_ITEM_CLASS}>
                           {v.placa} - {v.marca} {v.modelo}
                         </SelectItem>
                       ))}
@@ -177,18 +184,24 @@ export function Crear() {
               control={form.control}
               name="severidad"
               render={({ field }) => (
-                <FormItem className="relative z-[90]">
+                <FormItem>
                   <FormLabel>Nivel de Severidad</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
-                      <SelectTrigger className="w-full bg-white dark:bg-zinc-950">
+                      <SelectTrigger className={GV_MODAL_SELECT_TRIGGER_CLASS}>
                         <SelectValue placeholder="Seleccione severidad" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper" className="bg-white dark:bg-zinc-950 border border-border shadow-md z-[100]">
-                      <SelectItem value="BAJA">Baja (Mantenimiento menor)</SelectItem>
-                      <SelectItem value="MEDIA">Media (Revisión necesaria)</SelectItem>
-                      <SelectItem value="ALTA">Alta (Inmovilizar vehículo)</SelectItem>
+                    <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
+                      <SelectItem value="BAJA" className={GV_MODAL_SELECT_ITEM_CLASS}>
+                        Baja (Mantenimiento menor)
+                      </SelectItem>
+                      <SelectItem value="MEDIA" className={GV_MODAL_SELECT_ITEM_CLASS}>
+                        Media (Revisión necesaria)
+                      </SelectItem>
+                      <SelectItem value="ALTA" className={GV_MODAL_SELECT_ITEM_CLASS}>
+                        Alta (Inmovilizar vehículo)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -200,7 +213,7 @@ export function Crear() {
               control={form.control}
               name="descripcion"
               render={({ field }) => (
-                <FormItem className="relative z-[80]">
+                <FormItem>
                   <FormLabel>Descripción del problema</FormLabel>
                   <FormControl>
                     <Textarea
@@ -215,7 +228,7 @@ export function Crear() {
               )}
             />
 
-            <div className="relative z-[70] space-y-2">
+            <div className="space-y-2">
               <FormLabel>Evidencia Fotográfica (Opcional)</FormLabel>
               {previewUrl ? (
                 <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border">
@@ -247,26 +260,19 @@ export function Crear() {
               )}
             </div>
 
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={crear.isPending || uploading} className="min-w-[140px]">
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Subiendo...
-                  </>
-                ) : crear.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  "Enviar Reporte"
-                )}
-              </Button>
-            </div>
-          </form>
+            </GvModalFormBody>
+
+            <ModalFooter>
+              <ModalCancelButton onClick={() => setOpen(false)} disabled={crear.isPending || uploading} />
+              <ModalSubmit
+                disabled={crear.isPending || uploading}
+                label={uploading ? "Subiendo" : crear.isPending ? "Enviando" : "Enviar"}
+              />
+            </ModalFooter>
+          </GvModalForm>
         </Form>
-      </DialogContent>
-    </Dialog>
+        ) : null}
+      </GvModalShell>
+    </>
   );
 }

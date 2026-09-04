@@ -2,7 +2,7 @@
 
 import { ArrowRight, Eye } from "lucide";
 import { Wrench } from "lucide-react";
-import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { type FallaRow } from "./lib/zod";
 import {
   GestionVehiculosTable,
@@ -13,6 +13,7 @@ import {
   gvTableActionThClass,
   gvTableHeaderThClass,
 } from "../lib/table-ui";
+import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import {
   estadoFallaBadgeClass,
   FALLA_BADGE_BASE_CLASS,
@@ -30,7 +31,7 @@ function FallaListRow({
   onDetail: (falla: FallaRow) => void;
 }) {
   return (
-    <tr className="border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20">
+    <GvTableMorphRow>
       <td className="px-4 py-3 align-middle text-center">
         <p className="truncate font-semibold text-foreground">{formatVehiculoFalla(falla)}</p>
       </td>
@@ -51,7 +52,7 @@ function FallaListRow({
       </td>
       <td className={gvTableActionTdClass}>
         <GestionVehiculosActionCell>
-          <SigetActionButton
+          <GvSigetActionButton
             label="Ver"
             accentColor={sigetAccent.abrir}
             morphFrom={Eye}
@@ -62,7 +63,7 @@ function FallaListRow({
           />
         </GestionVehiculosActionCell>
       </td>
-    </tr>
+    </GvTableMorphRow>
   );
 }
 

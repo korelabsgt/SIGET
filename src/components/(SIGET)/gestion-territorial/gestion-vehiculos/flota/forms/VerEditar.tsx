@@ -4,23 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
-import { Loader2 } from "lucide-react";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  GvModalForm,
+  GvModalFormBody,
+  GvModalShell,
+  ModalFooter,
+  ModalCancelButton,
+  ModalSubmit,
+} from "../../lib/gv-modal-shell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  aplicarMascaraEnInput,
   formatFechaManualInput,
-  maskFechaManual,
 } from "../../lib/fechas-input";
-import { Button } from "@/components/ui/button";
+import { GvFechaInput } from "../../lib/gv-fecha-input";
 
 import {
   vehiculoInputSchema,
@@ -197,16 +195,18 @@ export function VerEditar({
 
   const subiendoFotos = uploadingCount > 0;
   const isWorking = crear.isPending || editar.isPending || isSubmitting || subiendoFotos;
+  const onClose = () => onOpenChange(false);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
-            {initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+    <GvModalShell
+      open={open}
+      onClose={onClose}
+      title={initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
+      maxWidth="max-w-xl"
+    >
+      {open ? (
+        <GvModalForm onSubmit={handleSubmit(onSubmit)}>
+          <GvModalFormBody>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="placa">Placa</Label>
@@ -289,19 +289,7 @@ export function VerEditar({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vencimiento_seguro">Vencimiento Seguro</Label>
-              <Input
-                id="vencimiento_seguro"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={10}
-                {...register("vencimiento_seguro", {
-                  onChange: (e) => {
-                    aplicarMascaraEnInput(e.target, maskFechaManual);
-                  },
-                })}
-              />
-              <p className="text-[11px] text-muted-foreground">DD/MM/AAAA</p>
+              <GvFechaInput id="vencimiento_seguro" {...register("vencimiento_seguro")} />
               {errors.vencimiento_seguro && (
                 <p className="text-xs text-red-500">
                   {errors.vencimiento_seguro.message}
@@ -310,19 +298,7 @@ export function VerEditar({
             </div>
             <div className="space-y-2">
               <Label htmlFor="vencimiento_circulacion">Vencimiento Circulación</Label>
-              <Input
-                id="vencimiento_circulacion"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={10}
-                {...register("vencimiento_circulacion", {
-                  onChange: (e) => {
-                    aplicarMascaraEnInput(e.target, maskFechaManual);
-                  },
-                })}
-              />
-              <p className="text-[11px] text-muted-foreground">DD/MM/AAAA</p>
+              <GvFechaInput id="vencimiento_circulacion" {...register("vencimiento_circulacion")} />
               {errors.vencimiento_circulacion && (
                 <p className="text-xs text-red-500">
                   {errors.vencimiento_circulacion.message}
@@ -341,35 +317,27 @@ export function VerEditar({
             disabled={isWorking}
           />
 
-          <DialogFooter className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+          </GvModalFormBody>
+
+          <ModalFooter>
+            <ModalCancelButton onClick={onClose} disabled={isWorking} />
+            <ModalSubmit
               disabled={isWorking}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isWorking} className="bg-azul-trifinio text-white hover:bg-azul-trifinio/90">
-              {subiendoFotos ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Subiendo fotografías...
-                </>
-              ) : isWorking ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  {initialData ? "Guardando..." : "Registrando..."}
-                </>
-              ) : initialData ? (
-                "Guardar Cambios"
-              ) : (
-                "Registrar"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              label={
+                subiendoFotos
+                  ? "Subiendo"
+                  : isWorking
+                    ? initialData
+                      ? "Guardando"
+                      : "Registrando"
+                    : initialData
+                      ? "Guardar"
+                      : "Registrar"
+              }
+            />
+          </ModalFooter>
+        </GvModalForm>
+      ) : null}
+    </GvModalShell>
   );
 }

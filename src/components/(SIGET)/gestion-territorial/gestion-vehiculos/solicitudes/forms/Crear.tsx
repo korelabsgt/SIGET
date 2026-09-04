@@ -4,15 +4,16 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
-import { Loader2, Car } from "lucide-react";
+import { Car } from "lucide-react";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  GvModalForm,
+  GvModalFormBody,
+  GvModalShell,
+  ModalFooter,
+  ModalCancelButton,
+  ModalSubmit,
+} from "../../lib/gv-modal-shell";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,13 +24,12 @@ import {
 } from "@/components/ui/select";
 import { PasajerosSelect } from "../PasajerosSelect";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
-import { aplicarMascaraEnInput, maskFechaHoraManual } from "../../lib/fechas-input";
+import { GvFechaHoraInput } from "../../lib/gv-fecha-input";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
@@ -98,53 +98,29 @@ export function Crear({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        className="max-h-[calc(100dvh-2rem)] gap-3 overflow-y-auto p-4 sm:max-w-lg"
-      >
-        <DialogHeader>
-          <DialogTitle className="text-base">Nueva Solicitud de Vehículo</DialogTitle>
-        </DialogHeader>
+  const onClose = () => onOpenChange(false);
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 py-1">
+  return (
+    <GvModalShell
+      open={open}
+      onClose={onClose}
+      title="Nueva Solicitud de Vehículo"
+      maxWidth="max-w-lg"
+    >
+      {open ? (
+        <GvModalForm onSubmit={handleSubmit(onSubmit)}>
+          <GvModalFormBody className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
-              <Input
-                id="fecha_inicio"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={16}
-                placeholder="DD/MM/AAAA HH:mm"
-                {...register("fecha_inicio", {
-                  onChange: (e) => {
-                    aplicarMascaraEnInput(e.target, maskFechaHoraManual);
-                  },
-                })}
-              />
+              <GvFechaHoraInput id="fecha_inicio" {...register("fecha_inicio")} />
               {errors.fecha_inicio && (
                 <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fecha_fin_estimada">Fecha y Hora de Retorno Estimado</Label>
-              <Input
-                id="fecha_fin_estimada"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={16}
-                placeholder="DD/MM/AAAA HH:mm"
-                {...register("fecha_fin_estimada", {
-                  onChange: (e) => {
-                    aplicarMascaraEnInput(e.target, maskFechaHoraManual);
-                  },
-                })}
-              />
+              <GvFechaHoraInput id="fecha_fin_estimada" {...register("fecha_fin_estimada")} />
               {errors.fecha_fin_estimada && (
                 <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
               )}
@@ -242,22 +218,14 @@ export function Crear({
             />
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={crear.isPending || isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={crear.isPending || isSubmitting}>
-              {(crear.isPending || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Enviar Solicitud
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </GvModalFormBody>
+
+          <ModalFooter>
+            <ModalCancelButton onClick={onClose} disabled={crear.isPending || isSubmitting} />
+            <ModalSubmit disabled={crear.isPending || isSubmitting} label="Enviar" />
+          </ModalFooter>
+        </GvModalForm>
+      ) : null}
+    </GvModalShell>
   );
 }

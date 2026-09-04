@@ -6,9 +6,10 @@ import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentario
 import { normalizeBitacoraRow } from "./helpers";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
+import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ter_bitacoras";
-const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/bitacoras";
+const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -115,13 +116,12 @@ export async function createBitacora(input: BitacoraInput) {
             "La bitácora se guardó, pero no se pudo finalizar la misión vinculada. Contacte al administrador.",
         };
       }
-      revalidatePath("/siget/gestion-territorial/gestion-vehiculos/solicitudes");
+      revalidatePath(GV_BASE_ROUTE);
     }
 
     await sincronizarEstadoFlotaVehiculo(supabase, parsed.vehiculo_id);
 
     revalidatePath(REVALIDATE_ROUTE);
-    revalidatePath("/siget/gestion-territorial/gestion-vehiculos/flota");
     return { success: true };
   } catch (error) {
     console.error("Error creating bitacora:", error);

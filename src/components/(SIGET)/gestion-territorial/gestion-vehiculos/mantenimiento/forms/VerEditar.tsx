@@ -7,13 +7,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
 import {
-  ModalShell,
+  GvModalForm,
+  GvModalFormBody,
+  GvModalShell,
+  ModalCancelButton,
   ModalLabel,
   ModalInput,
   ModalTextarea,
   ModalSubmit,
   ModalFooter,
-} from "@/components/ui/general-modal";
+} from "../../lib/gv-modal-shell";
 import { cn } from "@/lib/utils";
 import {
   AtenderFallaSchema,
@@ -187,14 +190,15 @@ export function VerEditar({
   const pending = isAtender ? atender.isPending : solventar.isPending;
 
   return (
-    <ModalShell
+    <GvModalShell
       open={open && modo !== null}
       onClose={onClose}
       title={isAtender ? "Iniciar reparación" : "Finalizar reparación"}
       subtitle={isAtender ? "Asignar atención a la avería" : "Registrar diagnóstico y reparación"}
     >
       {isAtender ? (
-        <form onSubmit={formAtender.handleSubmit(onAtender)} className="space-y-4">
+        <GvModalForm onSubmit={formAtender.handleSubmit(onAtender)}>
+          <GvModalFormBody className="space-y-4">
           <div className="space-y-2">
             <ModalLabel htmlFor="mecanico_id">Mecánico interno</ModalLabel>
             <Controller
@@ -216,19 +220,15 @@ export function VerEditar({
             <ModalLabel htmlFor="taller_externo">Taller externo</ModalLabel>
             <ModalInput id="taller_externo" {...formAtender.register("taller_externo")} />
           </div>
+          </GvModalFormBody>
           <ModalFooter>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-            >
-              Cancelar
-            </button>
+            <ModalCancelButton onClick={onClose} disabled={pending} />
             <ModalSubmit disabled={pending} label="Reparación" />
           </ModalFooter>
-        </form>
+        </GvModalForm>
       ) : (
-        <form onSubmit={formSolventar.handleSubmit(onSolventar)} className="space-y-4">
+        <GvModalForm onSubmit={formSolventar.handleSubmit(onSolventar)}>
+          <GvModalFormBody className="space-y-4">
           <div className="space-y-2">
             <ModalLabel htmlFor="diagnostico">Diagnóstico técnico</ModalLabel>
             <ModalTextarea id="diagnostico" rows={3} {...formSolventar.register("diagnostico")} />
@@ -247,18 +247,13 @@ export function VerEditar({
               <p className="text-xs text-red-500">{formSolventar.formState.errors.reparacion_detalle.message}</p>
             ) : null}
           </div>
+          </GvModalFormBody>
           <ModalFooter>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-            >
-              Cancelar
-            </button>
+            <ModalCancelButton onClick={onClose} disabled={pending} />
             <ModalSubmit disabled={pending} label="Solventar" />
           </ModalFooter>
-        </form>
+        </GvModalForm>
       )}
-    </ModalShell>
+    </GvModalShell>
   );
 }

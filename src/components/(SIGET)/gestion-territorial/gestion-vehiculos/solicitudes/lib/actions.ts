@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canManageSolicitudesVehiculos, canViewAllSolicitudes } from "../../lib/permissions";
+import { GV_BASE_ROUTE } from "../../lib/routes";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
 const TABLE = "ter_solicitudes";
-const REVALIDATE_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/solicitudes";
-const FLOTA_ROUTE = "/siget/gestion-territorial/gestion-vehiculos/flota";
+const REVALIDATE_ROUTE = GV_BASE_ROUTE;
+const FLOTA_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
   const supabase = await createClient();

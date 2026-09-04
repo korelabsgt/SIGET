@@ -1,82 +1,63 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SolicitudesList } from "./SolicitudesList";
 import { SolicitudesCards } from "./SolicitudesCards";
-import { SolicitudDetalleView } from "./SolicitudDetalleView";
+import { SolicitudDetalleModal } from "./SolicitudDetalleModal";
 import { type SolicitudRow } from "./lib/zod";
 
 export function SolicitudesPanel({
   solicitudes,
+  catalogo,
   canManage,
   onAction,
   misionPendiente = false,
-  onDetailViewChange,
+  detail,
+  onDetailChange,
 }: {
   solicitudes: SolicitudRow[];
+  catalogo?: SolicitudRow[];
   canManage: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
   misionPendiente?: boolean;
-  onDetailViewChange?: (active: boolean) => void;
+  detail?: SolicitudRow | null;
+  onDetailChange?: (solicitud: SolicitudRow | null) => void;
 }) {
-  const prefersReducedMotion = useReducedMotion();
-  const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudRow | null>(null);
+  const [internalDetail, setInternalDetail] = useState<SolicitudRow | null>(null);
+  const isControlled = detail !== undefined;
+  const selectedSolicitud = isControlled ? detail : internalDetail;
+  const setSelectedSolicitud = isControlled
+    ? (solicitud: SolicitudRow | null) => onDetailChange?.(solicitud)
+    : setInternalDetail;
+  const fuente = catalogo ?? solicitudes;
 
   useEffect(() => {
     if (!selectedSolicitud?.id) return;
-    const updated = solicitudes.find((s) => s.id === selectedSolicitud.id);
+    const updated = fuente.find((s) => s.id === selectedSolicitud.id);
     if (updated) {
       setSelectedSolicitud(updated);
     } else {
       setSelectedSolicitud(null);
     }
-  }, [solicitudes, selectedSolicitud?.id]);
-
-  useEffect(() => {
-    onDetailViewChange?.(selectedSolicitud !== null);
-  }, [selectedSolicitud, onDetailViewChange]);
-
-  const transition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
+  }, [fuente, selectedSolicitud?.id]);
 
   return (
-    <div className="relative overflow-hidden">
-      <AnimatePresence mode="wait" initial={false}>
-        {selectedSolicitud ? (
-          <motion.div
-            key={`detail-${selectedSolicitud.id}`}
-            initial={prefersReducedMotion ? false : { opacity: 0, x: 32 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, x: 32 }}
-            transition={transition}
-          >
-            <SolicitudDetalleView
-              solicitud={selectedSolicitud}
-              canManage={canManage}
-              misionPendiente={misionPendiente}
-              onBack={() => setSelectedSolicitud(null)}
-              onAction={onAction}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="list"
-            initial={prefersReducedMotion ? false : { opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, x: -24 }}
-            transition={transition}
-          >
-            <div className="hidden lg:block">
-              <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
-            </div>
-            <div className="p-4 lg:hidden">
-              <SolicitudesCards solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <>
+      <div className="hidden lg:block">
+        <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+      </div>
+      <div className="lg:hidden">
+        <SolicitudesCards solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+      </div>
+
+      <SolicitudDetalleModal
+        open={selectedSolicitud !== null}
+        onClose={() => setSelectedSolicitud(null)}
+        solicitud={selectedSolicitud}
+        canManage={canManage}
+        misionPendiente={misionPendiente}
+        onAction={onAction}
+      />
+    </>
   );
 }

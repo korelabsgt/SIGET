@@ -2,6 +2,7 @@ import { CalendarRange } from "lucide-react";
 import { type SolicitudRow } from "./lib/zod";
 import { SolicitudCard } from "./SolicitudCard";
 import { GestionVehiculosTableEmpty } from "../lib/table-ui";
+import { GvMobileRecordList } from "../lib/gv-mobile-record";
 
 export function SolicitudesCards({
   solicitudes,
@@ -21,15 +22,10 @@ export function SolicitudesCards({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {solicitudes.map((solicitud, index) => (
-        <SolicitudCard
-          key={solicitud.id}
-          solicitud={solicitud}
-          onDetail={onDetail}
-          index={index}
-        />
+    <GvMobileRecordList>
+      {solicitudes.map((solicitud) => (
+        <SolicitudCard key={solicitud.id} solicitud={solicitud} onDetail={onDetail} />
       ))}
-    </div>
+    </GvMobileRecordList>
   );
 }

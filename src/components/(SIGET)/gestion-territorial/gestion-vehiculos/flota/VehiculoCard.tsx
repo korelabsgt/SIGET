@@ -1,22 +1,23 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { differenceInDays } from "date-fns";
 import {
-  ArrowRight,
   EllipsisVertical,
-  LogIn,
   MoreVertical,
   PenSquare,
   Pencil,
+  FileSpreadsheet,
+  ArrowDownToLine,
   Trash,
   Trash2,
+  Image,
 } from "lucide";
-import { Activity, AlertTriangle, Car as CarIcon, Route } from "lucide-react";
+import { AlertTriangle, Car, Route } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
-import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { type VehiculoRow } from "./lib/zod";
+import { formatEstadoVehiculoLabel } from "./lib/helpers";
 import { cn } from "@/lib/utils";
-import { differenceInDays } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,12 +25,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  GV_LIST_CARD_CHIP_CLASS,
-  GV_LIST_CARD_CLASS,
-  GV_LIST_CARD_FOOTER_CLASS,
-  GV_LIST_CARD_ICON_BOX_CLASS,
-  GV_LIST_CARD_SECTION_CLASS,
-} from "../lib/detalle-ui";
+  GvMobileRecordBadge,
+  GvMobileRecordFooter,
+  GvMobileRecordHeader,
+  GvMobileRecordMeta,
+  GvMobileRecordMetaRow,
+  GvMobileRecordRow,
+} from "../lib/gv-mobile-record";
 
 function estadoVehiculoBadgeClass(estado: string) {
   switch (estado) {
@@ -38,30 +40,28 @@ function estadoVehiculoBadgeClass(estado: string) {
     case "RESERVADO":
       return "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400";
     case "EN_MANTENIMIENTO":
-      return "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400";
+      return "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400";
     default:
       return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
   }
 }
 
-function formatEstadoVehiculo(estado: string) {
-  return estado.replace("_", " ");
-}
-
 export function VehiculoCard({
   vehiculo,
-  onDetail,
   onEdit,
+  onOpenGaleria,
+  onExportExcel,
+  exporting = false,
   onDelete,
   canManage,
-  index = 0,
 }: {
   vehiculo: VehiculoRow;
-  onDetail: () => void;
   onEdit: () => void;
+  onOpenGaleria: () => void;
+  onExportExcel: () => void;
+  exporting?: boolean;
   onDelete: () => void;
   canManage: boolean;
-  index?: number;
 }) {
   const checkVencimiento = (fecha: string | null | undefined) => {
     if (!fecha) return null;
@@ -73,127 +73,125 @@ export function VehiculoCard({
 
   const vencSeguro = checkVencimiento(vehiculo.vencimiento_seguro);
   const vencCirculacion = checkVencimiento(vehiculo.vencimiento_circulacion);
-  const alertaVencimiento = vencSeguro?.text ?? vencCirculacion?.text ?? null;
   const tieneAlerta = Boolean(vencSeguro || vencCirculacion);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className={GV_LIST_CARD_CLASS}
-      data-morph-hover-scope
-    >
-      <div className="flex items-start gap-3">
-        <div className={GV_LIST_CARD_ICON_BOX_CLASS}>
-          <CarIcon className="h-5 w-5 text-sky-500" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{vehiculo.placa}</p>
-          <p className="mt-0.5 truncate text-xs font-semibold text-foreground">
-            {vehiculo.marca} {vehiculo.modelo}
-          </p>
-          {vehiculo.anio ? (
-            <p className="text-xs font-semibold text-celeste-trifinio">Año {vehiculo.anio}</p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${estadoVehiculoBadgeClass(vehiculo.estado)}`}
-          >
-            {formatEstadoVehiculo(vehiculo.estado)}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-lg bg-sky-500/10 px-2 py-1 text-xs font-bold text-sky-600 dark:text-sky-400">
-            <Route className="size-3" />
+    <GvMobileRecordRow>
+      <GvMobileRecordHeader
+        title={
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-foreground">{vehiculo.placa}</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {vehiculo.marca} {vehiculo.modelo}
+              {vehiculo.anio ? ` · ${vehiculo.anio}` : ""}
+            </p>
+          </div>
+        }
+        badge={
+          <GvMobileRecordBadge className={estadoVehiculoBadgeClass(vehiculo.estado)}>
+            {formatEstadoVehiculoLabel(vehiculo.estado)}
+          </GvMobileRecordBadge>
+        }
+      />
+
+      <GvMobileRecordMeta>
+        <GvMobileRecordMetaRow icon={<Route className="size-3.5 text-celeste-trifinio" />}>
+          <span className="tabular-nums font-semibold">
             {vehiculo.kilometraje_actual.toLocaleString("es-GT")} km
           </span>
-        </div>
-      </div>
-
-      <div className={GV_LIST_CARD_SECTION_CLASS}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Documentación
-        </p>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <p
-            className={cn(
-              "min-w-0 flex-1 truncate text-base font-semibold leading-snug",
-              tieneAlerta ? "text-red-500" : "text-foreground",
-            )}
-          >
-            {alertaVencimiento ?? "Al día"}
-          </p>
-          <span className={GV_LIST_CARD_CHIP_CLASS}>
-            <Activity className="size-3 shrink-0 text-celeste-trifinio" />
-            <span className="truncate">{tieneAlerta ? "Con alertas" : "Vigente"}</span>
-          </span>
-        </div>
+        </GvMobileRecordMetaRow>
         {tieneAlerta ? (
-          <div className="mt-2 flex flex-col gap-1">
-            {vencSeguro ? (
-              <p className="flex items-center gap-1.5 text-xs font-medium text-red-400">
-                <AlertTriangle className="size-3 shrink-0" />
-                Seguro: {vencSeguro.text}
-              </p>
+          <GvMobileRecordMetaRow icon={<AlertTriangle className="size-3.5 text-red-500" />}>
+            <span className="text-red-500">
+              {vencSeguro?.text ?? vencCirculacion?.text}
+            </span>
+            {vencSeguro && vencCirculacion ? (
+              <span className="text-xs text-red-400">
+                Seguro y circulación con alerta
+              </span>
             ) : null}
-            {vencCirculacion ? (
-              <p className="flex items-center gap-1.5 text-xs font-medium text-red-400">
-                <AlertTriangle className="size-3 shrink-0" />
-                Circulación: {vencCirculacion.text}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+          </GvMobileRecordMetaRow>
+        ) : (
+          <GvMobileRecordMetaRow icon={<Car className="size-3.5 text-celeste-trifinio" />}>
+            Documentación al día
+          </GvMobileRecordMetaRow>
+        )}
+      </GvMobileRecordMeta>
 
-      <div className={cn(GV_LIST_CARD_FOOTER_CLASS, "gap-2")}>
-        <SigetActionButton
-          label="Entrar"
-          accentColor={sigetAccent.abrir}
-          morphFrom={LogIn}
-          morphTo={ArrowRight}
-          onClick={onDetail}
-          ariaLabel={`Entrar a ${vehiculo.placa}`}
-          className="w-auto shrink-0"
-        />
-        {canManage ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 text-celeste-trifinio transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                aria-label={`Más acciones de ${vehiculo.placa}`}
+      <GvMobileRecordFooter
+        left={
+          tieneAlerta ? (
+            <span className="font-semibold text-red-500">Con alertas</span>
+          ) : (
+            <span className="font-semibold text-foreground">Vigente</span>
+          )
+        }
+        right={
+          <>
+            <GvSigetActionButton
+              label="Editar"
+              accentColor={sigetAccent.editar}
+              morphFrom={PenSquare}
+              morphTo={Pencil}
+              onClick={onEdit}
+              ariaLabel={`Editar ${vehiculo.placa}`}
+              className="h-8 w-auto shrink-0 rounded-lg px-3"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
+                  aria-label={`Más acciones de ${vehiculo.placa}`}
+                >
+                  <GvMorphIcon
+                    icon={EllipsisVertical}
+                    hoverIcon={MoreVertical}
+                    size={16}
+                    className="text-current"
+                  />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
               >
-                <GvMorphIcon
-                  icon={EllipsisVertical}
-                  hoverIcon={MoreVertical}
-                  size={18}
-                  className="text-current"
-                />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
-            >
-              <DropdownMenuItem
-                className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
-                onSelect={onEdit}
-              >
-                <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={14} className="text-current" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60"
-                onSelect={onDelete}
-              >
-                <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </div>
-    </motion.div>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                  onSelect={onExportExcel}
+                  disabled={exporting}
+                >
+                  <GvMorphIcon
+                    icon={FileSpreadsheet}
+                    hoverIcon={ArrowDownToLine}
+                    size={14}
+                    className="text-current"
+                  />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                  onSelect={onOpenGaleria}
+                >
+                  <GvMorphIcon icon={Image} hoverIcon={Image} size={14} morphOnHover={false} className="text-current" />
+                  Fotos
+                </DropdownMenuItem>
+                {canManage ? (
+                  <DropdownMenuItem
+                    className={cn(
+                      "cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60",
+                    )}
+                    onSelect={onDelete}
+                  >
+                    <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
+                    Eliminar
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
+    </GvMobileRecordRow>
   );
 }

@@ -2,18 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { MantenimientoPanel } from "./MantenimientoPanel";
+import { MantenimientoNotificaciones } from "./MantenimientoNotificaciones";
 import { MantenimientoStatsCards } from "./MantenimientoStatsCards";
 import { Crear } from "./forms/Crear";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "react-toastify";
-import { SubmodulosNav } from "../../SubmodulosNav";
-import { useRouter } from "next/navigation";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
-import { GestionVehiculosTableShell } from "../lib/table-ui";
+import { GestionVehiculosTableShell, gvTableVisibleRowCount } from "../lib/table-ui";
+import { useGvLgUp } from "../lib/gv-breakpoint";
+import { GV_PANEL_KPI_STACK_CLASS } from "../lib/page-shell";
 import { cn } from "@/lib/utils";
-import { GV_MODULO_PAGE_CLASS } from "../lib/page-shell";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { GvTableSectionMotion } from "../lib/gv-table-motion";
+import { useGvSection } from "../lib/tab-context";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { GvTabFilter } from "../lib/gv-tab-filter";
@@ -26,6 +29,7 @@ import {
   canGestionarFallasMantenimiento,
   canManageMantenimiento,
 } from "../lib/permissions";
+import { type FallaRow } from "./lib/zod";
 
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
 type TabMantenimiento = (typeof TABS)[number];
@@ -37,7 +41,6 @@ const TAB_LABELS: Record<TabMantenimiento, string> = {
 };
 
 export function Mantenimiento() {
-  const router = useRouter();
   const { effectiveRole } = useUserContext();
   const canManage = canManageMantenimiento(effectiveRole);
   const canExport = canExportMantenimientoReporte(effectiveRole);
@@ -46,8 +49,11 @@ export function Mantenimiento() {
   const { data: mecanicos = [] } = useMecanicos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
-  const [enDetalle, setEnDetalle] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [detailFalla, setDetailFalla] = useState<FallaRow | null>(null);
+  const gvSection = useGvSection();
+  const panelActive = gvSection?.section === "mantenimiento";
+  const lgUp = useGvLgUp();
 
   const fallasDelPeriodo = useMemo(
     () => fallas.filter((f) => registroEnPeriodoCalendario(f.created_at, periodoFilter)),
@@ -84,6 +90,21 @@ export function Mantenimiento() {
     setPageSize,
   } = useGvTablePagination(fallasFiltradas, paginacionKey);
 
+  const tableVisibleRows = gvTableVisibleRowCount(
+    fallasPaginadas.length,
+    fallasFiltradas.length === 0,
+  );
+
+  const headerExtras = useMemo(
+    () =>
+      !isLoading ? (
+        <MantenimientoNotificaciones fallas={fallas} />
+      ) : null,
+    [isLoading, fallas],
+  );
+
+  useGvPanelChrome("mantenimiento", { headerExtras });
+
   const handleExportReporte = async () => {
     if (fallasDelPeriodo.length === 0) {
       toast.warning("No hay averías para exportar en el periodo seleccionado.");
@@ -112,138 +133,96 @@ export function Mantenimiento() {
   };
 
   return (
-    <div className={GV_MODULO_PAGE_CLASS}>
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)] opacity-30 z-[-1]" />
-
-      {!enDetalle ? <SubmodulosNav /> : null}
-
-      {!enDetalle ? (
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/siget")}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-accent"
-          >
-            <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-celeste-trifinio">
-              Gestión Territorial
-            </p>
-            <h1 className="text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
-              Mantenimiento y Averías
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div className={GV_PANEL_KPI_STACK_CLASS}>
+      {panelActive && canManage ? (
+        <MantenimientoStatsCards
+          metrics={{
+            fallasActivas,
+            unidadesFueraDeServicio,
+            promedioDias,
+          }}
+        />
       ) : null}
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 className="mb-4 h-10 w-10 animate-spin text-celeste-trifinio" />
-          <p className="text-muted-foreground">Cargando mantenimiento...</p>
-        </div>
-      ) : (
-        <>
-          {!enDetalle ? (
-            <>
-              {canManage ? (
-                <MantenimientoStatsCards
-                  metrics={{
-                    fallasActivas,
-                    unidadesFueraDeServicio,
-                    promedioDias,
-                  }}
-                />
-              ) : null}
-            </>
-          ) : null}
+      <GvTableSectionMotion panelId="mantenimiento">
+        <GestionVehiculosTableShell
+          visibleRows={lgUp ? tableVisibleRows : null}
+          toolbar={
+            <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex w-full items-stretch gap-2 lg:contents">
+                  {canManage ? (
+                    <GvTabFilter
+                      value={tabActiva}
+                      onChange={setTabActiva}
+                      layoutId="gv-mantenimiento-tabs"
+                      layout="responsive-grid"
+                      fill
+                      compact
+                      options={TABS.map((tab) => ({
+                        value: tab,
+                        label: TAB_LABELS[tab],
+                        tone: tab === "CRITICAS" ? "danger" : "default",
+                      }))}
+                    />
+                  ) : null}
 
-          <div>
-            <GestionVehiculosTableShell
-              className={
-                enDetalle
-                  ? "overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent"
-                  : undefined
-              }
-              toolbar={
-                !enDetalle ? (
-                  <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex w-full items-stretch gap-2 lg:contents">
-                      {canManage ? (
-                        <GvTabFilter
-                          value={tabActiva}
-                          onChange={setTabActiva}
-                          layoutId="gv-mantenimiento-tabs"
-                          layout="responsive-grid"
-                          fill
-                          compact
-                          options={TABS.map((tab) => ({
-                            value: tab,
-                            label: TAB_LABELS[tab],
-                            tone: tab === "CRITICAS" ? "danger" : "default",
-                          }))}
-                        />
-                      ) : null}
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="!h-11 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
+                  />
+                </div>
 
-                      <GvMonthPicker
-                        value={periodoFilter}
-                        onChange={setPeriodoFilter}
-                        className="!h-9 min-w-0 flex-1 basis-0 !w-full text-xs lg:hidden"
-                      />
-                    </div>
-
-                    <div
-                      className={cn(
-                        "grid w-full gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto",
-                        canExport ? "grid-cols-2" : "grid-cols-1",
-                        "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
-                      )}
-                    >
-                      <GvMonthPicker
-                        value={periodoFilter}
-                        onChange={setPeriodoFilter}
-                        className="hidden lg:inline-flex"
-                      />
-                      {canExport ? (
-                        <GvExportReporteButton
-                          onClick={handleExportReporte}
-                          disabled={isLoading || fallasDelPeriodo.length === 0}
-                          loading={isExporting}
-                        />
-                      ) : null}
-                      <Crear />
-                    </div>
-                  </div>
-                ) : undefined
-              }
-              pagination={
-                !enDetalle
-                  ? {
-                      pageSafe,
-                      totalPages,
-                      pageSize,
-                      onPageChange: setPage,
-                      onPageSizeChange: (size) => {
-                        setPageSize(size);
-                        setPage(1);
-                      },
-                    }
-                  : undefined
-              }
-            >
-              <MantenimientoPanel
-                fallas={fallasPaginadas}
-                catalogo={fallasFiltradas}
-                mecanicos={mecanicos}
-                isAuthorized={canGestionar}
-                onDetailViewChange={setEnDetalle}
-              />
-            </GestionVehiculosTableShell>
-          </div>
-        </>
-      )}
+                <div
+                  className={cn(
+                    "grid w-full gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto",
+                    canExport ? "grid-cols-2" : "grid-cols-1",
+                    "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
+                  )}
+                >
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="hidden lg:inline-flex"
+                  />
+                  {canExport ? (
+                    <GvExportReporteButton
+                      onClick={handleExportReporte}
+                      disabled={isLoading || fallasDelPeriodo.length === 0}
+                      loading={isExporting}
+                    />
+                  ) : null}
+                  <Crear />
+                </div>
+              </div>
+          }
+          pagination={{
+            pageSafe,
+            totalPages,
+            pageSize,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
+        >
+          {isLoading ? (
+            <div className="flex min-h-full items-center justify-center py-20">
+              <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
+            </div>
+          ) : (
+            <MantenimientoPanel
+              fallas={fallasPaginadas}
+              catalogo={fallasFiltradas}
+              mecanicos={mecanicos}
+              isAuthorized={canGestionar}
+              detail={detailFalla}
+              onDetailChange={setDetailFalla}
+            />
+          )}
+        </GestionVehiculosTableShell>
+      </GvTableSectionMotion>
     </div>
   );
 }
