@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
-import { canManageSolicitudesVehiculos, canViewAllSolicitudes } from "../../lib/permissions";
+import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
@@ -131,20 +131,67 @@ export async function cambiarEstadoSolicitud(
 ) {
   try {
     const { user, role } = await requireAuth();
-    if (!canManageSolicitudesVehiculos(role)) {
-      return { success: false, error: "No tienes permisos para realizar esta acción." };
+    const esAdmin = canAprobarRechazarSolicitudes(role);
+    const esSuper = isSuperRole(role);
+    const esTransicionMision = nuevoEstado === "EN_MISION" || nuevoEstado === "FINALIZADA";
+    const esTransicionAprobacion =
+      nuevoEstado === "APROBADA" || nuevoEstado === "RECHAZADA";
+
+    if (esTransicionMision) {
+      if (canManageSolicitudesVehiculos(role) && !esSuper) {
+        return {
+          success: false,
+          error: "Solo el solicitante puede iniciar o finalizar la misión.",
+        };
+      }
+    } else if (esTransicionAprobacion) {
+      if (!esAdmin) {
+        return { success: false, error: "No tienes permisos para realizar esta acción." };
+      }
+    } else {
+      return { success: false, error: "Transición de estado no permitida." };
     }
 
     const supabase = await createClient();
 
     const { data: actual, error: actualError } = await supabase
       .from(TABLE)
-      .select("id, vehiculo_id, estado")
+      .select("id, solicitante_id, vehiculo_id, estado")
       .eq("id", id)
       .maybeSingle();
 
     if (actualError || !actual) {
       return { success: false, error: "No se encontró la solicitud." };
+    }
+
+    if (esTransicionMision) {
+      if (!esSuper && actual.solicitante_id !== user.id) {
+        return {
+          success: false,
+          error: "Solo el solicitante puede iniciar o finalizar esta misión.",
+        };
+      }
+
+      if (nuevoEstado === "EN_MISION" && actual.estado !== "APROBADA") {
+        return {
+          success: false,
+          error: "La misión solo puede iniciarse cuando la solicitud está aprobada.",
+        };
+      }
+
+      if (nuevoEstado === "FINALIZADA" && actual.estado !== "EN_MISION") {
+        return {
+          success: false,
+          error: "La misión solo puede finalizarse cuando está en curso.",
+        };
+      }
+    }
+
+    if (esTransicionAprobacion && actual.estado !== "PENDIENTE") {
+      return {
+        success: false,
+        error: "Solo se pueden aprobar o rechazar solicitudes pendientes.",
+      };
     }
 
     const vehiculoAsignado = payload?.vehiculo_id || actual.vehiculo_id;

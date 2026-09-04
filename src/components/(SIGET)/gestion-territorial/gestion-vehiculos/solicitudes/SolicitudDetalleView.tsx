@@ -19,7 +19,7 @@ import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { type SolicitudRow } from "./lib/zod";
 import { estadoBadgeClass, formatDuracionMision, formatEstadoLabel } from "./lib/helpers";
 import { cn } from "@/lib/utils";
-import { GV_DETALLE_CARD_CLASS } from "../lib/detalle-ui";
+import { GV_DETALLE_CARD_CLASS, GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
 
 function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
@@ -57,6 +57,7 @@ function FilaMision({
         <p
           className={cn(
             "mt-1 text-sm leading-relaxed",
+            GV_DETALLE_TEXTO_CLASS,
             destacado ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
         >
@@ -69,34 +70,120 @@ function FilaMision({
 
 function FilaVehiculoDato({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-t border-zinc-200 py-3 first:border-t-0 first:pt-0 dark:border-zinc-700/80">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="text-right text-sm font-semibold text-foreground">{value}</p>
+    <div className="flex items-start justify-between gap-3 border-t border-zinc-200 py-3 first:border-t-0 first:pt-0 dark:border-zinc-700/80">
+      <p className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={cn("min-w-0 flex-1 text-right text-sm font-semibold text-foreground", GV_DETALLE_TEXTO_CLASS)}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+const GV_SOLICITUD_MISION_GRID_CLASS =
+  "lg:grid lg:grid-cols-[minmax(0,1.5fr)_minmax(14rem,1.1fr)] lg:items-start lg:gap-x-8";
+
+function TarjetaVehiculoAsignado({ vehiculo }: { vehiculo: SolicitudRow["vehiculo"] }) {
+  return (
+    <div className="min-w-0 overflow-hidden rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/90">
+      {vehiculo ? (
+        <>
+          <GvDetalleEncabezadoVehiculo
+            marca={vehiculo.marca}
+            modelo={vehiculo.modelo}
+            placa={vehiculo.placa}
+          />
+          <div className="mt-3">
+            <FilaVehiculoDato label="Color" value={vehiculo.color?.trim() || "—"} />
+            <FilaVehiculoDato
+              label="Odómetro"
+              value={
+                vehiculo.kilometraje_actual != null
+                  ? `${vehiculo.kilometraje_actual.toLocaleString("es-GT")} km`
+                  : "—"
+              }
+            />
+          </div>
+        </>
+      ) : (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Aún no hay vehículo asignado. Se definirá al aprobar la solicitud.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function BloqueMisionYVehiculo({
+  justificacion,
+  ruta,
+  pasajeros,
+  nombreSolicitante,
+  vehiculo,
+  className,
+}: {
+  justificacion: string;
+  ruta: string;
+  pasajeros: string;
+  nombreSolicitante: string;
+  vehiculo: SolicitudRow["vehiculo"];
+  className?: string;
+}) {
+  const tituloSeccionClass =
+    "text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio";
+
+  return (
+    <div className={cn("min-w-0 overflow-x-hidden", className)}>
+      <div className={GV_SOLICITUD_MISION_GRID_CLASS}>
+        <h2 className={cn(tituloSeccionClass, "lg:col-start-1 lg:row-start-1")}>Detalle de la misión</h2>
+
+        <div className="mt-4 min-w-0 lg:col-span-2 lg:row-start-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Justificación</p>
+          <p
+            className={cn(
+              "mt-2 w-full text-[15px] font-semibold leading-7 text-foreground",
+              GV_DETALLE_TEXTO_CLASS,
+            )}
+          >
+            {justificacion}
+          </p>
+        </div>
+
+        <div className="mt-2 lg:col-start-1 lg:row-start-3 lg:mt-6">
+          <FilaMision icon={Route} label="Ruta planificada" value={ruta} />
+          <FilaMision icon={Users} label="Pasajeros" value={pasajeros} />
+          <FilaMision icon={User} label="Solicitante" value={nombreSolicitante} destacado />
+        </div>
+
+        <div className="mt-6 min-w-0 lg:col-start-2 lg:row-start-3 lg:mt-6">
+          <h2 className={cn(tituloSeccionClass, "mb-4")}>Vehículo asignado</h2>
+          <TarjetaVehiculoAsignado vehiculo={vehiculo} />
+        </div>
+      </div>
     </div>
   );
 }
 
 function AccionesSolicitud({
   solicitud,
-  canManage,
+  canAprobarRechazar,
+  puedeControlMision,
   misionPendiente,
   onAction,
   anchoCompleto = false,
 }: {
   solicitud: SolicitudRow;
-  canManage: boolean;
+  canAprobarRechazar: boolean;
+  puedeControlMision: boolean;
   misionPendiente: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
   anchoCompleto?: boolean;
 }) {
-  if (!canManage) return null;
-
   const btnBase = cn(
     "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-0 text-[11px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
     anchoCompleto ? "h-12 w-full" : "h-9 px-4",
   );
 
-  if (solicitud.estado === "PENDIENTE") {
+  if (canAprobarRechazar && solicitud.estado === "PENDIENTE") {
     return (
       <div className={cn(anchoCompleto && "grid grid-cols-2 gap-3")}>
         <button
@@ -119,7 +206,7 @@ function AccionesSolicitud({
     );
   }
 
-  if (solicitud.estado === "APROBADA") {
+  if (puedeControlMision && solicitud.estado === "APROBADA") {
     return (
       <button
         type="button"
@@ -137,7 +224,7 @@ function AccionesSolicitud({
     );
   }
 
-  if (solicitud.estado === "EN_MISION") {
+  if (puedeControlMision && solicitud.estado === "EN_MISION") {
     return (
       <button
         type="button"
@@ -160,14 +247,16 @@ function AccionesSolicitud({
 
 function ContenidoDetalle({
   solicitud,
-  canManage,
+  canAprobarRechazar,
+  puedeControlMision,
   misionPendiente,
   onAction,
   embedded,
   onClose,
 }: {
   solicitud: SolicitudRow;
-  canManage: boolean;
+  canAprobarRechazar: boolean;
+  puedeControlMision: boolean;
   misionPendiente: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
   embedded: boolean;
@@ -179,16 +268,21 @@ function ContenidoDetalle({
   const acciones = (
     <AccionesSolicitud
       solicitud={solicitud}
-      canManage={canManage}
+      canAprobarRechazar={canAprobarRechazar}
+      puedeControlMision={puedeControlMision}
       misionPendiente={misionPendiente}
       onAction={onAction}
       anchoCompleto={embedded}
     />
   );
+  const tieneAcciones =
+    (canAprobarRechazar && solicitud.estado === "PENDIENTE") ||
+    (puedeControlMision &&
+      (solicitud.estado === "APROBADA" || solicitud.estado === "EN_MISION"));
 
   if (embedded) {
     return (
-      <div className="space-y-5 pb-2">
+      <div className="min-w-0 space-y-5 overflow-x-hidden pb-2">
         <div className="relative space-y-1 pr-12">
           {onClose ? (
             <button
@@ -204,7 +298,12 @@ function ContenidoDetalle({
             <MapPin className="mt-1 size-6 shrink-0 text-celeste-trifinio" strokeWidth={2.25} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-black capitalize tracking-tight text-foreground md:text-[1.65rem]">
+                <h1
+                  className={cn(
+                    "text-2xl font-black capitalize tracking-tight text-foreground md:text-[1.65rem]",
+                    GV_DETALLE_TEXTO_CLASS,
+                  )}
+                >
                   {solicitud.destino}
                 </h1>
                 <span
@@ -223,7 +322,7 @@ function ContenidoDetalle({
           </div>
         </div>
 
-        {acciones ? <div>{acciones}</div> : null}
+        {tieneAcciones ? <div>{acciones}</div> : null}
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <StatResumen label="Salida" value={formatFechaHoraGv(solicitud.fecha_inicio)} />
@@ -234,58 +333,14 @@ function ContenidoDetalle({
           />
         </div>
 
-        <div className="grid gap-8 border-t border-zinc-200 pt-6 dark:border-zinc-700/80 lg:grid-cols-[minmax(0,1.55fr)_minmax(14rem,1fr)] lg:gap-10">
-          <section>
-            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Detalle de la misión
-            </h2>
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Justificación
-              </p>
-              <p className="mt-2 text-[15px] font-semibold leading-7 text-foreground">
-                {solicitud.justificacion}
-              </p>
-            </div>
-            <div className="mt-2">
-              <FilaMision icon={Route} label="Ruta planificada" value={ruta} />
-              <FilaMision icon={Users} label="Pasajeros" value={pasajeros} />
-              <FilaMision icon={User} label="Solicitante" value={nombreSolicitante} destacado />
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-              Vehículo asignado
-            </h2>
-            <div className="mt-4 rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/90">
-              {solicitud.vehiculo ? (
-                <>
-                  <GvDetalleEncabezadoVehiculo
-                    marca={solicitud.vehiculo.marca}
-                    modelo={solicitud.vehiculo.modelo}
-                    placa={solicitud.vehiculo.placa}
-                  />
-                  <div className="mt-3">
-                    <FilaVehiculoDato label="Color" value={solicitud.vehiculo.color?.trim() || "—"} />
-                    <FilaVehiculoDato
-                      label="Odómetro"
-                      value={
-                        solicitud.vehiculo.kilometraje_actual != null
-                          ? `${solicitud.vehiculo.kilometraje_actual.toLocaleString("es-GT")} km`
-                          : "—"
-                      }
-                    />
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Aún no hay vehículo asignado. Se definirá al aprobar la solicitud.
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
+        <BloqueMisionYVehiculo
+          justificacion={solicitud.justificacion}
+          ruta={ruta}
+          pasajeros={pasajeros}
+          nombreSolicitante={nombreSolicitante}
+          vehiculo={solicitud.vehiculo}
+          className="border-t border-zinc-200 pt-6 dark:border-zinc-700/80"
+        />
       </div>
     );
   }
@@ -315,7 +370,7 @@ function ContenidoDetalle({
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">Solicitado por {nombreSolicitante}</p>
         </div>
-        {acciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
+        {tieneAcciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -327,63 +382,22 @@ function ContenidoDetalle({
         />
       </div>
 
-      <div className="mt-8 grid gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 dark:border-zinc-700">
-        <section>
-          <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-            Detalle de la misión
-          </h2>
-          <div className="mt-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Justificación
-            </p>
-            <p className="mt-2 max-w-prose text-[15px] leading-7 text-foreground">{solicitud.justificacion}</p>
-          </div>
-          <div className="mt-2">
-            <FilaMision icon={Route} label="Ruta planificada" value={ruta} />
-            <FilaMision icon={Users} label="Pasajeros" value={pasajeros} />
-            <FilaMision icon={User} label="Solicitante" value={nombreSolicitante} destacado />
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-            Vehículo asignado
-          </h2>
-          <div className="mt-4 rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/90">
-            {solicitud.vehiculo ? (
-              <>
-                <GvDetalleEncabezadoVehiculo
-                  marca={solicitud.vehiculo.marca}
-                  modelo={solicitud.vehiculo.modelo}
-                  placa={solicitud.vehiculo.placa}
-                />
-                <div className="mt-3">
-                  <FilaVehiculoDato label="Color" value={solicitud.vehiculo.color?.trim() || "—"} />
-                  <FilaVehiculoDato
-                    label="Odómetro"
-                    value={
-                      solicitud.vehiculo.kilometraje_actual != null
-                        ? `${solicitud.vehiculo.kilometraje_actual.toLocaleString("es-GT")} km`
-                        : "—"
-                    }
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Aún no hay vehículo asignado. Se definirá al aprobar la solicitud.
-              </p>
-            )}
-          </div>
-        </section>
-      </div>
+      <BloqueMisionYVehiculo
+        justificacion={solicitud.justificacion}
+        ruta={ruta}
+        pasajeros={pasajeros}
+        nombreSolicitante={nombreSolicitante}
+        vehiculo={solicitud.vehiculo}
+        className="mt-8 border-t border-border pt-8 dark:border-zinc-700"
+      />
     </div>
   );
 }
 
 export function SolicitudDetalleView({
   solicitud,
-  canManage,
+  canAprobarRechazar,
+  puedeControlMision,
   misionPendiente = false,
   embedded = false,
   onBack,
@@ -391,16 +405,31 @@ export function SolicitudDetalleView({
   onAction,
 }: {
   solicitud: SolicitudRow;
-  canManage: boolean;
+  canAprobarRechazar: boolean;
+  puedeControlMision: boolean;
   misionPendiente?: boolean;
   embedded?: boolean;
   onBack?: () => void;
   onClose?: () => void;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
 }) {
+  if (embedded) {
+    return (
+      <ContenidoDetalle
+        solicitud={solicitud}
+        canAprobarRechazar={canAprobarRechazar}
+        puedeControlMision={puedeControlMision}
+        misionPendiente={misionPendiente}
+        onAction={onAction}
+        embedded
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
-    <div className={embedded ? undefined : "pb-8 pt-1"}>
-      {!embedded && onBack ? (
+    <div className="pb-8 pt-1">
+      {onBack ? (
         <button
           type="button"
           onClick={onBack}
@@ -411,13 +440,14 @@ export function SolicitudDetalleView({
         </button>
       ) : null}
 
-      <div className={cn(!embedded && "mt-4")}>
+      <div className="mt-4">
         <ContenidoDetalle
           solicitud={solicitud}
-          canManage={canManage}
+          canAprobarRechazar={canAprobarRechazar}
+          puedeControlMision={puedeControlMision}
           misionPendiente={misionPendiente}
           onAction={onAction}
-          embedded={embedded}
+          embedded={false}
           onClose={onClose}
         />
       </div>

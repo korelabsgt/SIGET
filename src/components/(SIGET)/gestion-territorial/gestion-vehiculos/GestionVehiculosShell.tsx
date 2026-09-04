@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { Suspense, useCallback, useEffect, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "./lib/tab-context";
 import { GvPageChromeLayout, GvPageChromeProvider } from "./lib/gv-page-chrome";
 import { GV_PANEL_STACK_CLASS, GV_TABLE_AREA_CLASS } from "./lib/page-shell";
+import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
 import { cn } from "@/lib/utils";
 
 function PanelFallback() {
@@ -47,19 +49,40 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
 const SCROLL_ROOT_CLASS =
   "min-h-[calc(100vh-4rem)] flex flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden";
 
-export function GestionVehiculosShell() {
-  const [section, setSection] = useState<GvSubmoduloId>("flota");
-  const [visited, setVisited] = useState<Set<GvSubmoduloId>>(() => new Set(["flota"]));
+function GestionVehiculosShellInner() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const selectSection = useCallback((id: GvSubmoduloId) => {
-    setSection(id);
+  const sectionFromUrl = gvSectionFromSearchParams(searchParams);
+
+  const [section, setSection] = useState<GvSubmoduloId>(sectionFromUrl);
+  const [visited, setVisited] = useState<Set<GvSubmoduloId>>(() => new Set([sectionFromUrl]));
+
+  useEffect(() => {
+    const fromUrl = gvSectionFromSearchParams(searchParams);
+    setSection((current) => (current === fromUrl ? current : fromUrl));
     setVisited((prev) => {
-      if (prev.has(id)) return prev;
+      if (prev.has(fromUrl)) return prev;
       const next = new Set(prev);
-      next.add(id);
+      next.add(fromUrl);
       return next;
     });
-  }, []);
+  }, [searchParams]);
+
+  const selectSection = useCallback(
+    (id: GvSubmoduloId) => {
+      setSection(id);
+      setVisited((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      router.replace(buildGvSectionHref(pathname, id, searchParams), { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     document.title = GV_SUBMODULO_TITLES[section];
@@ -95,5 +118,13 @@ export function GestionVehiculosShell() {
         </div>
       </GvPageChromeProvider>
     </GvSectionProvider>
+  );
+}
+
+export function GestionVehiculosShell() {
+  return (
+    <Suspense fallback={<PanelFallback />}>
+      <GestionVehiculosShellInner />
+    </Suspense>
   );
 }

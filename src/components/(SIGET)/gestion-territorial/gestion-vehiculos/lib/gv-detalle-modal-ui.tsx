@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { Car, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GV_DETALLE_TEXTO_CLASS } from "./detalle-ui";
 
 export { formatFechaHoraGv } from "./gv-fechas";
 
@@ -46,9 +47,11 @@ export function GvDetalleFilaVehiculo({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-t border-zinc-200 py-3 first:border-t-0 first:pt-0 dark:border-zinc-700/80">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className={cn("text-right text-sm font-semibold text-foreground", valueClassName)}>{value}</p>
+    <div className="flex items-baseline justify-between gap-3 border-t border-zinc-200 py-3 first:border-t-0 first:pt-0 dark:border-zinc-700/80">
+      <p className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={cn("min-w-0 flex-1 text-right text-sm font-semibold text-foreground", GV_DETALLE_TEXTO_CLASS, valueClassName)}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -76,6 +79,7 @@ export function GvDetalleFilaIcono({
         <p
           className={cn(
             "mt-1 text-sm leading-relaxed",
+            GV_DETALLE_TEXTO_CLASS,
             valorClassName,
             !valorClassName && (destacado ? "font-semibold text-foreground" : "text-muted-foreground"),
           )}
@@ -105,18 +109,22 @@ export function GvDetalleEncabezadoVehiculo({
   const modeloLabel = [marca, modelo].filter(Boolean).join(" ").trim() || "Sin datos";
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-celeste-trifinio text-white">
         <Car size={22} strokeWidth={2} />
       </div>
-      <div className="min-w-0">
-        <p className="truncate text-lg font-black capitalize tracking-tight text-foreground">{modeloLabel}</p>
-        <p className="truncate text-sm font-bold uppercase tracking-wide text-muted-foreground">{placa}</p>
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-lg font-black capitalize tracking-tight text-foreground", GV_DETALLE_TEXTO_CLASS)}>
+          {modeloLabel}
+        </p>
+        <p className={cn("text-sm font-bold uppercase tracking-wide text-muted-foreground", GV_DETALLE_TEXTO_CLASS)}>
+          {placa}
+        </p>
       </div>
     </div>
   );
 }
 
 export function GvDetalleTarjetaAnidada({ children }: { children: ReactNode }) {
-  return <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/90">{children}</div>;
+  return <div className="min-w-0 overflow-hidden rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/90">{children}</div>;
 }

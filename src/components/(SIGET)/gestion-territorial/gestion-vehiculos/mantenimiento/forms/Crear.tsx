@@ -9,12 +9,12 @@ import { createClient } from "@/utils/supabase/client";
 import {
   GvModalForm,
   GvModalFormBody,
+  GvModalFooter,
   GvModalShell,
   GV_MODAL_SELECT_CONTENT_CLASS,
   GV_MODAL_SELECT_ITEM_CLASS,
   GV_MODAL_SELECT_TRIGGER_CLASS,
   ModalCancelButton,
-  ModalFooter,
   ModalSubmit,
 } from "../../lib/gv-modal-shell";
 import { Button } from "@/components/ui/button";
@@ -262,13 +262,13 @@ export function Crear() {
 
             </GvModalFormBody>
 
-            <ModalFooter>
+            <GvModalFooter>
               <ModalCancelButton onClick={() => setOpen(false)} disabled={crear.isPending || uploading} />
               <ModalSubmit
                 disabled={crear.isPending || uploading}
                 label={uploading ? "Subiendo" : crear.isPending ? "Enviando" : "Enviar"}
               />
-            </ModalFooter>
+            </GvModalFooter>
           </GvModalForm>
         </Form>
         ) : null}

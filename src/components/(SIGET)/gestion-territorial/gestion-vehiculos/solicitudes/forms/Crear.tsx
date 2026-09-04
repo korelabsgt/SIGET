@@ -9,8 +9,8 @@ import { Car } from "lucide-react";
 import {
   GvModalForm,
   GvModalFormBody,
+  GvModalFooter,
   GvModalShell,
-  ModalFooter,
   ModalCancelButton,
   ModalSubmit,
 } from "../../lib/gv-modal-shell";
@@ -220,10 +220,10 @@ export function Crear({
 
           </GvModalFormBody>
 
-          <ModalFooter>
+          <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={crear.isPending || isSubmitting} />
             <ModalSubmit disabled={crear.isPending || isSubmitting} label="Enviar" />
-          </ModalFooter>
+          </GvModalFooter>
         </GvModalForm>
       ) : null}
     </GvModalShell>

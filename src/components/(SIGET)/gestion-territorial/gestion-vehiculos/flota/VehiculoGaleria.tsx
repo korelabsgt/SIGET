@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { Car, CarFront, Loader2, Plus, Trash, Trash2 } from "lucide";
 import { toast } from "react-toastify";
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { confirmDestructivo } from "@/lib/confirm-destructivo";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GV_DETALLE_NESTED_CLASS } from "../lib/detalle-ui";
+import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import { canDeleteVehiculoFotos } from "../lib/permissions";
 import { type VehiculoRow } from "./lib/zod";
 import { fotosVehiculo, MIN_FOTOS_VEHICULO } from "./lib/helpers";
@@ -28,8 +28,8 @@ export function VehiculoGaleria({
   canManage?: boolean;
   className?: string;
 }) {
-  const { effectiveRole } = useUserContext();
-  const canDeleteFoto = canDeleteVehiculoFotos(effectiveRole);
+  const gvRole = useGvPermissionRole();
+  const canDeleteFoto = canDeleteVehiculoFotos(gvRole);
   const tituloVehiculo = `${vehiculo.marca} ${vehiculo.modelo}`;
   const fotos = fotosVehiculo(vehiculo);
   const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(fotos);

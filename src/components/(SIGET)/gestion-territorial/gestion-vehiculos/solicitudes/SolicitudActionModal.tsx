@@ -2,21 +2,17 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "react-toastify";
-import {
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Car,
-  AlertTriangle,
-} from "lucide-react";
+import { Check, CheckCircle, XCircle, Ban } from "lucide";
+import { Car, AlertTriangle, Loader2 } from "lucide-react";
 
 import {
-  GV_MODAL_CONTENT_CLASS,
+  GV_MODAL_ACTION_CONTENT_CLASS,
+  GvModalFooter,
   GvModalShell,
   GV_MODAL_INSET_CLASS,
-  ModalFooter,
   ModalCancelButton,
 } from "../lib/gv-modal-shell";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -48,33 +44,41 @@ const ACTION_META: Record<
     title: string;
     description: string;
     confirmLabel: string;
+    confirmAriaLabel: string;
     icon: typeof CheckCircle;
     accentBar: string;
     iconWrap: string;
     iconColor: string;
-    confirmBtn: string;
+    confirmAccent: string;
+    confirmMorphFrom: typeof CheckCircle;
+    confirmMorphTo: typeof Check;
   }
 > = {
   APROBAR: {
     title: "Aprobar solicitud",
     description: "Asigne un vehículo disponible para confirmar la aprobación.",
-    confirmLabel: "Aprobar solicitud",
+    confirmLabel: "Aprobar",
+    confirmAriaLabel: "Aprobar solicitud",
     icon: CheckCircle,
     accentBar: "bg-emerald-500",
     iconWrap: "bg-emerald-100 dark:bg-emerald-950",
     iconColor: "text-emerald-600 dark:text-emerald-400",
-    confirmBtn:
-      "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500",
+    confirmAccent: sigetAccent.guardar,
+    confirmMorphFrom: CheckCircle,
+    confirmMorphTo: Check,
   },
   RECHAZAR: {
     title: "Rechazar solicitud",
     description: "La solicitud quedará marcada como rechazada y no podrá asignarse vehículo.",
-    confirmLabel: "Rechazar solicitud",
+    confirmLabel: "Rechazar",
+    confirmAriaLabel: "Rechazar solicitud",
     icon: XCircle,
     accentBar: "bg-red-500",
     iconWrap: "bg-red-100 dark:bg-red-950",
     iconColor: "text-red-600 dark:text-red-400",
-    confirmBtn: "bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500",
+    confirmAccent: sigetAccent.quitar,
+    confirmMorphFrom: XCircle,
+    confirmMorphTo: Ban,
   },
 };
 
@@ -189,14 +193,20 @@ export function SolicitudActionModal({
       onClose={onClose}
       title={meta?.title ?? ""}
       subtitle={meta?.description}
-      maxWidth="max-w-md"
-      contentClassName={GV_MODAL_CONTENT_CLASS}
+      maxWidth="max-w-xl"
+      fullHeight={false}
+      contentClassName={GV_MODAL_ACTION_CONTENT_CLASS}
     >
       {meta ? (
-        <div className="flex min-h-0 flex-1 flex-col max-md:min-h-full">
+        <div className="flex flex-col max-md:min-h-full max-md:flex-1 max-md:min-h-0">
           <div className={cn("h-1 w-full shrink-0", meta.accentBar)} />
 
-          <div className={cn(GV_MODAL_INSET_CLASS, "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain")}>
+          <div
+            className={cn(
+              GV_MODAL_INSET_CLASS,
+              "space-y-5 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain md:flex-none md:overflow-visible",
+            )}
+          >
           {actionType === "APROBAR" && (
             <div className="space-y-4">
               {vehiculoPreferido ? (
@@ -310,21 +320,20 @@ export function SolicitudActionModal({
           )}
           </div>
 
-          <ModalFooter>
+          <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={isPending} />
-            <button
-              type="button"
+            <SigetActionButton
+              label={meta.confirmLabel}
+              ariaLabel={meta.confirmAriaLabel}
+              accentColor={meta.confirmAccent}
+              morphFrom={meta.confirmMorphFrom}
+              morphTo={meta.confirmMorphTo}
               onClick={handleSubmit}
               disabled={confirmDisabled}
-              className={cn(
-                "inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 px-6 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                meta.confirmBtn,
-              )}
-            >
-              {isPending && <Loader2 className="size-4 animate-spin" />}
-              {meta.confirmLabel}
-            </button>
-          </ModalFooter>
+              ariaBusy={isPending}
+              className="w-auto shrink-0"
+            />
+          </GvModalFooter>
         </div>
       ) : null}
     </GvModalShell>

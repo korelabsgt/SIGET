@@ -8,8 +8,11 @@ import { toast } from "react-toastify";
 import {
   GvModalForm,
   GvModalFormBody,
+  GvModalFooter,
   GvModalShell,
-  ModalFooter,
+  GV_MODAL_FORM_BODY_EXPANDED_CLASS,
+  GV_MODAL_FORM_CONTENT_CLASS,
+  GV_MODAL_FORM_EXPANDED_CLASS,
   ModalCancelButton,
   ModalSubmit,
 } from "../../lib/gv-modal-shell";
@@ -203,10 +206,12 @@ export function VerEditar({
       onClose={onClose}
       title={initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
       maxWidth="max-w-xl"
+      fullHeight={false}
+      contentClassName={GV_MODAL_FORM_CONTENT_CLASS}
     >
       {open ? (
-        <GvModalForm onSubmit={handleSubmit(onSubmit)}>
-          <GvModalFormBody>
+        <GvModalForm className={GV_MODAL_FORM_EXPANDED_CLASS} onSubmit={handleSubmit(onSubmit)}>
+          <GvModalFormBody className={GV_MODAL_FORM_BODY_EXPANDED_CLASS}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="placa">Placa</Label>
@@ -319,7 +324,7 @@ export function VerEditar({
 
           </GvModalFormBody>
 
-          <ModalFooter>
+          <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={isWorking} />
             <ModalSubmit
               disabled={isWorking}
@@ -335,7 +340,7 @@ export function VerEditar({
                       : "Registrar"
               }
             />
-          </ModalFooter>
+          </GvModalFooter>
         </GvModalForm>
       ) : null}
     </GvModalShell>

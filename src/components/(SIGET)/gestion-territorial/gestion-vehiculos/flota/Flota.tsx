@@ -26,7 +26,7 @@ import { GestionVehiculosTableEmpty, GestionVehiculosTableShell, gvTableShellVis
 import { useGvTablePagination } from "../lib/table-pagination";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import { canManageFlota } from "../lib/permissions";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
@@ -52,8 +52,8 @@ const filtroEstadoItemClass =
   "cursor-pointer rounded-lg bg-white font-medium capitalize text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800";
 
 export function Flota() {
-  const { effectiveRole } = useUserContext();
-  const canManage = canManageFlota(effectiveRole);
+  const gvRole = useGvPermissionRole();
+  const canManage = canManageFlota(gvRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
   const eliminar = useEliminarVehiculo();
 

@@ -9,6 +9,14 @@ export function isSuperRole(role: string | null | undefined): boolean {
   return normalizeRoleSlug(role) === "super";
 }
 
+export function resolveGvRoleForPermissions(
+  realRole: string | null | undefined,
+  effectiveRole: string | null | undefined,
+): string {
+  if (isSuperRole(realRole)) return realRole as string;
+  return effectiveRole || realRole || "user";
+}
+
 export function isAdministradorOtRole(role: string | null | undefined): boolean {
   if (!role) return false;
   const slug = normalizeRoleSlug(role);
@@ -33,6 +41,25 @@ export function canManageSolicitudesVehiculos(role: string | null | undefined): 
   if (isSuperRole(role)) return true;
   const slug = normalizeRoleSlug(role);
   return slug === "admin" || isAdministradorOtRole(role);
+}
+
+export function canAprobarRechazarSolicitudes(role: string | null | undefined): boolean {
+  return canManageSolicitudesVehiculos(role);
+}
+
+export function canGestionarMisionPropiaSolicitud(role: string | null | undefined): boolean {
+  if (isSuperRole(role)) return true;
+  return !canManageSolicitudesVehiculos(role);
+}
+
+export function canGestionarMisionSolicitud(
+  role: string | null | undefined,
+  solicitudSolicitanteId: string,
+  userId: string | null | undefined,
+): boolean {
+  if (isSuperRole(role)) return true;
+  if (canManageSolicitudesVehiculos(role)) return false;
+  return Boolean(userId && solicitudSolicitanteId === userId);
 }
 
 export function canAccessGestionTerritorial(role: string | null | undefined): boolean {

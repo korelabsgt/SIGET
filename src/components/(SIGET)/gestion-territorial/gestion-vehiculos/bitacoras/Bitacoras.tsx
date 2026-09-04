@@ -36,8 +36,8 @@ import {
 } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { useGvTablePagination } from "../lib/table-pagination";
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
+import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportBitacoraReporte,
   canViewAllBitacoras,
@@ -60,9 +60,9 @@ const filtroItemClass =
   "cursor-pointer rounded-lg bg-white font-medium text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800";
 
 export function Bitacoras() {
-  const { effectiveRole } = useUserContext();
-  const canViewAll = canViewAllBitacoras(effectiveRole);
-  const canExport = canExportBitacoraReporte(effectiveRole);
+  const gvRole = useGvPermissionRole();
+  const canViewAll = canViewAllBitacoras(gvRole);
+  const canExport = canExportBitacoraReporte(gvRole);
   const { data: bitacoras = [], isLoading: loadingBitacoras } = useBitacoras();
   const { data: vehiculosFlota = [] } = useVehiculos();
   const [view, setView] = useState<BitacorasView>({ mode: "list" });

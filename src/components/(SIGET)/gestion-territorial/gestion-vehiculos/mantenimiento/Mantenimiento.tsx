@@ -8,7 +8,6 @@ import { Crear } from "./forms/Crear";
 import { Loader2 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "react-toastify";
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { GestionVehiculosTableShell, gvTableVisibleRowCount } from "../lib/table-ui";
 import { useGvLgUp } from "../lib/gv-breakpoint";
@@ -24,6 +23,7 @@ import { filtrarFallasMantenimiento } from "./lib/helpers";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { useGvTablePagination } from "../lib/table-pagination";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
+import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportMantenimientoReporte,
   canGestionarFallasMantenimiento,
@@ -41,10 +41,10 @@ const TAB_LABELS: Record<TabMantenimiento, string> = {
 };
 
 export function Mantenimiento() {
-  const { effectiveRole } = useUserContext();
-  const canManage = canManageMantenimiento(effectiveRole);
-  const canExport = canExportMantenimientoReporte(effectiveRole);
-  const canGestionar = canGestionarFallasMantenimiento(effectiveRole);
+  const gvRole = useGvPermissionRole();
+  const canManage = canManageMantenimiento(gvRole);
+  const canExport = canExportMantenimientoReporte(gvRole);
+  const canGestionar = canGestionarFallasMantenimiento(gvRole);
   const { data: fallas = [], isLoading } = useFallasMantenimiento();
   const { data: mecanicos = [] } = useMecanicos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");

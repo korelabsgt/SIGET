@@ -9,13 +9,13 @@ import { toast } from "react-toastify";
 import {
   GvModalForm,
   GvModalFormBody,
+  GvModalFooter,
   GvModalShell,
   ModalCancelButton,
   ModalLabel,
   ModalInput,
   ModalTextarea,
   ModalSubmit,
-  ModalFooter,
 } from "../../lib/gv-modal-shell";
 import { cn } from "@/lib/utils";
 import {
@@ -221,10 +221,10 @@ export function VerEditar({
             <ModalInput id="taller_externo" {...formAtender.register("taller_externo")} />
           </div>
           </GvModalFormBody>
-          <ModalFooter>
+          <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={pending} />
             <ModalSubmit disabled={pending} label="Reparación" />
-          </ModalFooter>
+          </GvModalFooter>
         </GvModalForm>
       ) : (
         <GvModalForm onSubmit={formSolventar.handleSubmit(onSolventar)}>
@@ -248,10 +248,10 @@ export function VerEditar({
             ) : null}
           </div>
           </GvModalFormBody>
-          <ModalFooter>
+          <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={pending} />
             <ModalSubmit disabled={pending} label="Solventar" />
-          </ModalFooter>
+          </GvModalFooter>
         </GvModalForm>
       )}
     </GvModalShell>

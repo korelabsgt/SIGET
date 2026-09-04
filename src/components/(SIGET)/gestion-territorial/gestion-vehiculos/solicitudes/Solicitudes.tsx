@@ -15,14 +15,14 @@ import { GvTabFilter } from "../lib/gv-tab-filter";
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
-import { canManageSolicitudesVehiculos } from "../lib/permissions";
+import { canAprobarRechazarSolicitudes } from "../lib/permissions";
+import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import { cn } from "@/lib/utils";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
@@ -39,9 +39,8 @@ const TAB_LABELS: Record<TabSolicitud, string> = {
 export function Solicitudes() {
   const { data: solicitudes = [], isLoading: loading } = useSolicitudes();
   const invalidate = useInvalidateSolicitudes();
-  const { effectiveRole } = useUserContext();
-  const canVerFiltros = canManageSolicitudesVehiculos(effectiveRole);
-  const canManage = canVerFiltros;
+  const gvRole = useGvPermissionRole();
+  const canAprobarRechazar = canAprobarRechazarSolicitudes(gvRole);
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
 
@@ -81,14 +80,13 @@ export function Solicitudes() {
   const filtradas = useMemo(() => {
     return solicitudes.filter((sol) => {
       if (!registroEnPeriodoCalendario(sol.fecha_inicio, periodoFilter)) return false;
-      if (!canVerFiltros) return true;
       if (tabActiva === "TODAS") return true;
       if (tabActiva === "PENDIENTES") return sol.estado === "PENDIENTE";
       if (tabActiva === "ACTIVAS") return sol.estado === "APROBADA" || sol.estado === "EN_MISION";
       if (tabActiva === "HISTORIAL") return sol.estado === "FINALIZADA" || sol.estado === "RECHAZADA";
       return true;
     });
-  }, [solicitudes, periodoFilter, canVerFiltros, tabActiva]);
+  }, [solicitudes, periodoFilter, tabActiva]);
 
   const paginacionKey = `${tabActiva}|${periodoFilter}`;
   const {
@@ -104,10 +102,10 @@ export function Solicitudes() {
 
   const headerExtras = useMemo(
     () =>
-      canManage ? (
+      canAprobarRechazar ? (
         <SolicitudesNotificaciones solicitudes={solicitudes} />
       ) : null,
-    [canManage, solicitudes],
+    [canAprobarRechazar, solicitudes],
   );
 
   useGvPanelChrome("solicitudes", { headerExtras });
@@ -130,18 +128,16 @@ export function Solicitudes() {
           toolbar={
             <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex w-full items-stretch gap-2 lg:contents">
-                  {canVerFiltros ? (
-                    <GvTabFilter
-                      value={tabActiva}
-                      onChange={setTabActiva}
-                      layoutId="gv-solicitudes-tabs"
-                      compact
-                      options={TABS.map((tab) => ({
-                        value: tab,
-                        label: TAB_LABELS[tab],
-                      }))}
-                    />
-                  ) : null}
+                  <GvTabFilter
+                    value={tabActiva}
+                    onChange={setTabActiva}
+                    layoutId="gv-solicitudes-tabs"
+                    compact
+                    options={TABS.map((tab) => ({
+                      value: tab,
+                      label: TAB_LABELS[tab],
+                    }))}
+                  />
 
                   <GvMonthPicker
                     value={periodoFilter}
@@ -182,7 +178,6 @@ export function Solicitudes() {
             <SolicitudesPanel
               solicitudes={solicitudesPaginadas}
               catalogo={filtradas}
-              canManage={canManage}
               onAction={handleAction}
               misionPendiente={misionPendiente}
               detail={detailSolicitud}

@@ -1,23 +1,52 @@
 "use client";
 
 import { type ComponentProps, type ReactNode } from "react";
-import { ModalShell } from "@/components/ui/general-modal";
+import { ModalFooter, ModalShell } from "@/components/ui/general-modal";
 import { cn } from "@/lib/utils";
+import { GV_MODAL_INSET_MARGIN_CLASS } from "./page-shell";
 
 export const GV_MODAL_CONTENT_CLASS =
-  "!flex min-h-0 flex-1 flex-col !p-0 max-md:!overflow-hidden md:!block md:overflow-y-auto";
+  "!flex min-h-0 min-w-0 flex-1 flex-col !p-0 max-md:!overflow-hidden md:!block md:overflow-y-auto";
 
 export const GV_MODAL_DETALLE_CONTENT_CLASS =
-  "!flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain !p-0 md:!block md:overflow-y-auto";
+  "!flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain !p-0 md:!block md:overflow-y-auto";
 
-export const GV_MODAL_INSET_CLASS =
-  "mx-4 flex min-h-0 flex-1 flex-col max-md:mb-[max(1rem,env(safe-area-inset-bottom))] max-md:mt-[max(1rem,env(safe-area-inset-top))] md:mx-6 md:mb-6 md:mt-6";
+export const GV_MODAL_INSET_CLASS = cn(
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
+  GV_MODAL_INSET_MARGIN_CLASS,
+);
+
+export const GV_MODAL_ACTION_CONTENT_CLASS =
+  "!flex min-h-0 min-w-0 flex-col !p-0 max-md:!overflow-hidden md:!block md:!overflow-visible";
+
+export const GV_MODAL_FOOTER_CLASS =
+  "md:!mx-0 md:!mb-0 md:!mt-3 md:!w-full md:rounded-b-3xl";
+
+export function GvModalFooter({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return <ModalFooter className={cn(GV_MODAL_FOOTER_CLASS, className)}>{children}</ModalFooter>;
+}
+
+export const GV_MODAL_FORM_CONTENT_CLASS =
+  "!flex min-h-0 min-w-0 flex-col !p-0 max-md:!overflow-hidden md:!block md:!overflow-visible";
+
+export const GV_MODAL_FORM_BODY_EXPANDED_CLASS = "md:flex-none md:overflow-visible";
+
+export const GV_MODAL_FORM_EXPANDED_CLASS = "md:flex-none";
 
 export const GV_MODAL_FORM_CLASS =
-  "flex min-h-0 flex-1 flex-col max-md:min-h-full md:space-y-4";
+  "flex min-h-0 min-w-0 flex-1 flex-col max-md:min-h-full md:space-y-4";
 
-export const GV_MODAL_FORM_BODY_CLASS =
-  "mx-4 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain max-md:mb-4 max-md:mt-[max(1rem,env(safe-area-inset-top))] md:mx-6 md:mb-0 md:mt-6";
+export const GV_MODAL_FORM_BODY_CLASS = cn(
+  "min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain",
+  GV_MODAL_INSET_MARGIN_CLASS,
+  "max-md:mb-4 md:mb-0",
+);
 
 export function GvModalForm({
   className,
@@ -51,9 +80,20 @@ export function GvModalInset({
   return <div className={cn(GV_MODAL_INSET_CLASS, className)}>{children}</div>;
 }
 
-export function GvModalContentMotion({ children }: { children: ReactNode }) {
+export function GvModalContentMotion({
+  children,
+  expanded = false,
+}: {
+  children: ReactNode;
+  expanded?: boolean;
+}) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col max-md:min-h-full max-md:w-full md:contents">
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col max-md:min-h-full",
+        !expanded && "flex-1",
+      )}
+    >
       {children}
     </div>
   );
@@ -99,7 +139,9 @@ export function GvModalShell({
       headerActions={resolvedHeaderActions}
       {...props}
     >
-      {open ? <GvModalContentMotion>{children}</GvModalContentMotion> : null}
+      {open ? (
+        <GvModalContentMotion expanded={!fullHeight}>{children}</GvModalContentMotion>
+      ) : null}
     </ModalShell>
   );
 }

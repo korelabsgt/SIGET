@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,9 +22,38 @@ const contentClass =
 const itemClass =
   "cursor-pointer rounded-lg bg-card font-medium text-foreground focus:bg-sky-50/40 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-sky-950/20";
 
+function GvSectionSelectPlaceholder({
+  className,
+  label,
+}: {
+  className?: string;
+  label: string;
+}) {
+  return (
+    <div
+      className={cn(triggerClass, className, "flex items-center justify-between gap-2")}
+      aria-hidden
+    >
+      <span className="truncate">{label}</span>
+      <ChevronDown className="size-4 shrink-0 opacity-50" />
+    </div>
+  );
+}
+
 export function GvSectionSelect({ className }: { className?: string }) {
+  const [mounted, setMounted] = useState(false);
   const gvSection = useGvSection();
   const current = gvSection?.section ?? "flota";
+  const currentTitle =
+    GV_MENU_OPTIONS.find((opt) => opt.id === current)?.title ?? "Área";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <GvSectionSelectPlaceholder className={className} label={currentTitle} />;
+  }
 
   return (
     <Select
@@ -32,7 +63,14 @@ export function GvSectionSelect({ className }: { className?: string }) {
       <SelectTrigger className={cn(triggerClass, className)} aria-label="Área de gestión vehicular">
         <SelectValue placeholder="Área" />
       </SelectTrigger>
-      <SelectContent className={contentClass}>
+      <SelectContent
+        position="popper"
+        side="bottom"
+        align="start"
+        sideOffset={4}
+        avoidCollisions={false}
+        className={contentClass}
+      >
         {GV_MENU_OPTIONS.map((opt) => (
           <SelectItem key={opt.id} value={opt.id} className={itemClass}>
             {opt.title}

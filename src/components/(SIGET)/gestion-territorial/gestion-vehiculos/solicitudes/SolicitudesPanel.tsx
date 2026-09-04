@@ -9,7 +9,6 @@ import { type SolicitudRow } from "./lib/zod";
 export function SolicitudesPanel({
   solicitudes,
   catalogo,
-  canManage,
   onAction,
   misionPendiente = false,
   detail,
@@ -17,7 +16,6 @@ export function SolicitudesPanel({
 }: {
   solicitudes: SolicitudRow[];
   catalogo?: SolicitudRow[];
-  canManage: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
   misionPendiente?: boolean;
   detail?: SolicitudRow | null;
@@ -54,7 +52,6 @@ export function SolicitudesPanel({
         open={selectedSolicitud !== null}
         onClose={() => setSelectedSolicitud(null)}
         solicitud={selectedSolicitud}
-        canManage={canManage}
         misionPendiente={misionPendiente}
         onAction={onAction}
       />

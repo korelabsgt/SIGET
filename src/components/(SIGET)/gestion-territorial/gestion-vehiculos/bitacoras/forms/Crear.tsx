@@ -555,41 +555,43 @@ export function Crear({
                         ) : null}
                       </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-zinc-200/80 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            aria-label={`Acciones del comentario ${index + 1}`}
+                      {!isEditing && texto ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground transition-colors hover:bg-zinc-200/80 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                              aria-label={`Acciones del comentario ${index + 1}`}
+                            >
+                              <GvMorphIcon
+                                icon={EllipsisVertical}
+                                hoverIcon={MoreVertical}
+                                size={18}
+                                className="text-current"
+                              />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
                           >
-                            <GvMorphIcon
-                              icon={EllipsisVertical}
-                              hoverIcon={MoreVertical}
-                              size={18}
-                              className="text-current"
-                            />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
-                        >
-                          <DropdownMenuItem
-                            className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
-                            onSelect={() => startEdit(field.id)}
-                          >
-                            <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={14} className="text-current" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60"
-                            onSelect={() => handleRemoveComentario(index, field.id)}
-                          >
-                            <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
-                            Quitar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                              onSelect={() => startEdit(field.id)}
+                            >
+                              <GvMorphIcon icon={PenSquare} hoverIcon={Pencil} size={14} className="text-current" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60"
+                              onSelect={() => handleRemoveComentario(index, field.id)}
+                            >
+                              <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
+                              Quitar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
                     </div>
 
                     {isEditing ? (

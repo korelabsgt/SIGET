@@ -8,5 +8,12 @@ export const GV_PANEL_STACK_CLASS = "flex min-h-0 w-full flex-1 flex-col";
 export const GV_PANEL_KPI_STACK_CLASS =
   "flex min-h-0 w-full flex-1 flex-col gap-1.5 lg:gap-3";
 
+export const GV_MODAL_INSET_X_CLASS = "mx-4 md:mx-6";
+
+export const GV_MODAL_INSET_Y_CLASS =
+  "max-md:mt-[max(1rem,env(safe-area-inset-top))] max-md:mb-[max(1rem,env(safe-area-inset-bottom))] md:mt-6 md:mb-6";
+
+export const GV_MODAL_INSET_MARGIN_CLASS = `${GV_MODAL_INSET_X_CLASS} ${GV_MODAL_INSET_Y_CLASS}`;
+
 export const GV_TABLE_DETAIL_SHELL_CLASS =
   "min-h-0 flex-none overflow-visible rounded-none border-0 bg-transparent dark:bg-transparent";
