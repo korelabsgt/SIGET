@@ -37,11 +37,13 @@ export function BitacorasPanel({
 
   return (
     <>
-      <div className="hidden lg:block">
-        <BitacorasList bitacoras={bitacoras} onDetail={setSelectedBitacora} />
-      </div>
-      <div className="lg:hidden">
-        <BitacorasCards bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+          <BitacorasList bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+          <BitacorasCards bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+        </div>
       </div>
 
       <BitacoraDetalleModal

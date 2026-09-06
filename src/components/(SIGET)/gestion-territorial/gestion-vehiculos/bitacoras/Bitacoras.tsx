@@ -20,22 +20,25 @@ import { computeMetricasBitacorasMes, extractVehiculosVinculadosBitacoras, forma
 import { normalizarMesCalendario } from "@/lib/fechas-gt";
 import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
-import { GestionVehiculosTableShell, gvTableVisibleRowCount } from "../lib/table-ui";
-import { GV_PANEL_KPI_STACK_CLASS } from "../lib/page-shell";
-import { useGvLgUp } from "../lib/gv-breakpoint";
+import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
-import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
-import { useGvSection } from "../lib/tab-context";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import {
   GV_FILTRO_FIELD_CLASS,
   GV_HEADER_OUTLINE_BUTTON_CLASS,
   GV_TABLE_SEARCH_INPUT_CLASS,
   GV_TABLE_SEARCH_WRAPPER_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS,
 } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { useGvTablePagination } from "../lib/table-pagination";
+import { useGvDetailScrollToTop } from "../lib/scroll-detail-to-top";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
@@ -50,6 +53,7 @@ const TODOS_VEHICULOS = "__todos__";
 
 const filtroTriggerClass = cn(
   GV_FILTRO_FIELD_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
   "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
 );
 
@@ -71,9 +75,6 @@ export function Bitacoras() {
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
   const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
   const [detailBitacora, setDetailBitacora] = useState<BitacoraRow | null>(null);
-  const gvSection = useGvSection();
-  const panelActive = gvSection?.section === "bitacoras";
-  const lgUp = useGvLgUp();
   const loading = loadingBitacoras;
 
   const vehiculosVinculados = useMemo(
@@ -160,27 +161,17 @@ export function Bitacoras() {
     setPageSize,
   } = useGvTablePagination(bitacorasFiltradas, paginacionKey);
 
-  const tableVisibleRows = gvTableVisibleRowCount(
-    bitacorasPaginadas.length,
-    !loading && bitacorasFiltradas.length === 0,
-  );
+  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
 
   const bitacorasParaAlertas = useMemo(
     () => bitacoras.filter((bitacora) => bitacoraEnPeriodoCalendario(bitacora.fecha, periodoFilter)),
     [bitacoras, periodoFilter],
   );
 
-  const headerExtras = useMemo(
-    () =>
-      !loading && view.mode === "list" ? (
-        <BitacorasNotificaciones bitacoras={bitacorasParaAlertas} />
-      ) : null,
-    [loading, view.mode, bitacorasParaAlertas],
-  );
+  useGvDetailScrollToTop(true, view.mode);
 
   useGvPanelChrome("bitacoras", {
     hideChrome: view.mode === "create",
-    headerExtras,
   });
 
   if (view.mode === "create") {
@@ -188,22 +179,29 @@ export function Bitacoras() {
   }
 
   return (
-    <div className={GV_PANEL_KPI_STACK_CLASS}>
-      {panelActive && canViewAll ? (
-        <BitacoraStatsCards
-          metrics={metricas}
-          mesLabel={periodoLabel}
-          filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS}
-        />
-      ) : null}
-
+    <>
+      <GvHeaderExtras panelId="bitacoras">
+        {!loading ? <BitacorasNotificaciones bitacoras={bitacorasParaAlertas} /> : null}
+      </GvHeaderExtras>
       <GvTableSectionMotion panelId="bitacoras">
-        <GestionVehiculosTableShell
-          visibleRows={lgUp ? tableVisibleRows : null}
-          toolbar={
-            <div className="flex flex-col gap-2 md:col-span-2 lg:flex-row lg:items-center lg:gap-3">
+      <GestionVehiculosTableShell
+        visibleRows={tableVisibleRows}
+        kpiSlot={
+          canViewAll ? (
+            <GvTableKpiSlot>
+              <BitacoraStatsCards
+                metrics={metricas}
+                mesLabel={periodoLabel}
+                filtroVehiculo={vehiculoFilter !== TODOS_VEHICULOS}
+              />
+            </GvTableKpiSlot>
+          ) : undefined
+        }
+        toolbar={
+            <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
+              <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
                 {canViewAll ? (
-                  <div className={cn(GV_TABLE_SEARCH_WRAPPER_CLASS, "w-full lg:min-w-0 lg:flex-1")}>
+                  <div className={GV_TABLE_SEARCH_WRAPPER_CLASS}>
                     <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-celeste-trifinio" />
                     <input
                       type="text"
@@ -259,10 +257,12 @@ export function Bitacoras() {
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
-                  className="!h-11 !w-full text-xs lg:hidden"
+                  className="!h-11 !w-full text-xs lg:hidden sm:w-[10.5rem]"
                 />
+              </div>
 
-                <div className="hidden w-[12rem] shrink-0 lg:block">
+              <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+                <div className={GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS}>
                   <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
                     <SelectTrigger className={filtroTriggerClass}>
                       <SelectValue
@@ -297,37 +297,29 @@ export function Bitacoras() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div
-                  className={cn(
-                    "grid w-full gap-2 lg:flex lg:flex-row lg:flex-nowrap lg:items-center lg:ml-auto lg:w-auto lg:shrink-0",
-                    canExport ? "grid-cols-2" : "grid-cols-1",
-                    "[&_button]:w-full lg:[&_button]:w-auto lg:[&_button]:shrink-0",
-                  )}
-                >
-                  <GvMonthPicker
-                    value={periodoFilter}
-                    onChange={setPeriodoFilter}
-                    className="hidden lg:inline-flex"
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="hidden lg:inline-flex"
+                />
+                {canExport ? (
+                  <GvExportReporteButton
+                    onClick={handleExportReporte}
+                    disabled={loading}
+                    loading={isExporting}
                   />
-                  {canExport ? (
-                    <GvExportReporteButton
-                      onClick={handleExportReporte}
-                      disabled={loading}
-                      loading={isExporting}
-                    />
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setView({ mode: "create" })}
-                    className={GV_HEADER_OUTLINE_BUTTON_CLASS}
-                  >
-                    <Plus className="h-4 w-4 shrink-0" />
-                    <span className="lg:hidden">Viaje</span>
-                    <span className="hidden lg:inline">Registrar viaje</span>
-                  </button>
-                </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setView({ mode: "create" })}
+                  className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                >
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="lg:hidden">Viaje</span>
+                  <span className="hidden lg:inline">Registrar viaje</span>
+                </button>
               </div>
+            </div>
           }
           pagination={{
             pageSafe,
@@ -341,7 +333,7 @@ export function Bitacoras() {
           }}
         >
           {loading ? (
-            <div className="flex min-h-full items-center justify-center py-20">
+            <div className={GV_TABLE_BODY_CENTER_CLASS}>
               <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
             </div>
           ) : bitacorasFiltradas.length === 0 ? (
@@ -366,6 +358,6 @@ export function Bitacoras() {
           )}
         </GestionVehiculosTableShell>
       </GvTableSectionMotion>
-    </div>
+    </>
   );
 }

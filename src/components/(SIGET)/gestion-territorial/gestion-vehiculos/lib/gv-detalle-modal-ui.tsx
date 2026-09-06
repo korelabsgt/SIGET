@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { Car, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GV_DETALLE_TEXTO_CLASS } from "./detalle-ui";
+import { formatFechaHoraGv } from "./gv-fechas";
 
 export { formatFechaHoraGv } from "./gv-fechas";
 
@@ -94,6 +95,48 @@ export function GvDetalleFilaIcono({
 export function GvDetalleSeccionTitulo({ children }: { children: ReactNode }) {
   return (
     <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-celeste-trifinio">{children}</h2>
+  );
+}
+
+export function GvDetalleComentarioLista({
+  comentarios,
+  vacioClassName,
+}: {
+  comentarios: { id: string; texto: string; fecha: string }[];
+  vacioClassName?: string;
+}) {
+  if (comentarios.length === 0) {
+    return (
+      <p className={cn("mt-4 text-sm text-muted-foreground", vacioClassName)}>
+        Sin comentarios registrados.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4 min-w-0 max-w-full space-y-0">
+      {comentarios.map((comentario, index) => (
+        <div
+          key={comentario.id}
+          className={cn(
+            "min-w-0 max-w-full py-4",
+            index > 0 && "border-t border-zinc-200 dark:border-zinc-700/80",
+          )}
+        >
+          <p
+            className={cn(
+              "text-sm font-medium leading-relaxed text-foreground",
+              GV_DETALLE_TEXTO_CLASS,
+            )}
+          >
+            {comentario.texto}
+          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {formatFechaHoraGv(comentario.fecha)}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 

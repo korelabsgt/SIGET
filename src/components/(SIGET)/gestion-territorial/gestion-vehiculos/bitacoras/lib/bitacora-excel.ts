@@ -7,11 +7,16 @@ import { getDatosReporteBitacora } from "./actions";
 import type { BitacoraRow } from "./zod";
 
 const COLUMN_COUNT = 9;
-const MIN_DATA_ROWS = 18;
-const LOGO_COL = 2;
+const LOGO_START_COL = 1;
+const LOGO_END_COL = 2;
 const TITLE_START_COL = 3;
-const TITLE_END_COL = 8;
-const TITLE_ROW_1 = "PLAN TRIFINIO/ DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
+const TITLE_END_COL = 9;
+const META_ROW = 5;
+const SPACER_ROW = 6;
+const HEADER_ROW = 7;
+const MIN_DATA_ROWS = 17;
+
+const TITLE_ROW_1 = "PLAN TRIFINIO / DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
 const TITLE_ROW_2 = "FORMULARIO DE CONTROL DE USO DE VEHICULO - BITACORA";
 
 const TABLE_HEADERS = [
@@ -79,12 +84,12 @@ function sanitizeSheetName(name: string, used: Set<string>): string {
 }
 
 function formatDescripcionVehiculo(
-  vehiculo: Pick<VehiculoRow, "marca" | "modelo" | "color"> | null,
+  vehiculo: Pick<VehiculoRow, "marca" | "modelo"> | null,
 ): string {
   if (!vehiculo) return "CONSOLIDADO GENERAL";
   const marca = vehiculo.marca.trim().toUpperCase();
-  const color = vehiculo.color?.trim().toUpperCase() ?? "";
-  return color ? `${marca} ${color}` : `${marca} ${vehiculo.modelo.trim().toUpperCase()}`.trim();
+  const modelo = vehiculo.modelo.trim().toUpperCase();
+  return `${marca} ${modelo}`.trim();
 }
 
 function formatPlacaReporte(placa: string): string {
@@ -167,6 +172,20 @@ function buildBitacoraSheet(
 ) {
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
+    pageSetup: {
+      orientation: "portrait",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.4,
+        right: 0.4,
+        top: 0.5,
+        bottom: 0.5,
+        header: 0.2,
+        footer: 0.2,
+      },
+    },
   });
 
   sheet.columns = [
@@ -181,8 +200,8 @@ function buildBitacoraSheet(
     { width: 28 },
   ];
 
-  sheet.mergeCells(1, LOGO_COL, 3, LOGO_COL);
-  sheet.getCell(1, LOGO_COL).alignment = { vertical: "middle", horizontal: "center" };
+  sheet.mergeCells(1, LOGO_START_COL, 3, LOGO_END_COL);
+  sheet.getCell(1, LOGO_START_COL).alignment = { vertical: "middle", horizontal: "center" };
 
   if (logoBuffer) {
     const imageId = workbook.addImage({
@@ -190,8 +209,8 @@ function buildBitacoraSheet(
       extension: "png",
     });
     sheet.addImage(imageId, {
-      tl: { col: 1.12, row: 0.12 },
-      ext: { width: 84, height: 68 },
+      tl: { col: 0.15, row: 0.1 },
+      ext: { width: 88, height: 72 },
     });
   }
 
@@ -203,49 +222,46 @@ function buildBitacoraSheet(
     font: { bold: true, size: 11 },
     alignment: { horizontal: "center", vertical: "middle", wrapText: true },
   });
+  sheet.mergeCells(3, TITLE_START_COL, 3, TITLE_END_COL);
 
   sheet.getRow(1).height = 22;
   sheet.getRow(2).height = 22;
-  sheet.getRow(3).height = 18;
+  sheet.getRow(3).height = 16;
+  sheet.getRow(4).height = 8;
 
   const descripcion = formatDescripcionVehiculo(grupo.vehiculo);
   const placa = grupo.vehiculo ? formatPlacaReporte(grupo.vehiculo.placa) : "—";
   const periodo = formatPeriodoReporte(grupo.mesLabel, grupo.anio);
 
-  sheet.getCell(4, LOGO_COL).value = "Descripción del Vehículo:";
-  sheet.getCell(4, LOGO_COL).font = { bold: true, size: 10 };
+  sheet.getCell(META_ROW, LOGO_END_COL).value = "Descripción del Vehículo:";
+  sheet.getCell(META_ROW, LOGO_END_COL).font = { bold: true, size: 10 };
 
-  setMergedValue(sheet, 4, 3, 4, descripcion, {
+  setCellUnderlineValue(sheet, META_ROW, 3, descripcion, {
+    alignment: { horizontal: "left", vertical: "middle" },
+  });
+
+  sheet.getCell(META_ROW, 5).value = "PLACAS:";
+  sheet.getCell(META_ROW, 5).font = { bold: true, size: 10 };
+
+  setCellUnderlineValue(sheet, META_ROW, 6, placa, {
+    alignment: { horizontal: "left", vertical: "middle" },
+  });
+
+  sheet.getCell(META_ROW, 7).value = "MES:";
+  sheet.getCell(META_ROW, 7).font = { bold: true, size: 10 };
+
+  setMergedValue(sheet, META_ROW, 8, 9, periodo, {
     font: { underline: true, size: 10 },
     alignment: { horizontal: "left", vertical: "middle" },
   });
 
-  sheet.getCell(4, 5).value = "PLACAS:";
-  sheet.getCell(4, 5).font = { bold: true, size: 10 };
+  sheet.getRow(META_ROW).height = 20;
+  sheet.getRow(SPACER_ROW).height = 8;
 
-  setCellUnderlineValue(sheet, 4, 6, placa, {
-    alignment: { horizontal: "left", vertical: "middle" },
-  });
-
-  sheet.getCell(4, 7).value = "MES:";
-  sheet.getCell(4, 7).font = { bold: true, size: 10 };
-
-  setCellUnderlineValue(sheet, 4, 8, periodo, {
-    alignment: { horizontal: "left", vertical: "middle" },
-  });
-
-  sheet.getRow(4).height = 20;
-  sheet.getRow(5).height = 8;
-
-  const headerRowIndex = 6;
   TABLE_HEADERS.forEach((header, index) => {
-    const cell = sheet.getCell(headerRowIndex, index + 1);
+    const cell = sheet.getCell(HEADER_ROW, index + 1);
     cell.value = header;
-    cell.font = {
-      bold: true,
-      size: index === 5 ? 9 : 10,
-      italic: index === 5,
-    };
+    cell.font = { bold: true, size: 10 };
     cell.fill = headerFill;
     cell.alignment = {
       horizontal: "center",
@@ -254,13 +270,13 @@ function buildBitacoraSheet(
     };
     cell.border = thinBorder;
   });
-  sheet.getRow(headerRowIndex).height = 36;
+  sheet.getRow(HEADER_ROW).height = 36;
 
   const sorted = [...grupo.bitacoras].sort(
     (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
   );
 
-  const dataStartRow = headerRowIndex + 1;
+  const dataStartRow = HEADER_ROW + 1;
   const dataEndRow = dataStartRow + Math.max(sorted.length, MIN_DATA_ROWS) - 1;
 
   for (let offset = 0; offset < Math.max(sorted.length, MIN_DATA_ROWS); offset += 1) {
@@ -270,6 +286,7 @@ function buildBitacoraSheet(
     const values: (string | number | null)[] = bitacora
       ? (() => {
           const responsable = responsableBitacoraNombre(bitacora);
+          const monto = Number(bitacora.monto_combustible) || 0;
           return [
             format(new Date(bitacora.fecha), "dd/MM/yyyy"),
             bitacora.destino,
@@ -277,8 +294,8 @@ function buildBitacoraSheet(
             bitacora.km_inicial,
             bitacora.km_final,
             bitacora.km_recorrido,
-            bitacora.vale_combustible ?? "",
-            Number(bitacora.monto_combustible) || 0,
+            bitacora.vale_combustible?.trim() ?? "",
+            monto > 0 ? monto : "",
             responsable,
           ];
         })()
@@ -289,9 +306,9 @@ function buildBitacoraSheet(
       cell.value = value;
       cell.font = { size: 10 };
       cell.alignment = {
-        horizontal: colIndex === 8 ? "center" : colIndex <= 2 ? "left" : "center",
+        horizontal: "center",
         vertical: "middle",
-        wrapText: colIndex <= 2,
+        wrapText: colIndex === 1 || colIndex === 2 || colIndex === 8,
       };
       cell.border = thinBorder;
 
@@ -306,7 +323,7 @@ function buildBitacoraSheet(
     sheet.getRow(rowIndex).height = 22;
   }
 
-  applyBorderRange(sheet, headerRowIndex, dataEndRow, 1, COLUMN_COUNT);
+  applyBorderRange(sheet, HEADER_ROW, dataEndRow, 1, COLUMN_COUNT);
 }
 
 export function buildBitacoraReporteGrupos(

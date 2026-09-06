@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
 import { normalizeBitacoraRow } from "./helpers";
+import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
@@ -71,8 +72,22 @@ export async function createBitacora(input: BitacoraInput) {
       if (solicitud.solicitante_id !== user.id) {
         return { success: false, error: "Solo puedes registrar la bitácora de tus misiones." };
       }
-      if (solicitud.estado !== "EN_MISION") {
-        return { success: false, error: "La misión ya no está en curso." };
+
+      if (solicitud.estado === "FINALIZADA") {
+        const { data: bitacoraExistente, error: bitacoraExistenteError } = await supabase
+          .from(TABLE)
+          .select("id")
+          .eq("solicitud_id", solicitudId)
+          .maybeSingle();
+
+        if (bitacoraExistenteError) {
+          return { success: false, error: "No se pudo verificar la misión vinculada." };
+        }
+        if (bitacoraExistente) {
+          return { success: false, error: "Esta misión ya tiene una bitácora vinculada." };
+        }
+      } else if (solicitud.estado !== "EN_MISION") {
+        return { success: false, error: "La misión no puede vincularse en este estado." };
       }
     }
 
@@ -101,22 +116,33 @@ export async function createBitacora(input: BitacoraInput) {
     }
 
     if (solicitudId) {
-      const { error: updateError } = await supabase
+      const { data: solicitudActual, error: solicitudActualError } = await supabase
         .from("ter_solicitudes")
-        .update({ estado: "FINALIZADA" })
+        .select("estado")
         .eq("id", solicitudId)
         .eq("solicitante_id", user.id)
-        .eq("estado", "EN_MISION");
+        .maybeSingle();
 
-      if (updateError) {
-        console.error("Error finalizing solicitud:", updateError);
-        return {
-          success: false,
-          error:
-            "La bitácora se guardó, pero no se pudo finalizar la misión vinculada. Contacte al administrador.",
-        };
+      if (solicitudActualError || !solicitudActual) {
+        console.error("Error reading solicitud estado:", solicitudActualError);
+      } else if (solicitudActual.estado === "EN_MISION") {
+        const { error: updateError } = await supabase
+          .from("ter_solicitudes")
+          .update({ estado: "FINALIZADA" })
+          .eq("id", solicitudId)
+          .eq("solicitante_id", user.id)
+          .eq("estado", "EN_MISION");
+
+        if (updateError) {
+          console.error("Error finalizing solicitud:", updateError);
+          return {
+            success: false,
+            error:
+              "La bitácora se guardó, pero no se pudo finalizar la misión vinculada. Contacte al administrador.",
+          };
+        }
+        revalidatePath(GV_BASE_ROUTE);
       }
-      revalidatePath(GV_BASE_ROUTE);
     }
 
     await sincronizarEstadoFlotaVehiculo(supabase, parsed.vehiculo_id);
@@ -179,36 +205,7 @@ export async function getConductores() {
 export async function getSolicitudesEnMision() {
   try {
     const { supabase, user } = await requireAuth();
-    const { data, error } = await supabase
-      .from("ter_solicitudes")
-      .select(`
-        id,
-        destino,
-        solicitante_id,
-        vehiculo_id,
-        vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
-      `)
-      .eq("estado", "EN_MISION")
-      .eq("solicitante_id", user.id);
-
-    if (error) throw error;
-
-    return (data ?? [])
-      .filter((row) => row.id && row.vehiculo_id && row.solicitante_id)
-      .map((row) => {
-        const vehiculoJoin = row.vehiculo;
-        const ter_vehiculos = Array.isArray(vehiculoJoin)
-          ? (vehiculoJoin[0] ?? null)
-          : (vehiculoJoin ?? null);
-
-        return {
-          id: row.id as string,
-          destino: row.destino as string,
-          conductor_id: row.solicitante_id as string,
-          vehiculo_id: row.vehiculo_id as string,
-          ter_vehiculos: ter_vehiculos as { kilometraje_actual: number } | null,
-        };
-      });
+    return await loadMisionesVinculablesBitacora(supabase, user.id);
   } catch (error) {
     console.error("Error fetching solicitudes activas:", error);
     return [];

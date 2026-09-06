@@ -144,3 +144,78 @@ export function formatMontoCombustibleBitacora(monto: number) {
     maximumFractionDigits: 2,
   })}`;
 }
+
+export const MISION_VINCULABLE_SELECT = `
+  id,
+  destino,
+  solicitante_id,
+  vehiculo_id,
+  estado,
+  fecha_inicio,
+  vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
+`;
+
+export type MisionVinculableBitacora = {
+  id: string;
+  destino: string;
+  conductor_id: string;
+  vehiculo_id: string;
+  estado: string;
+  ter_vehiculos: { kilometraje_actual: number } | null;
+};
+
+type SolicitudMisionRow = {
+  id: string | null;
+  destino: string | null;
+  solicitante_id: string | null;
+  vehiculo_id: string | null;
+  estado: string | null;
+  vehiculo:
+    | { kilometraje_actual: number }
+    | { kilometraje_actual: number }[]
+    | null;
+};
+
+export function mapSolicitudAMisionVinculable(
+  row: SolicitudMisionRow,
+): MisionVinculableBitacora | null {
+  if (!row.id || !row.vehiculo_id || !row.solicitante_id || !row.destino) return null;
+
+  const vehiculoJoin = row.vehiculo;
+  const ter_vehiculos = Array.isArray(vehiculoJoin)
+    ? (vehiculoJoin[0] ?? null)
+    : (vehiculoJoin ?? null);
+
+  return {
+    id: row.id,
+    destino: row.destino,
+    conductor_id: row.solicitante_id,
+    vehiculo_id: row.vehiculo_id,
+    estado: row.estado ?? "",
+    ter_vehiculos: ter_vehiculos as { kilometraje_actual: number } | null,
+  };
+}
+
+export function buildMisionesVinculablesList(
+  enMision: SolicitudMisionRow[],
+  finalizadas: SolicitudMisionRow[],
+  solicitudesConBitacora: Set<string>,
+): MisionVinculableBitacora[] {
+  const activas = enMision
+    .map(mapSolicitudAMisionVinculable)
+    .filter((mision): mision is MisionVinculableBitacora => mision !== null);
+
+  const activaIds = new Set(activas.map((mision) => mision.id));
+
+  const ultimaFinalizadaSinBitacora = finalizadas
+    .map(mapSolicitudAMisionVinculable)
+    .filter(
+      (mision): mision is MisionVinculableBitacora =>
+        mision !== null &&
+        !activaIds.has(mision.id) &&
+        !solicitudesConBitacora.has(mision.id),
+    )
+    .slice(0, 1);
+
+  return [...activas, ...ultimaFinalizadaSinBitacora];
+}

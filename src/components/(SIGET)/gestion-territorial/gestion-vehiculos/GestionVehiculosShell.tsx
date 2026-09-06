@@ -10,9 +10,10 @@ import {
   GV_SUBMODULO_TITLES,
   type GvSubmoduloId,
 } from "./lib/tab-context";
-import { GvPageChromeLayout, GvPageChromeProvider } from "./lib/gv-page-chrome";
+import { GvPageChromeProvider } from "./lib/gv-page-chrome";
 import { GV_PANEL_STACK_CLASS, GV_TABLE_AREA_CLASS } from "./lib/page-shell";
 import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
+import { useGvDetailScrollToTop } from "./lib/scroll-detail-to-top";
 import { cn } from "@/lib/utils";
 
 function PanelFallback() {
@@ -88,6 +89,8 @@ function GestionVehiculosShellInner() {
     document.title = GV_SUBMODULO_TITLES[section];
   }, [section]);
 
+  useGvDetailScrollToTop(true, section);
+
   return (
     <GvSectionProvider section={section} selectSection={selectSection}>
       <GvPageChromeProvider>
@@ -96,24 +99,22 @@ function GestionVehiculosShellInner() {
           className="relative flex min-h-[calc(100vh-4rem)] w-full flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0"
         >
           <div data-gv-scroll-root className={SCROLL_ROOT_CLASS}>
-            <GvPageChromeLayout>
-              <div className={GV_TABLE_AREA_CLASS}>
-                {PANELS.map(({ id, Panel }) =>
-                  visited.has(id) ? (
-                    <div
-                      key={id}
-                      className={cn(
-                        GV_PANEL_STACK_CLASS,
-                        section !== id && "h-0 overflow-hidden pointer-events-none",
-                      )}
-                      aria-hidden={section !== id}
-                    >
-                      <Panel />
-                    </div>
-                  ) : null,
-                )}
-              </div>
-            </GvPageChromeLayout>
+            <div className={GV_TABLE_AREA_CLASS}>
+              {PANELS.map(({ id, Panel }) =>
+                visited.has(id) ? (
+                  <div
+                    key={id}
+                    className={cn(
+                      GV_PANEL_STACK_CLASS,
+                      section !== id && "h-0 overflow-hidden pointer-events-none",
+                    )}
+                    aria-hidden={section !== id}
+                  >
+                    <Panel />
+                  </div>
+                ) : null,
+              )}
+            </div>
           </div>
         </div>
       </GvPageChromeProvider>

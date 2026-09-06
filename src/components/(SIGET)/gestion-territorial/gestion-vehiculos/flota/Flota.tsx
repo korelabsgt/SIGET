@@ -21,10 +21,10 @@ import {
 import { useEliminarVehiculo, useVehiculos } from "./lib/hooks";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
 import { cn } from "@/lib/utils";
-import { GV_FILTRO_FIELD_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS } from "../lib/gv-header-ui";
-import { GestionVehiculosTableEmpty, GestionVehiculosTableShell, gvTableShellVisibleRows } from "../lib/table-ui";
+import { GV_FILTRO_FIELD_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_SEARCH_INPUT_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS, GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS } from "../lib/gv-header-ui";
+import { GestionVehiculosTableEmpty, GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
 import { useGvTablePagination } from "../lib/table-pagination";
-import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import { canManageFlota } from "../lib/permissions";
@@ -42,6 +42,7 @@ const ESTADO_VEHICULO_LABELS: Record<(typeof ESTADOS_VEHICULO)[number], string> 
 
 const filtroEstadoTriggerClass = cn(
   GV_FILTRO_FIELD_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
   "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
 );
 
@@ -110,12 +111,7 @@ export function Flota() {
     setIsModalOpen(true);
   };
 
-  const headerExtras = useMemo(
-    () => (!loading ? <FlotaNotificaciones vehiculos={vehiculos} /> : null),
-    [loading, vehiculos],
-  );
-
-  useGvPanelChrome("flota", { headerExtras });
+  useGvPanelChrome("flota");
 
   const handleExportExcel = async () => {
     if (vehiculosFiltrados.length === 0) {
@@ -181,6 +177,9 @@ export function Flota() {
 
   return (
     <>
+      <GvHeaderExtras panelId="flota">
+        {!loading ? <FlotaNotificaciones vehiculos={vehiculos} /> : null}
+      </GvHeaderExtras>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell
           visibleRows={tableVisibleRows}
@@ -195,42 +194,45 @@ export function Flota() {
             },
           }}
           toolbar={
-            <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)_auto] lg:items-center">
-              <div className="relative min-w-0 w-full sm:col-span-2 lg:col-span-1" data-morph-hover-scope>
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-celeste-trifinio">
-                  <GvMorphIcon icon={Search} hoverIcon={ScanSearch} size={16} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Buscar por placa, marca o modelo..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 pl-10 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20"
-                />
+            <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
+              <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
+                <div className="relative min-w-0 w-full flex-1" data-morph-hover-scope>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-celeste-trifinio">
+                    <GvMorphIcon icon={Search} hoverIcon={ScanSearch} size={16} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Buscar por placa, marca o modelo..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
+                  />
+                </div>
+                <div className="min-w-0 w-full flex-1 lg:max-w-[14rem] lg:shrink-0">
+                  <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                    <SelectTrigger className={filtroEstadoTriggerClass}>
+                      <SelectValue placeholder="Todos los estados" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className={filtroEstadoContentClass}>
+                      <SelectItem value={TODOS} textValue="Todos los estados" className={filtroEstadoItemClass}>
+                        Todos los estados
+                      </SelectItem>
+                      {ESTADOS_VEHICULO.map((est) => (
+                        <SelectItem
+                          key={est}
+                          value={est}
+                          textValue={ESTADO_VEHICULO_LABELS[est]}
+                          className={filtroEstadoItemClass}
+                        >
+                          {ESTADO_VEHICULO_LABELS[est]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="flex w-full items-center gap-2 sm:col-span-2 lg:col-span-1">
-                <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                  <SelectTrigger className={cn(filtroEstadoTriggerClass, "min-w-0 flex-1")}>
-                    <SelectValue placeholder="Todos los estados" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className={filtroEstadoContentClass}>
-                    <SelectItem value={TODOS} textValue="Todos los estados" className={filtroEstadoItemClass}>
-                      Todos los estados
-                    </SelectItem>
-                    {ESTADOS_VEHICULO.map((est) => (
-                      <SelectItem
-                        key={est}
-                        value={est}
-                        textValue={ESTADO_VEHICULO_LABELS[est]}
-                        className={filtroEstadoItemClass}
-                      >
-                        {ESTADO_VEHICULO_LABELS[est]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
+              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
                 {vehiculosFiltrados.length > 0 ? (
                   <SigetActionButton
                     label="Excel"
@@ -243,14 +245,11 @@ export function Flota() {
                     className="h-11 w-auto shrink-0 rounded-xl px-4"
                   />
                 ) : null}
-              </div>
-
-              <div className="w-full sm:col-span-2 lg:col-span-1 lg:flex lg:justify-end">
                 {canManage ? (
                   <button
                     type="button"
                     onClick={handleCreate}
-                    className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-full lg:w-auto")}
+                    className={GV_HEADER_OUTLINE_BUTTON_CLASS}
                   >
                     <GvMorphIcon icon={Plus} hoverIcon={Check} size={16} />
                     Añadir
@@ -261,13 +260,13 @@ export function Flota() {
           }
         >
           {loading ? (
-            <div className="flex min-h-full items-center justify-center py-20">
+            <div className={GV_TABLE_BODY_CENTER_CLASS}>
               <span className="inline-flex animate-spin text-celeste-trifinio">
                 <GvMorphIcon icon={Loader2} size={32} morphOnHover={false} />
               </span>
             </div>
           ) : error ? (
-            <p className="flex min-h-full items-center justify-center py-12 text-center text-sm text-red-500">{error}</p>
+            <p className={cn(GV_TABLE_BODY_CENTER_CLASS, "text-sm text-red-500")}>{error}</p>
           ) : vehiculosFiltrados.length === 0 ? (
             <GestionVehiculosTableEmpty
               icon={<GvMorphIcon icon={Car} hoverIcon={CarFront} size={40} />}

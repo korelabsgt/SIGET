@@ -24,8 +24,8 @@ export function VehiculosPanel({
   canManage: boolean;
 }) {
   return (
-    <>
-      <div className="hidden lg:block">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="hidden min-h-0 flex-1 flex-col lg:flex">
         <VehiculosList
           vehiculos={vehiculos}
           rowOffset={rowOffset}
@@ -37,7 +37,7 @@ export function VehiculosPanel({
         />
       </div>
 
-      <div className="lg:hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:hidden">
         <VehiculosCards
           vehiculos={vehiculos}
           onEdit={onEdit}
@@ -50,6 +50,6 @@ export function VehiculosPanel({
           canManage={canManage}
         />
       </div>
-    </>
+    </div>
   );
 }

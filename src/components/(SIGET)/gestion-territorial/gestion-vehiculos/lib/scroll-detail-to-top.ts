@@ -9,6 +9,12 @@ export function scrollGvDetailToTop() {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
 
+  document.querySelectorAll("main").forEach((node) => {
+    if (node instanceof HTMLElement) {
+      node.scrollTop = 0;
+    }
+  });
+
   document.querySelectorAll("[data-gv-scroll-root]").forEach((node) => {
     if (node instanceof HTMLElement) {
       node.scrollTop = 0;

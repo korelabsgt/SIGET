@@ -41,11 +41,13 @@ export function SolicitudesPanel({
 
   return (
     <>
-      <div className="hidden lg:block">
-        <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
-      </div>
-      <div className="lg:hidden">
-        <SolicitudesCards solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+          <SolicitudesList solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+          <SolicitudesCards solicitudes={solicitudes} onDetail={setSelectedSolicitud} />
+        </div>
       </div>
 
       <SolicitudDetalleModal

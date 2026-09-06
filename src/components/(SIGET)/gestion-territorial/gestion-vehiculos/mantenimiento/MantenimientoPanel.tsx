@@ -41,11 +41,13 @@ export function MantenimientoPanel({
 
   return (
     <>
-      <div className="hidden lg:block">
-        <MantenimientoList fallas={fallas} onDetail={setSelectedFalla} />
-      </div>
-      <div className="lg:hidden">
-        <MantenimientoCards fallas={fallas} onDetail={setSelectedFalla} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+          <MantenimientoList fallas={fallas} onDetail={setSelectedFalla} />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+          <MantenimientoCards fallas={fallas} onDetail={setSelectedFalla} />
+        </div>
       </div>
 
       <FallaDetalleModal

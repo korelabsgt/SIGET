@@ -61,6 +61,7 @@ interface SolicitudActiva {
   destino: string;
   conductor_id: string;
   vehiculo_id: string;
+  estado?: string;
   ter_vehiculos: { kilometraje_actual: number } | { kilometraje_actual: number }[] | null;
 }
 
@@ -78,6 +79,11 @@ const formLabelClass =
 
 const selectContentClass =
   "z-[200] max-h-60 border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
+
+const selectOverflowScrollWrapClass = "min-w-0 max-w-full overflow-x-auto";
+
+const selectOverflowTriggerClass =
+  "w-max min-w-full [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-nowrap";
 
 const selectItemClass =
   "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
@@ -259,7 +265,7 @@ export function Crear({
   }
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="w-full">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="w-full min-w-0">
       <div className="mb-6 flex items-start gap-3">
         <button
           type="button"
@@ -288,40 +294,50 @@ export function Crear({
         <section className={formSectionClass}>
           <div className={sectionTitleClass} data-morph-hover-scope>
             <GvMorphIcon icon={Link} hoverIcon={Unlink} size={16} className="text-current" />
-            Vinculación de misión en curso
+            Vinculación de misión
           </div>
-          <div className="grid gap-1.5 p-4">
-            <FieldLabel>Misión activa (opcional)</FieldLabel>
+          <div className="grid min-w-0 gap-1.5 p-4">
+            <FieldLabel>Misión a vincular (opcional)</FieldLabel>
             <Controller
               name="solicitud_id"
               control={control}
               render={({ field }) => (
-                <Select
-                  onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
-                  value={field.value || "none"}
-                >
-                  <SelectTrigger className={cn(formInputClass, "cursor-pointer shadow-none")}>
-                    <SelectValue placeholder="Seleccionar misión en curso" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className={selectContentClass}>
-                    <SelectItem value="none" className={selectItemClass}>
-                      Ninguna — registro manual
-                    </SelectItem>
-                    {misiones.map((m) => {
-                      const label = `Misión a ${m.destino} · ${kmDeMision(m.ter_vehiculos)} km`;
-                      return (
-                        <SelectItem
-                          key={m.id}
-                          value={m.id}
-                          textValue={label}
-                          className={selectItemClass}
-                        >
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <div className={selectOverflowScrollWrapClass}>
+                  <Select
+                    onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                    value={field.value || "none"}
+                  >
+                    <SelectTrigger
+                      className={cn(
+                        formInputClass,
+                        selectOverflowTriggerClass,
+                        "cursor-pointer shadow-none",
+                      )}
+                    >
+                      <SelectValue placeholder="Seleccionar misión en curso" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className={selectContentClass}>
+                      <SelectItem value="none" className={selectItemClass}>
+                        Ninguna — registro manual
+                      </SelectItem>
+                      {misiones.map((m) => {
+                        const sufijoEstado =
+                          m.estado === "FINALIZADA" ? " · finalizada" : "";
+                        const label = `Misión a ${m.destino} · ${kmDeMision(m.ter_vehiculos)} km${sufijoEstado}`;
+                        return (
+                          <SelectItem
+                            key={m.id}
+                            value={m.id}
+                            textValue={label}
+                            className={cn(selectItemClass, "whitespace-nowrap")}
+                          >
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             />
             {selectedMisionId ? (
@@ -330,7 +346,8 @@ export function Crear({
               </p>
             ) : (
               <p className="text-[11px] leading-relaxed text-muted-foreground dark:text-zinc-500">
-                Solo se listan las misiones en curso que solicitaste.
+                Se listan tus misiones en curso y la última finalizada sin bitácora
+                vinculada.
               </p>
             )}
           </div>
@@ -349,35 +366,41 @@ export function Crear({
                   name="vehiculo_id"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={!!selectedMisionId}
-                    >
-                      <SelectTrigger
-                        className={cn(formInputClass, "cursor-pointer shadow-none")}
+                    <div className={selectOverflowScrollWrapClass}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
                         disabled={!!selectedMisionId}
                       >
-                        <SelectValue placeholder="Seleccionar vehículo" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className={selectContentClass}>
-                        {vehiculos
-                          .filter((v) => v.id)
-                          .map((v) => {
-                            const label = formatVehiculoLabel(v);
-                            return (
-                              <SelectItem
-                                key={v.id}
-                                value={v.id as string}
-                                textValue={label}
-                                className={selectItemClass}
-                              >
-                                {label}
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          className={cn(
+                            formInputClass,
+                            selectOverflowTriggerClass,
+                            "cursor-pointer shadow-none",
+                          )}
+                          disabled={!!selectedMisionId}
+                        >
+                          <SelectValue placeholder="Seleccionar vehículo" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className={selectContentClass}>
+                          {vehiculos
+                            .filter((v) => v.id)
+                            .map((v) => {
+                              const label = formatVehiculoLabel(v);
+                              return (
+                                <SelectItem
+                                  key={v.id}
+                                  value={v.id as string}
+                                  textValue={label}
+                                  className={cn(selectItemClass, "whitespace-nowrap")}
+                                >
+                                  {label}
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
                 />
                 {errors.vehiculo_id ? (

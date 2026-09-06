@@ -43,6 +43,9 @@ export function useGvTablePagination<T>(items: T[], resetKey?: string) {
   };
 }
 
+const GV_TABLE_PAGINATION_CLASS =
+  "flex h-[3.5625rem] shrink-0 flex-wrap items-center justify-center gap-3 border-t border-border px-4 dark:border-zinc-700";
+
 export function GestionVehiculosTablePagination({
   pageSafe,
   totalPages,
@@ -61,7 +64,7 @@ export function GestionVehiculosTablePagination({
   if (hidden) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 border-t border-border px-4 py-3 dark:border-zinc-700">
+    <div className={GV_TABLE_PAGINATION_CLASS}>
       <button
         type="button"
         onClick={() => onPageChange(Math.max(1, pageSafe - 1))}

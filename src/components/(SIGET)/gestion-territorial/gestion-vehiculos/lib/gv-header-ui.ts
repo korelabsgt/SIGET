@@ -20,3 +20,18 @@ export const GV_TABLE_SEARCH_WRAPPER_CLASS = "relative min-w-0 flex-1";
 
 export const GV_TABLE_SEARCH_INPUT_CLASS =
   "h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20";
+
+export const GV_TABLE_TOOLBAR_ROW_CLASS =
+  "flex w-full min-w-0 flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-3";
+
+export const GV_TABLE_TOOLBAR_PRIMARY_CLASS =
+  "flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:items-center";
+
+export const GV_TABLE_TOOLBAR_ACTIONS_CLASS =
+  "flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-2 [&_button]:w-auto";
+
+export const GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS =
+  "hidden min-w-[12rem] w-max max-w-[min(26rem,42vw)] shrink-0 lg:block";
+
+export const GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS =
+  "min-w-0 max-w-full overflow-hidden [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate";

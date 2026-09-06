@@ -30,7 +30,7 @@ export function GvTableSectionMotion({
       initial={prefersReducedMotion ? false : { opacity: 0, y: 16, scale: 0.992 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={gvTableMotionTransition(Boolean(prefersReducedMotion))}
-      className="flex min-h-0 w-full min-w-0 flex-none flex-col lg:flex-1"
+      className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
     >
       {children}
     </motion.div>

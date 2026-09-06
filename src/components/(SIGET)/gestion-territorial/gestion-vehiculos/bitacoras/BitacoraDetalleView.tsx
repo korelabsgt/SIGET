@@ -8,12 +8,14 @@ import { cn } from "@/lib/utils";
 import { GV_DETALLE_CARD_CLASS } from "../lib/detalle-ui";
 import {
   GvDetalleCerrar,
+  GvDetalleComentarioLista,
   GvDetalleEncabezadoVehiculo,
   GvDetalleFilaVehiculo,
   GvDetalleSeccionTitulo,
   GvDetalleStat,
   GvDetalleTarjetaAnidada,
 } from "../lib/gv-detalle-modal-ui";
+import { GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
 import { type BitacoraRow } from "./lib/zod";
 
 function formatMontoCombustible(monto: number) {
@@ -42,23 +44,28 @@ function ContenidoBitacora({
 
   if (embedded) {
     return (
-      <div className="space-y-5 pb-2">
-        <div className="relative space-y-1 pr-12">
+      <div className="min-w-0 max-w-full space-y-5 pb-2">
+        <div className="relative min-w-0 space-y-1 pr-12">
           {onClose ? <GvDetalleCerrar onClose={onClose} /> : null}
-          <div className="flex items-start gap-2.5">
+          <div className="flex min-w-0 items-start gap-2.5">
             <MapPin className="mt-1 size-6 shrink-0 text-celeste-trifinio" strokeWidth={2.25} />
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-black capitalize tracking-tight text-foreground md:text-[1.65rem]">
+              <h1
+                className={cn(
+                  "text-2xl font-black capitalize tracking-tight text-foreground md:text-[1.65rem]",
+                  GV_DETALLE_TEXTO_CLASS,
+                )}
+              >
                 {bitacora.destino}
               </h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">
+              <p className={cn("mt-1.5 text-sm text-muted-foreground", GV_DETALLE_TEXTO_CLASS)}>
                 Conductor {conductor} · Registrado el {formatFechaHoraGv(bitacora.fecha)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
           <GvDetalleStat label="Km inicial" value={bitacora.km_inicial.toLocaleString("es-GT")} />
           <GvDetalleStat label="Km final" value={bitacora.km_final.toLocaleString("es-GT")} />
           <GvDetalleStat
@@ -68,30 +75,8 @@ function ContenidoBitacora({
           />
         </div>
 
-        <div className="grid gap-8 border-t border-zinc-200 pt-6 dark:border-zinc-700/80 lg:grid-cols-[minmax(0,1.55fr)_minmax(14rem,1fr)] lg:gap-10">
-          <section>
-            <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
-            {comentarios.length > 0 ? (
-              <div className="mt-4 space-y-0">
-                {comentarios.map((c, index) => (
-                  <div
-                    key={c.id}
-                    className={cn(
-                      "py-4",
-                      index > 0 && "border-t border-zinc-200 dark:border-zinc-700/80",
-                    )}
-                  >
-                    <p className="text-sm font-medium leading-relaxed text-foreground">{c.texto}</p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">{formatFechaHoraGv(c.fecha)}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">Sin comentarios registrados.</p>
-            )}
-          </section>
-
-          <section>
+        <div className="flex min-w-0 max-w-full flex-col gap-8 border-t border-zinc-200 pt-6 dark:border-zinc-700/80">
+          <section className="min-w-0 max-w-full">
             <GvDetalleSeccionTitulo>Vehículo y combustible</GvDetalleSeccionTitulo>
             <GvDetalleTarjetaAnidada>
               <GvDetalleEncabezadoVehiculo marca={marca} modelo={modelo} placa={placa} />
@@ -106,6 +91,11 @@ function ContenidoBitacora({
                 ) : null}
               </div>
             </GvDetalleTarjetaAnidada>
+          </section>
+
+          <section className="min-w-0 max-w-full">
+            <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
+            <GvDetalleComentarioLista comentarios={comentarios} />
           </section>
         </div>
       </div>
@@ -136,27 +126,8 @@ function ContenidoBitacora({
         />
       </div>
 
-      <div className="mt-8 grid gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,0.9fr)] lg:gap-12 dark:border-zinc-700">
-        <section>
-          <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
-          {comentarios.length > 0 ? (
-            <div className="mt-4 space-y-0">
-              {comentarios.map((c, index) => (
-                <div
-                  key={c.id}
-                  className={cn("py-4", index > 0 && "border-t border-zinc-200 dark:border-zinc-700")}
-                >
-                  <p className="text-sm leading-relaxed text-foreground">{c.texto}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatFechaHoraGv(c.fecha)}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">Sin comentarios registrados.</p>
-          )}
-        </section>
-
-        <section>
+      <div className="mt-8 grid min-w-0 gap-8 border-t border-border pt-8 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(0,1.65fr)] lg:gap-12 dark:border-zinc-700">
+        <section className="min-w-0 max-w-full">
           <GvDetalleSeccionTitulo>Vehículo y combustible</GvDetalleSeccionTitulo>
           <GvDetalleTarjetaAnidada>
             <GvDetalleEncabezadoVehiculo marca={marca} modelo={modelo} placa={placa} />
@@ -168,6 +139,11 @@ function ContenidoBitacora({
               <GvDetalleFilaVehiculo label="Vale" value={bitacora.vale_combustible?.trim() || "—"} />
             </div>
           </GvDetalleTarjetaAnidada>
+        </section>
+
+        <section className="min-w-0 max-w-full">
+          <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
+          <GvDetalleComentarioLista comentarios={comentarios} vacioClassName="mt-4" />
         </section>
       </div>
     </div>

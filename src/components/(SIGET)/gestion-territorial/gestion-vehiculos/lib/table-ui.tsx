@@ -4,7 +4,7 @@ import { GestionVehiculosTablePagination } from "./table-pagination";
 import {
   GV_TABLE_DEFAULT_VISIBLE_ROWS,
   GV_TABLE_MIN_WIDTH,
-  gvTableBodyMinHeightPx,
+  gvTableBodyMinHeightPxForShell,
   gvTableShellMinHeightPx,
 } from "./table-layout";
 
@@ -31,16 +31,29 @@ export const GV_TABLE_SHELL_INNER_CLASS =
   "flex min-h-0 flex-1 flex-col overflow-hidden bg-card dark:bg-zinc-900";
 
 export const GV_TABLE_TOOLBAR_CLASS =
-  "w-full shrink-0 min-h-[5.0625rem] border-b border-border p-4 dark:border-zinc-700";
+  "w-full shrink-0 min-h-[5.0625rem] border-b border-border p-4 dark:border-zinc-700 lg:h-[5.0625rem] lg:overflow-hidden";
+
+export const GV_TABLE_KPI_SLOT_CLASS =
+  "flex shrink-0 items-stretch border-b border-border px-4 py-3 dark:border-zinc-700 min-h-[7.875rem] sm:h-[7rem] sm:min-h-0";
+
+export function GvTableKpiSlot({ children }: { children?: ReactNode }) {
+  return (
+    <div className={GV_TABLE_KPI_SLOT_CLASS}>
+      {children ? <div className="w-full min-w-0">{children}</div> : null}
+    </div>
+  );
+}
 
 export function GestionVehiculosTableShell({
   toolbar,
+  kpiSlot,
   children,
   className,
   pagination,
   visibleRows = GV_TABLE_DEFAULT_VISIBLE_ROWS,
 }: {
   toolbar?: ReactNode;
+  kpiSlot?: ReactNode;
   children: ReactNode;
   className?: string;
   pagination?: GestionVehiculosTablePaginationProps;
@@ -48,19 +61,38 @@ export function GestionVehiculosTableShell({
 }) {
   const hasToolbar = Boolean(toolbar);
   const hasPagination = Boolean(pagination);
+  const hasKpiSlot = Boolean(kpiSlot);
   const applySizing = visibleRows !== null;
   const rows = visibleRows ?? GV_TABLE_DEFAULT_VISIBLE_ROWS;
+  const shellHeight = gvTableShellMinHeightPx({
+    visibleRows: rows,
+    hasToolbar,
+    hasPagination,
+  });
+  const bodyMinHeight = gvTableBodyMinHeightPxForShell(rows, hasKpiSlot);
   const shellStyle: CSSProperties | undefined = applySizing
-    ? { minHeight: gvTableShellMinHeightPx({ visibleRows: rows, hasToolbar, hasPagination }) }
-    : undefined;
-  const bodyStyle: CSSProperties | undefined = applySizing
-    ? { minHeight: gvTableBodyMinHeightPx(rows) }
+    ? ({
+        minHeight: shellHeight,
+        "--gv-table-shell-h": `${shellHeight}px`,
+        "--gv-table-body-min-h": `${bodyMinHeight}px`,
+      } as CSSProperties)
     : undefined;
 
-  const toolbarBlock = toolbar ? <div className={GV_TABLE_TOOLBAR_CLASS}>{toolbar}</div> : null;
+  const toolbarBlock = toolbar ? (
+    <div className={GV_TABLE_TOOLBAR_CLASS}>
+      <div className="flex w-full min-w-0 items-center lg:h-full">{toolbar}</div>
+    </div>
+  ) : null;
+
+  const kpiBlock = kpiSlot ?? null;
 
   const bodyBlock = (
-    <div className="flex min-h-0 flex-1 flex-col" style={bodyStyle}>
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col",
+        applySizing && "min-h-[var(--gv-table-body-min-h)]",
+      )}
+    >
       {children}
     </div>
   );
@@ -70,15 +102,17 @@ export function GestionVehiculosTableShell({
   return (
     <div
       className={cn(
-        "flex min-h-0 w-full flex-1 flex-col",
+        "flex min-h-0 w-full flex-1 flex-col overflow-hidden",
         GV_TABLE_SHELL_SURFACE_CLASS,
+        applySizing && "lg:h-[var(--gv-table-shell-h)]",
         className,
       )}
       style={shellStyle}
     >
       {hasToolbar ? (
         <div className="flex min-h-0 flex-1 flex-col bg-celeste-trifinio pt-1">
-          <div className={cn(GV_TABLE_SHELL_INNER_CLASS, "flex-1 rounded-t-2xl")}>
+          <div className={cn(GV_TABLE_SHELL_INNER_CLASS, "h-full flex-1 rounded-t-2xl")}>
+            {kpiBlock}
             {toolbarBlock}
             {bodyBlock}
             {paginationBlock}
@@ -172,6 +206,9 @@ export function GestionVehiculosTr({ cells }: { cells: GestionVehiculosTdCell[] 
   );
 }
 
+export const GV_TABLE_BODY_CENTER_CLASS =
+  "flex w-full min-h-[var(--gv-table-body-min-h,14rem)] flex-1 flex-col items-center justify-center px-4 py-8 text-center";
+
 export function GestionVehiculosTableEmpty({
   icon,
   title,
@@ -182,7 +219,7 @@ export function GestionVehiculosTableEmpty({
   description: string;
 }) {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-4 py-16 text-center">
+    <div className={GV_TABLE_BODY_CENTER_CLASS}>
       <div className="mx-auto mb-4 flex size-10 items-center justify-center text-celeste-trifinio/70">
         {icon}
       </div>
@@ -194,7 +231,7 @@ export function GestionVehiculosTableEmpty({
 
 export function GestionVehiculosTableLoading({ label }: { label: string }) {
   return (
-    <div className="flex min-h-full items-center justify-center py-20">
+    <div className={GV_TABLE_BODY_CENTER_CLASS}>
       <p className="text-sm text-muted-foreground">{label}</p>
     </div>
   );

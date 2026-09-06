@@ -1,12 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createBitacora } from "./actions";
+import { createBitacora, getSolicitudesEnMision } from "./actions";
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
-import {
-  fetchBitacoras,
-  fetchSolicitudesEnMision,
-} from "../../lib/client-db";
+import { fetchBitacoras } from "../../lib/client-db";
 import { useVehiculos, VEHICULOS_KEY } from "../../flota/lib/hooks";
 import { SOLICITUDES_KEY } from "../../solicitudes/lib/hooks";
 import type { BitacoraInput } from "./zod";
@@ -42,19 +39,24 @@ export function useMetricasBitacoras() {
   });
 }
 
+export const BITACORAS_MISIONES_VINCULABLES_KEY = [
+  ...BITACORAS_KEY,
+  "form-options",
+  "misiones-vinculables",
+] as const;
+
 export function useBitacoraFormOptions(enabled: boolean) {
   const vehiculosQuery = useVehiculos();
   const extras = useQuery({
-    queryKey: [...BITACORAS_KEY, "form-options", "misiones-propias"],
+    queryKey: BITACORAS_MISIONES_VINCULABLES_KEY,
     queryFn: async () => {
-      const misiones = await shareInflight(
-        "ter-solicitudes-en-mision-propias",
-        fetchSolicitudesEnMision,
-      );
+      const misiones = await getSolicitudesEnMision();
       return { misiones };
     },
     enabled,
-    ...GV_QUERY_OPTIONS,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   return {
@@ -77,7 +79,7 @@ export function useCrearBitacora() {
       qc.invalidateQueries({ queryKey: BITACORAS_KEY });
       qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
       qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      qc.invalidateQueries({ queryKey: [...BITACORAS_KEY, "form-options", "misiones-propias"] });
+      qc.invalidateQueries({ queryKey: BITACORAS_MISIONES_VINCULABLES_KEY });
     },
   });
 }

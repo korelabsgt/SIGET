@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/client";
 
 import type { BitacoraRow } from "../bitacoras/lib/zod";
 import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
+import { loadMisionesVinculablesBitacora } from "../bitacoras/lib/misiones-vinculables";
 import { esVehiculoDisponible, normalizeVehiculoRow } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
@@ -151,36 +152,5 @@ export async function fetchSolicitudesEnMision() {
   } = await client.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await client
-    .from("ter_solicitudes")
-    .select(
-      `
-        id,
-        destino,
-        solicitante_id,
-        vehiculo_id,
-        vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
-      `,
-    )
-    .eq("estado", "EN_MISION")
-    .eq("solicitante_id", user.id);
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? [])
-    .filter((row) => row.id && row.vehiculo_id && row.solicitante_id)
-    .map((row) => {
-      const vehiculoJoin = row.vehiculo;
-      const ter_vehiculos = Array.isArray(vehiculoJoin)
-        ? (vehiculoJoin[0] ?? null)
-        : (vehiculoJoin ?? null);
-
-      return {
-        id: row.id as string,
-        destino: row.destino as string,
-        conductor_id: row.solicitante_id as string,
-        vehiculo_id: row.vehiculo_id as string,
-        ter_vehiculos: ter_vehiculos as { kilometraje_actual: number } | null,
-      };
-    });
+  return loadMisionesVinculablesBitacora(client, user.id);
 }
