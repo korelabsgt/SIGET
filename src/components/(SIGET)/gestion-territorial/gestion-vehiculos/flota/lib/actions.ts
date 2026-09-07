@@ -3,7 +3,17 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { fotosVehiculo, imagenUrlParaDb, MIN_FOTOS_VEHICULO, normalizeVehiculoRow } from "./helpers";
+import {
+  combinarFotosVehiculo,
+  esFotoTarjetaCirculacion,
+  estadoVehiculoConReservaFija,
+  fotosUnidadVehiculo,
+  fotosVehiculo,
+  imagenUrlParaDb,
+  MIN_FOTOS_VEHICULO,
+  normalizeVehiculoRow,
+  separarFotosVehiculo,
+} from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
 import {
   normalizeVehiculoStoragePath,
@@ -64,12 +74,28 @@ export async function getVehiculo(id: string): Promise<VehiculoRow | null> {
   return normalizeVehiculoRow(data as VehiculoRow);
 }
 
-function payloadConFotos(data: VehiculoInput) {
+function payloadConFotos(
+  data: VehiculoInput,
+  { requiereCirculacion = false }: { requiereCirculacion?: boolean } = {},
+) {
   const fotos = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
-  if (fotos.length < MIN_FOTOS_VEHICULO) {
+  const { unidad, tarjetaCirculacion } = separarFotosVehiculo({ imagen_url: fotos });
+
+  if (unidad.length < MIN_FOTOS_VEHICULO) {
     throw new Error("Debes subir al menos una fotografía del vehículo.");
   }
-  return { ...data, imagen_url: imagenUrlParaDb(fotos) };
+  if (fotos.filter(esFotoTarjetaCirculacion).length > 1) {
+    throw new Error("Solo puedes guardar una fotografía de la tarjeta de circulación.");
+  }
+  if (requiereCirculacion && !tarjetaCirculacion) {
+    throw new Error("Debes subir la fotografía de la tarjeta de circulación.");
+  }
+
+  return {
+    ...data,
+    estado: estadoVehiculoConReservaFija(data.placa, data.estado),
+    imagen_url: imagenUrlParaDb(combinarFotosVehiculo(unidad, tarjetaCirculacion)),
+  };
 }
 
 function mapImagenesDbError(message: string) {
@@ -88,7 +114,7 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
     throw new Error("Datos inválidos: " + parsed.error.message);
   }
 
-  const payload = payloadConFotos(parsed.data);
+  const payload = payloadConFotos(parsed.data, { requiereCirculacion: true });
 
   const { data: existingPlaca } = await supabase
     .from(TABLE)
@@ -171,7 +197,7 @@ export async function removeVehiculoImagen(
     (foto) => normalizeVehiculoStoragePath(foto) !== path,
   );
 
-  if (fotos.length < MIN_FOTOS_VEHICULO) {
+  if (fotosUnidadVehiculo({ imagen_url: fotos }).length < MIN_FOTOS_VEHICULO) {
     throw new Error("Debes conservar al menos una fotografía del vehículo.");
   }
 

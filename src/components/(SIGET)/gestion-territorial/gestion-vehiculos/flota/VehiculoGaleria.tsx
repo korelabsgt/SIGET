@@ -9,7 +9,12 @@ import { GV_DETALLE_NESTED_CLASS } from "../lib/detalle-ui";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import { canDeleteVehiculoFotos } from "../lib/permissions";
 import { type VehiculoRow } from "./lib/zod";
-import { fotosVehiculo, MIN_FOTOS_VEHICULO } from "./lib/helpers";
+import {
+  combinarFotosVehiculo,
+  esFotoTarjetaCirculacion,
+  MIN_FOTOS_VEHICULO,
+  separarFotosVehiculo,
+} from "./lib/helpers";
 import { useQuitarImagenVehiculo } from "./lib/hooks";
 import {
   resolveStorageDisplaySrc,
@@ -31,12 +36,14 @@ export function VehiculoGaleria({
   const gvRole = useGvPermissionRole();
   const canDeleteFoto = canDeleteVehiculoFotos(gvRole);
   const tituloVehiculo = `${vehiculo.marca} ${vehiculo.modelo}`;
-  const fotos = fotosVehiculo(vehiculo);
+  const { unidad, tarjetaCirculacion } = separarFotosVehiculo(vehiculo);
+  const fotos = combinarFotosVehiculo(unidad, tarjetaCirculacion);
   const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(fotos);
   const fotosConSrc = fotos
     .map((path) => ({
       path,
       src: resolveStorageDisplaySrc(path, signedMap),
+      esTarjeta: esFotoTarjetaCirculacion(path),
     }))
     .filter((item) => item.src.length > 0);
   const [fotoRota, setFotoRota] = useState(false);
@@ -57,12 +64,13 @@ export function VehiculoGaleria({
   const handleQuitarFoto = async (path: string) => {
     if (!canDeleteFoto) return;
     if (!vehiculo.id) return;
-    if (fotos.length <= MIN_FOTOS_VEHICULO) {
+    const esTarjeta = esFotoTarjetaCirculacion(path);
+    if (!esTarjeta && unidad.length <= MIN_FOTOS_VEHICULO) {
       toast.warn("Debes conservar al menos una fotografía del vehículo.");
       return;
     }
     const res = await confirmDestructivo({
-      title: "¿Eliminar fotografía?",
+      title: esTarjeta ? "¿Eliminar tarjeta de circulación?" : "¿Eliminar fotografía?",
       text: "Se quitará de la galería y del almacenamiento.",
       confirmButtonText: "Sí, eliminar",
     });
@@ -95,10 +103,19 @@ export function VehiculoGaleria({
                   "relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg border-0 p-0",
                   activa ? "ring-2 ring-celeste-trifinio" : "opacity-55 hover:opacity-100",
                 )}
-                aria-label={`Ver fotografía ${index + 1}`}
+                aria-label={
+                  item.esTarjeta
+                    ? "Ver tarjeta de circulación"
+                    : `Ver fotografía ${index + 1}`
+                }
                 aria-pressed={activa}
               >
                 <img src={item.src} alt="" className="size-full object-cover" />
+                {item.esTarjeta ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-celeste-trifinio/90 py-px text-center text-[7px] font-bold uppercase tracking-wide text-white">
+                    Tarjeta
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -126,10 +143,19 @@ export function VehiculoGaleria({
           <>
             <img
               src={fotoActiva?.src ?? ""}
-              alt={tituloVehiculo}
+              alt={
+                fotoActiva?.esTarjeta
+                  ? `Tarjeta de circulación de ${vehiculo.placa}`
+                  : tituloVehiculo
+              }
               onError={() => setFotoRota(true)}
               className="size-full object-cover object-center"
             />
+            {fotoActiva?.esTarjeta ? (
+              <span className="absolute bottom-2 left-2 z-10 rounded-full bg-celeste-trifinio px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                Tarjeta de circulación
+              </span>
+            ) : null}
             {canDeleteFoto ? (
               <button
                 type="button"

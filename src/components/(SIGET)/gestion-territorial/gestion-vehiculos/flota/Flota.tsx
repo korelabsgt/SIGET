@@ -27,7 +27,11 @@ import { useGvTablePagination } from "../lib/table-pagination";
 import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
-import { canManageFlota } from "../lib/permissions";
+import {
+  canExportFlotaReporte,
+  canManageFlota,
+  canViewAlertasFlota,
+} from "../lib/permissions";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
 const VerEditar = dynamic(() => import("./forms/VerEditar").then((m) => m.VerEditar));
@@ -55,6 +59,8 @@ const filtroEstadoItemClass =
 export function Flota() {
   const gvRole = useGvPermissionRole();
   const canManage = canManageFlota(gvRole);
+  const puedeExportar = canExportFlotaReporte(gvRole);
+  const puedeVerAlertas = canViewAlertasFlota(gvRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
   const eliminar = useEliminarVehiculo();
 
@@ -178,7 +184,7 @@ export function Flota() {
   return (
     <>
       <GvHeaderExtras panelId="flota">
-        {!loading ? <FlotaNotificaciones vehiculos={vehiculos} /> : null}
+        {!loading && puedeVerAlertas ? <FlotaNotificaciones vehiculos={vehiculos} /> : null}
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell
@@ -233,7 +239,7 @@ export function Flota() {
               </div>
 
               <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
-                {vehiculosFiltrados.length > 0 ? (
+                {puedeExportar && vehiculosFiltrados.length > 0 ? (
                   <SigetActionButton
                     label="Excel"
                     accentColor={sigetAccent.excel}

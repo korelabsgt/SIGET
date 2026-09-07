@@ -1,6 +1,11 @@
 import { differenceInDays } from "date-fns";
 
-import { type AlertStatus, type VehiculoRow } from "./zod";
+import {
+  ESTADOS_VEHICULO,
+  type AlertStatus,
+  type EstadoVehiculo,
+  type VehiculoRow,
+} from "./zod";
 import { normalizeVehiculoStoragePath } from "../../lib/storage";
 
 
@@ -351,6 +356,29 @@ export function esVehiculoDisponible(
   return estado === "LIBRE" || estado === "DISPONIBLE";
 }
 
+export const PLACAS_SIEMPRE_RESERVADAS: readonly string[] = [];
+
+export function esPlacaSiempreReservada(placa: string | null | undefined): boolean {
+  const normalizada = (placa ?? "").trim().toUpperCase();
+  if (!normalizada) return false;
+  return PLACAS_SIEMPRE_RESERVADAS.includes(normalizada);
+}
+
+export function estadoVehiculoConReservaFija(
+  placa: string | null | undefined,
+  estado: EstadoVehiculo,
+): EstadoVehiculo {
+  if (estado === "LIBRE" && esPlacaSiempreReservada(placa)) return "RESERVADO";
+  return estado;
+}
+
+export function estadosVehiculoSeleccionables(
+  placa: string | null | undefined,
+): readonly EstadoVehiculo[] {
+  if (!esPlacaSiempreReservada(placa)) return ESTADOS_VEHICULO;
+  return ESTADOS_VEHICULO.filter((estado) => estado !== "LIBRE");
+}
+
 export function formatVehiculoOpcion(
   v: Pick<VehiculoRow, "placa" | "marca" | "modelo"> & { color?: string | null },
 ): string {
@@ -361,6 +389,40 @@ export function formatVehiculoOpcion(
 
 export const MAX_FOTOS_VEHICULO = 4;
 export const MIN_FOTOS_VEHICULO = 1;
+export const MAX_FOTOS_UNIDAD = 3;
+
+export const CIRCULACION_PATH_MARKER = "_circulacion_";
+
+export type TipoFotoVehiculo = "unidad" | "circulacion";
+
+export function esFotoTarjetaCirculacion(path: string | null | undefined): boolean {
+  const valor = path?.trim();
+  if (!valor) return false;
+  const normalizado = normalizeVehiculoStoragePath(valor) ?? valor;
+  return normalizado.toLowerCase().includes(CIRCULACION_PATH_MARKER);
+}
+
+export function separarFotosVehiculo(vehiculo: Pick<VehiculoRow, "imagen_url">): {
+  unidad: string[];
+  tarjetaCirculacion: string | null;
+} {
+  const fotos = fotosVehiculo(vehiculo);
+  return {
+    unidad: fotos.filter((foto) => !esFotoTarjetaCirculacion(foto)),
+    tarjetaCirculacion: fotos.find((foto) => esFotoTarjetaCirculacion(foto)) ?? null,
+  };
+}
+
+export function fotosUnidadVehiculo(vehiculo: Pick<VehiculoRow, "imagen_url">): string[] {
+  return separarFotosVehiculo(vehiculo).unidad;
+}
+
+export function combinarFotosVehiculo(
+  unidad: string[],
+  tarjetaCirculacion: string | null,
+): string[] {
+  return [...unidad, ...(tarjetaCirculacion ? [tarjetaCirculacion] : [])];
+}
 
 function normalizarFotoPaths(paths: string[]): string[] {
   const normalized = paths

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { estadoVehiculoConReservaFija } from "../flota/lib/helpers";
+
 type SupabaseServer = SupabaseClient;
 
 const VEHICULOS_TABLE = "ter_vehiculos";
@@ -45,7 +47,20 @@ export async function sincronizarEstadoFlotaVehiculo(
     throw new Error("No se pudieron verificar las misiones del vehículo.");
   }
 
-  const estado = (reservasActivas ?? 0) > 0 ? "RESERVADO" : "LIBRE";
+  const { data: vehiculo, error: vehiculoError } = await supabase
+    .from(VEHICULOS_TABLE)
+    .select("placa")
+    .eq("id", vehiculoId)
+    .maybeSingle();
+
+  if (vehiculoError) {
+    throw new Error("No se pudo verificar el vehículo en flota.");
+  }
+
+  const estado = estadoVehiculoConReservaFija(
+    vehiculo?.placa,
+    (reservasActivas ?? 0) > 0 ? "RESERVADO" : "LIBRE",
+  );
   const { error } = await supabase
     .from(VEHICULOS_TABLE)
     .update({ estado })

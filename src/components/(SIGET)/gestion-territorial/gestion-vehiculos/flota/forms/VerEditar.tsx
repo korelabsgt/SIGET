@@ -25,13 +25,24 @@ import { GvFechaInput } from "../../lib/gv-fecha-input";
 
 import {
   vehiculoInputSchema,
-  ESTADOS_VEHICULO,
   type VehiculoInput,
   type VehiculoRow,
 } from "../lib/zod";
 import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
-import { fotosVehiculo, MAX_FOTOS_VEHICULO, MIN_FOTOS_VEHICULO } from "../lib/helpers";
-import { ImagenVehiculoDropzone, uploadImagenVehiculo } from "./ImagenVehiculoDropzone";
+import {
+  combinarFotosVehiculo,
+  estadoVehiculoConReservaFija,
+  estadosVehiculoSeleccionables,
+  separarFotosVehiculo,
+  MAX_FOTOS_UNIDAD,
+  MAX_FOTOS_VEHICULO,
+  MIN_FOTOS_VEHICULO,
+} from "../lib/helpers";
+import {
+  ImagenVehiculoDropzone,
+  TarjetaCirculacionCampo,
+  uploadImagenVehiculo,
+} from "./ImagenVehiculoDropzone";
 import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
@@ -50,10 +61,15 @@ export function VerEditar({
 }) {
   const crear = useCrearVehiculo();
   const editar = useEditarVehiculo();
-  const [existingUrls, setExistingUrls] = useState<string[]>([]);
+  const [fotosUnidad, setFotosUnidad] = useState<string[]>([]);
+  const [fotoCirculacion, setFotoCirculacion] = useState<string | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [subiendoCirculacion, setSubiendoCirculacion] = useState(false);
   const submitInFlightRef = useRef(false);
-  const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(existingUrls);
+  const esNuevo = !initialData?.id;
+  const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(
+    combinarFotosVehiculo(fotosUnidad, fotoCirculacion),
+  );
 
   const {
     register,
@@ -79,18 +95,30 @@ export function VerEditar({
 
   const placa = useWatch({ control, name: "placa" });
 
+  const totalImagenes =
+    fotosUnidad.length +
+    uploadingCount +
+    (fotoCirculacion ? 1 : 0) +
+    (subiendoCirculacion ? 1 : 0);
+  const maxFotosUnidad = Math.max(MAX_FOTOS_UNIDAD, fotosUnidad.length);
+  const sinEspacioParaCirculacion =
+    !fotoCirculacion && !subiendoCirculacion && totalImagenes >= MAX_FOTOS_VEHICULO;
+
   const previews = [
-    ...existingUrls.map((path) => resolveStorageDisplaySrc(path, signedMap)),
+    ...fotosUnidad.map((path) => resolveStorageDisplaySrc(path, signedMap)),
     ...Array.from({ length: uploadingCount }, () => ""),
   ];
   const previewLoading = [
-    ...existingUrls.map((path) => !resolveStorageDisplaySrc(path, signedMap) && firmandoFotos),
+    ...fotosUnidad.map((path) => !resolveStorageDisplaySrc(path, signedMap) && firmandoFotos),
     ...Array.from({ length: uploadingCount }, () => true),
   ];
+  const previewCirculacion = fotoCirculacion
+    ? resolveStorageDisplaySrc(fotoCirculacion, signedMap)
+    : "";
 
   const handleRemoveFoto = (index: number) => {
-    if (index < existingUrls.length) {
-      setExistingUrls((prev) => prev.filter((_, i) => i !== index));
+    if (index < fotosUnidad.length) {
+      setFotosUnidad((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -101,19 +129,24 @@ export function VerEditar({
       return;
     }
 
-    const room = MAX_FOTOS_VEHICULO - existingUrls.length - uploadingCount;
+    const room = Math.min(
+      maxFotosUnidad - fotosUnidad.length - uploadingCount,
+      MAX_FOTOS_VEHICULO - totalImagenes,
+    );
     const toAdd = selectedFiles.slice(0, Math.max(0, room));
     if (toAdd.length === 0) {
-      toast.warn(`Puedes agregar hasta ${MAX_FOTOS_VEHICULO} fotografías.`);
+      toast.warn(
+        `Puedes guardar hasta ${MAX_FOTOS_UNIDAD} fotografías del vehículo más la tarjeta de circulación.`,
+      );
       return;
     }
 
     setUploadingCount((prev) => prev + toAdd.length);
     try {
       const uploaded = await Promise.all(
-        toAdd.map((item) => uploadImagenVehiculo(item, placaVal)),
+        toAdd.map((item) => uploadImagenVehiculo(item, placaVal, "unidad")),
       );
-      setExistingUrls((prev) => [...prev, ...uploaded].slice(0, MAX_FOTOS_VEHICULO));
+      setFotosUnidad((prev) => [...prev, ...uploaded].slice(0, maxFotosUnidad));
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "No se pudo subir la fotografía.",
@@ -123,13 +156,36 @@ export function VerEditar({
     }
   };
 
+  const handleSelectCirculacion = async (file: File) => {
+    const placaVal = placa?.trim();
+    if (!placaVal) {
+      toast.warn("Ingresa la placa antes de subir la tarjeta de circulación.");
+      return;
+    }
+
+    setSubiendoCirculacion(true);
+    try {
+      setFotoCirculacion(await uploadImagenVehiculo(file, placaVal, "circulacion"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir la tarjeta de circulación.",
+      );
+    } finally {
+      setSubiendoCirculacion(false);
+    }
+  };
+
   useEffect(() => {
     if (open) {
       submitInFlightRef.current = false;
       setUploadingCount(0);
+      setSubiendoCirculacion(false);
       if (initialData) {
-        const fotos = fotosVehiculo(initialData);
-        setExistingUrls(fotos);
+        const { unidad, tarjetaCirculacion } = separarFotosVehiculo(initialData);
+        setFotosUnidad(unidad);
+        setFotoCirculacion(tarjetaCirculacion);
         reset({
           placa: initialData.placa,
           marca: initialData.marca,
@@ -137,15 +193,16 @@ export function VerEditar({
           color: initialData.color,
           anio: initialData.anio,
           kilometraje_actual: initialData.kilometraje_actual,
-          estado: initialData.estado,
+          estado: estadoVehiculoConReservaFija(initialData.placa, initialData.estado),
           vencimiento_seguro: formatFechaManualInput(initialData.vencimiento_seguro),
           vencimiento_circulacion: formatFechaManualInput(
             initialData.vencimiento_circulacion,
           ),
-          imagen_url: fotos,
+          imagen_url: combinarFotosVehiculo(unidad, tarjetaCirculacion),
         });
       } else {
-        setExistingUrls([]);
+        setFotosUnidad([]);
+        setFotoCirculacion(null);
         reset({
           placa: "",
           marca: "",
@@ -164,12 +221,16 @@ export function VerEditar({
 
   const onSubmit = async (data: VehiculoInput) => {
     if (submitInFlightRef.current) return;
-    if (uploadingCount > 0) {
+    if (uploadingCount > 0 || subiendoCirculacion) {
       toast.warn("Espera a que terminen de subir las fotografías.");
       return;
     }
-    if (existingUrls.length < MIN_FOTOS_VEHICULO) {
+    if (fotosUnidad.length < MIN_FOTOS_VEHICULO) {
       toast.warn("Debes subir al menos una fotografía del vehículo.");
+      return;
+    }
+    if (esNuevo && !fotoCirculacion) {
+      toast.warn("Debes subir la fotografía de la tarjeta de circulación.");
       return;
     }
 
@@ -177,7 +238,7 @@ export function VerEditar({
     try {
       const payload: VehiculoInput = {
         ...data,
-        imagen_url: existingUrls,
+        imagen_url: combinarFotosVehiculo(fotosUnidad, fotoCirculacion),
       };
 
       if (initialData?.id) {
@@ -196,7 +257,7 @@ export function VerEditar({
     }
   };
 
-  const subiendoFotos = uploadingCount > 0;
+  const subiendoFotos = uploadingCount > 0 || subiendoCirculacion;
   const isWorking = crear.isPending || editar.isPending || isSubmitting || subiendoFotos;
   const onClose = () => onOpenChange(false);
 
@@ -232,7 +293,7 @@ export function VerEditar({
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 {...register("estado")}
               >
-                {ESTADOS_VEHICULO.map((estado) => (
+                {estadosVehiculoSeleccionables(placa).map((estado) => (
                   <option key={estado} value={estado}>
                     {estado.replace("_", " ")}
                   </option>
@@ -320,6 +381,19 @@ export function VerEditar({
             }}
             onRemove={handleRemoveFoto}
             disabled={isWorking}
+            max={maxFotosUnidad}
+          />
+
+          <TarjetaCirculacionCampo
+            preview={previewCirculacion}
+            loading={subiendoCirculacion}
+            onSelectFile={(file) => {
+              void handleSelectCirculacion(file);
+            }}
+            onRemove={() => setFotoCirculacion(null)}
+            disabled={isWorking}
+            sinEspacio={sinEspacioParaCirculacion}
+            requerida={esNuevo}
           />
 
           </GvModalFormBody>

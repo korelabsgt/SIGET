@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -51,7 +51,6 @@ const SCROLL_ROOT_CLASS =
   "min-h-[calc(100vh-4rem)] flex flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden";
 
 function GestionVehiculosShellInner() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -60,30 +59,47 @@ function GestionVehiculosShellInner() {
   const [section, setSection] = useState<GvSubmoduloId>(sectionFromUrl);
   const [visited, setVisited] = useState<Set<GvSubmoduloId>>(() => new Set([sectionFromUrl]));
 
-  useEffect(() => {
-    const fromUrl = gvSectionFromSearchParams(searchParams);
-    setSection((current) => (current === fromUrl ? current : fromUrl));
+  const abrirSeccion = useCallback((id: GvSubmoduloId) => {
+    setSection(id);
     setVisited((prev) => {
-      if (prev.has(fromUrl)) return prev;
+      if (prev.has(id)) return prev;
       const next = new Set(prev);
-      next.add(fromUrl);
+      next.add(id);
       return next;
     });
-  }, [searchParams]);
+  }, []);
+
+  useEffect(() => {
+    const sincronizarDesdeHistorial = () => {
+      abrirSeccion(
+        gvSectionFromSearchParams(new URLSearchParams(window.location.search)),
+      );
+    };
+
+    window.addEventListener("popstate", sincronizarDesdeHistorial);
+    return () => window.removeEventListener("popstate", sincronizarDesdeHistorial);
+  }, [abrirSeccion]);
 
   const selectSection = useCallback(
     (id: GvSubmoduloId) => {
-      setSection(id);
-      setVisited((prev) => {
-        if (prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.add(id);
-        return next;
-      });
-      router.replace(buildGvSectionHref(pathname, id, searchParams), { scroll: false });
+      abrirSeccion(id);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        buildGvSectionHref(pathname, id, searchParams),
+      );
     },
-    [pathname, router, searchParams],
+    [abrirSeccion, pathname, searchParams],
   );
+
+  useEffect(() => {
+    if (gvSectionFromSearchParams(searchParams) === section) return;
+    window.history.replaceState(
+      window.history.state,
+      "",
+      buildGvSectionHref(pathname, section, searchParams),
+    );
+  }, [pathname, searchParams, section]);
 
   useEffect(() => {
     document.title = GV_SUBMODULO_TITLES[section];

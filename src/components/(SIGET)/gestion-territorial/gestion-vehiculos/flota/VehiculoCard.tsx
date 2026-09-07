@@ -128,15 +128,17 @@ export function VehiculoCard({
         }
         right={
           <>
-            <GvSigetActionButton
-              label="Editar"
-              accentColor={sigetAccent.editar}
-              morphFrom={PenSquare}
-              morphTo={Pencil}
-              onClick={onEdit}
-              ariaLabel={`Editar ${vehiculo.placa}`}
-              className="h-8 w-auto shrink-0 rounded-lg px-3"
-            />
+            {canManage ? (
+              <GvSigetActionButton
+                label="Editar"
+                accentColor={sigetAccent.editar}
+                morphFrom={PenSquare}
+                morphTo={Pencil}
+                onClick={onEdit}
+                ariaLabel={`Editar ${vehiculo.placa}`}
+                className="h-8 w-auto shrink-0 rounded-lg px-3"
+              />
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -156,19 +158,21 @@ export function VehiculoCard({
                 align="end"
                 className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
               >
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
-                  onSelect={onExportExcel}
-                  disabled={exporting}
-                >
-                  <GvMorphIcon
-                    icon={FileSpreadsheet}
-                    hoverIcon={ArrowDownToLine}
-                    size={14}
-                    className="text-current"
-                  />
-                  Excel
-                </DropdownMenuItem>
+                {canManage ? (
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                    onSelect={onExportExcel}
+                    disabled={exporting}
+                  >
+                    <GvMorphIcon
+                      icon={FileSpreadsheet}
+                      hoverIcon={ArrowDownToLine}
+                      size={14}
+                      className="text-current"
+                    />
+                    Excel
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
                   onSelect={onOpenGaleria}

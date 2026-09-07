@@ -36,6 +36,14 @@ export function canDeleteVehiculoFotos(role: string | null | undefined): boolean
   return canManageFlota(role);
 }
 
+export function canExportFlotaReporte(role: string | null | undefined): boolean {
+  return canManageFlota(role);
+}
+
+export function canViewAlertasFlota(role: string | null | undefined): boolean {
+  return canManageFlota(role);
+}
+
 export function canManageSolicitudesVehiculos(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;

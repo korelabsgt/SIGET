@@ -8,9 +8,10 @@ import {
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
 import {
+  combinarFotosVehiculo,
   formatEstadoVehiculoLabel,
-  fotosVehiculo,
   getMantenimientoAlertStatus,
+  separarFotosVehiculo,
 } from "./helpers";
 import type { VehiculoRow } from "./zod";
 
@@ -162,7 +163,8 @@ async function urlABase64Imagen(
 async function cargarFotosBase64(
   vehiculo: VehiculoRow,
 ): Promise<Array<{ base64: string; extension: "png" | "jpeg" }>> {
-  const paths = fotosVehiculo(vehiculo);
+  const { unidad, tarjetaCirculacion } = separarFotosVehiculo(vehiculo);
+  const paths = combinarFotosVehiculo(unidad, tarjetaCirculacion);
   if (paths.length === 0) return [];
 
   const signedMap = await firmarUrlsFotos(paths);
@@ -452,7 +454,7 @@ async function pintarSeccionFotografias(
   vehiculo: VehiculoRow,
   filaInicio: number,
 ): Promise<number> {
-  pintarSubtitulo(ws, filaInicio, "Fotografías del vehículo");
+  pintarSubtitulo(ws, filaInicio, "Fotografías y tarjeta de circulación");
   let fila = filaInicio + 1;
 
   const imagenes = await cargarFotosBase64(vehiculo);

@@ -6,7 +6,7 @@ import { GestionVehiculosActionCell, gvTableActionTdClass, gvTableActionThClass 
 import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { type VehiculoRow } from "./lib/zod";
-import { formatEstadoVehiculoLabel, fotosVehiculo } from "./lib/helpers";
+import { formatEstadoVehiculoLabel, fotosUnidadVehiculo } from "./lib/helpers";
 import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
@@ -40,7 +40,7 @@ function VehiculoTablaFoto({
   vehiculo: VehiculoRow;
   onOpenGaleria: (vehiculo: VehiculoRow) => void;
 }) {
-  const fotos = fotosVehiculo(vehiculo);
+  const fotos = fotosUnidadVehiculo(vehiculo);
   const { data: signedMap = {}, isLoading } = useSignedStorageUrls(fotos.slice(0, 1));
   const primeraSrc = fotos[0] ? resolveStorageDisplaySrc(fotos[0], signedMap) : "";
 
@@ -108,20 +108,20 @@ function VehiculoListRow({
       <td className={cn(cellPad, "text-center align-middle")}>
         <EstadoBadge estado={vehiculo.estado} />
       </td>
-      <td className={gvTableActionTdClass}>
-        <GestionVehiculosActionCell>
-          <div className="flex items-center justify-center gap-2">
-            <GvSigetActionButton
-              label="Excel"
-              accentColor={sigetAccent.excel}
-              morphFrom={FileSpreadsheet}
-              morphTo={ArrowDownToLine}
-              onClick={() => onExportExcel(vehiculo)}
-              disabled={exporting}
-              ariaLabel={`Descargar Excel de ${vehiculo.placa}`}
-              className="w-auto shrink-0"
-            />
-            {canManage ? (
+      {canManage ? (
+        <td className={gvTableActionTdClass}>
+          <GestionVehiculosActionCell>
+            <div className="flex items-center justify-center gap-2">
+              <GvSigetActionButton
+                label="Excel"
+                accentColor={sigetAccent.excel}
+                morphFrom={FileSpreadsheet}
+                morphTo={ArrowDownToLine}
+                onClick={() => onExportExcel(vehiculo)}
+                disabled={exporting}
+                ariaLabel={`Descargar Excel de ${vehiculo.placa}`}
+                className="w-auto shrink-0"
+              />
               <GvSigetActionButton
                 label="Editar"
                 accentColor={sigetAccent.editar}
@@ -131,10 +131,10 @@ function VehiculoListRow({
                 ariaLabel={`Editar ${vehiculo.placa}`}
                 className="w-auto shrink-0"
               />
-            ) : null}
-          </div>
-        </GestionVehiculosActionCell>
-      </td>
+            </div>
+          </GestionVehiculosActionCell>
+        </td>
+      ) : null}
     </GvTableMorphRow>
   );
 }
@@ -166,7 +166,7 @@ export function VehiculosList({
             <th className={cn(cellPad, "w-0 whitespace-nowrap pr-2.5 text-center")}>Foto</th>
             <th className={cn(cellPad, "w-full pl-2.5 text-left")}>Marca / modelo</th>
             <th className={cn(cellPad, "text-center")}>Estado</th>
-            <th className={gvTableActionThClass}>Acciones</th>
+            {canManage ? <th className={gvTableActionThClass}>Acciones</th> : null}
           </tr>
         </thead>
         <tbody>
