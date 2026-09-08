@@ -20,6 +20,7 @@ import {
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
 import { canManageFlota } from "../../lib/permissions";
+import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ter_vehiculos";
@@ -107,7 +108,7 @@ function mapImagenesDbError(message: string) {
 }
 
 export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase, user } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -134,12 +135,19 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
+  const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
+  await aplicarMantenimientoForzadoPorKm(supabase, {
+    vehiculoId: vehiculo.id ?? "",
+    kmActual: vehiculo.kilometraje_actual,
+    reportadoPor: user.id,
+  });
+
   revalidatePath(REVALIDATE_ROUTE);
-  return normalizeVehiculoRow(data as VehiculoRow);
+  return vehiculo;
 }
 
 export async function updateVehiculo(id: string, input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase, user } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -169,8 +177,15 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
+  const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
+  await aplicarMantenimientoForzadoPorKm(supabase, {
+    vehiculoId: id,
+    kmActual: vehiculo.kilometraje_actual,
+    reportadoPor: user.id,
+  });
+
   revalidatePath(REVALIDATE_ROUTE);
-  return normalizeVehiculoRow(data as VehiculoRow);
+  return vehiculo;
 }
 
 export async function removeVehiculoImagen(

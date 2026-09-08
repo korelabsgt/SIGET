@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import { Check, CheckCircle, XCircle, Ban } from "lucide";
 import { Car, AlertTriangle, Loader2 } from "lucide-react";
@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { ESTADOS_SOLICITUD, type SolicitudRow } from "./lib/zod";
+import { formatEstadoLabel } from "./lib/helpers";
 import { useVehiculosParaSolicitud } from "./lib/hooks";
 import { esVehiculoDisponible, formatVehiculoOpcion } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
@@ -96,6 +97,7 @@ export function SolicitudActionModal({
   onSaved: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const submitInFlightRef = useRef(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState("");
   const cargarLibres = open && actionType === "APROBAR";
   const { data: vehiculosLibres = [], isLoading: loadingVehiculos } =
@@ -152,36 +154,53 @@ export function SolicitudActionModal({
     : null;
 
   const meta = actionType ? ACTION_META[actionType] : null;
+  const solicitudNoPendiente = solicitud != null && solicitud.estado !== "PENDIENTE";
 
   const handleSubmit = () => {
-    if (!solicitud || !actionType) return;
+    if (!solicitud || !actionType || submitInFlightRef.current || isPending) return;
+
+    if (solicitud.estado !== "PENDIENTE") {
+      toast.warn(
+        `Esta solicitud ya está ${formatEstadoLabel(solicitud.estado).toLowerCase()}.`,
+      );
+      onSaved();
+      onOpenChange(false);
+      return;
+    }
 
     if (actionType === "APROBAR" && !selectedVehiculo) {
       toast.error("Debe seleccionar un vehículo para aprobar la solicitud");
       return;
     }
 
+    submitInFlightRef.current = true;
     startTransition(async () => {
-      const nuevoEstado: (typeof ESTADOS_SOLICITUD)[number] =
-        actionType === "APROBAR" ? "APROBADA" : "RECHAZADA";
+      try {
+        const nuevoEstado: (typeof ESTADOS_SOLICITUD)[number] =
+          actionType === "APROBAR" ? "APROBADA" : "RECHAZADA";
 
-      const payload =
-        actionType === "APROBAR" ? { vehiculo_id: selectedVehiculo } : undefined;
+        const payload =
+          actionType === "APROBAR" ? { vehiculo_id: selectedVehiculo } : undefined;
 
-      const res = await cambiarEstadoSolicitud(solicitud.id, nuevoEstado, payload);
-      if (!res.success) {
-        toast.error(res.error || "Error al cambiar estado");
-        return;
+        const res = await cambiarEstadoSolicitud(solicitud.id, nuevoEstado, payload);
+        if (!res.success) {
+          toast.error(res.error || "Error al cambiar estado");
+          return;
+        }
+
+        toast.success("Estado actualizado correctamente");
+        onSaved();
+        onOpenChange(false);
+      } finally {
+        submitInFlightRef.current = false;
       }
-
-      toast.success("Estado actualizado correctamente");
-      onSaved();
-      onOpenChange(false);
     });
   };
 
   const confirmDisabled =
     isPending ||
+    submitInFlightRef.current ||
+    solicitudNoPendiente ||
     (actionType === "APROBAR" &&
       (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo));
 
@@ -207,7 +226,16 @@ export function SolicitudActionModal({
               "space-y-5 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain md:flex-none md:overflow-visible",
             )}
           >
-          {actionType === "APROBAR" && (
+          {solicitudNoPendiente ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+              Esta solicitud ya está{" "}
+              <span className="font-semibold">
+                {formatEstadoLabel(solicitud.estado).toLowerCase()}
+              </span>
+              . Actualice la lista; solo las pendientes pueden aprobarse o rechazarse.
+            </div>
+          ) : null}
+          {actionType === "APROBAR" && !solicitudNoPendiente && (
             <div className="space-y-4">
               {vehiculoPreferido ? (
                 <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/40">
@@ -309,7 +337,7 @@ export function SolicitudActionModal({
             </div>
           )}
 
-          {actionType === "RECHAZAR" && (
+          {actionType === "RECHAZAR" && !solicitudNoPendiente && (
             <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
               <p className="text-sm leading-relaxed text-red-800 dark:text-red-300">

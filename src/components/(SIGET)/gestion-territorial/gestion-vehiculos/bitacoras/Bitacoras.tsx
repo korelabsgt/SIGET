@@ -44,6 +44,7 @@ import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportBitacoraReporte,
   canViewAllBitacoras,
+  canViewBitacoraMetricas,
 } from "../lib/permissions";
 import { type BitacoraRow } from "./lib/zod";
 
@@ -66,7 +67,8 @@ const filtroItemClass =
 export function Bitacoras() {
   const gvRole = useGvPermissionRole();
   const canViewAll = canViewAllBitacoras(gvRole);
-  const canExport = canExportBitacoraReporte(gvRole);
+  const puedeVerMetricas = canViewBitacoraMetricas(gvRole);
+  const puedeExportar = canExportBitacoraReporte(gvRole);
   const { data: bitacoras = [], isLoading: loadingBitacoras } = useBitacoras();
   const { data: vehiculosFlota = [] } = useVehiculos();
   const [view, setView] = useState<BitacorasView>({ mode: "list" });
@@ -187,7 +189,7 @@ export function Bitacoras() {
       <GestionVehiculosTableShell
         visibleRows={tableVisibleRows}
         kpiSlot={
-          canViewAll ? (
+          puedeVerMetricas ? (
             <GvTableKpiSlot>
               <BitacoraStatsCards
                 metrics={metricas}
@@ -302,7 +304,7 @@ export function Bitacoras() {
                   onChange={setPeriodoFilter}
                   className="hidden lg:inline-flex"
                 />
-                {canExport ? (
+                {puedeExportar ? (
                   <GvExportReporteButton
                     onClick={handleExportReporte}
                     disabled={loading}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
 import { normalizeBitacoraRow } from "./helpers";
 import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
+import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
@@ -113,6 +114,12 @@ export async function createBitacora(input: BitacoraInput) {
 
     if (kmError) {
       console.error("Error updating vehiculo kilometraje:", kmError);
+    } else {
+      await aplicarMantenimientoForzadoPorKm(supabase, {
+        vehiculoId: parsed.vehiculo_id,
+        kmActual: parsed.km_final,
+        reportadoPor: user.id,
+      });
     }
 
     if (solicitudId) {

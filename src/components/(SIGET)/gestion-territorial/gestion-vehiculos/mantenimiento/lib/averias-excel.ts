@@ -1,8 +1,6 @@
 import type ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
-
-import { fechaCalendarioGt } from "@/lib/fechas-gt";
 import type { FallaRow } from "./zod";
 import {
   formatEstadoFallaLabel,
@@ -10,24 +8,37 @@ import {
   formatVehiculoFalla,
 } from "./helpers";
 
-const COLUMN_COUNT = 9;
+const COLUMN_COUNT_CONSOLIDADO = 10;
+const COLUMN_COUNT_VEHICULO = 8;
 const MIN_DATA_ROWS = 18;
-const LOGO_COL = 2;
-const TITLE_START_COL = 3;
-const TITLE_END_COL = 8;
+const LOGO_COL = 1;
+const TITLE_START_COL = 2;
+
 const TITLE_ROW_1 = "PLAN TRIFINIO/ DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
 const TITLE_ROW_2 = "FORMULARIO DE REPORTE DE AVERIAS Y MANTENIMIENTO VEHICULAR";
 
-const TABLE_HEADERS = [
+const TABLE_HEADERS_VEHICULO = [
+  "FECHA",
+  "Severidad",
+  "Estado",
+  "Descripción de la Avería",
+  "Mecánico / Taller",
+  "Diagnostico",
+  "Fecha de reparacion",
+  "Reportado",
+] as const;
+
+const TABLE_HEADERS_CONSOLIDADO = [
   "FECHA",
   "Placa",
   "Vehículo",
   "Severidad",
   "Estado",
   "Descripción de la Avería",
-  "Reportado por",
   "Mecánico / Taller",
-  "Firma Responsable del Reporte",
+  "Diagnostico",
+  "Fecha de reparacion",
+  "Reportado",
 ] as const;
 
 const MESES_LABEL: Record<number, string> = {
@@ -89,16 +100,6 @@ function safeFilename(name: string): string {
   );
 }
 
-function currentPeriodoGt(): { mesLabel: string; anio: string } {
-  const fecha = fechaCalendarioGt();
-  const [anio, mes] = fecha.split("-");
-  const mesNum = Number(mes);
-  return {
-    mesLabel: MESES_LABEL[mesNum] ?? mes,
-    anio,
-  };
-}
-
 function formatDescripcionVehiculo(
   vehiculo: { marca: string; modelo: string } | null,
 ): string {
@@ -125,6 +126,32 @@ function mecanicoOTaller(falla: FallaRow): string {
   const taller = falla.taller_externo?.trim();
   if (mecanico && taller) return `${mecanico} / ${taller}`;
   return mecanico || taller || "";
+}
+
+function diagnosticoFalla(falla: FallaRow): string {
+  return falla.diagnostico?.trim() ?? "";
+}
+
+function fechaReparacionFalla(falla: FallaRow): string {
+  if (!falla.solventado_at) return "";
+  return format(new Date(falla.solventado_at), "dd/MM/yyyy");
+}
+
+function filaDatosFalla(falla: FallaRow, porVehiculo: boolean): string[] {
+  const base = [
+    format(new Date(falla.created_at), "dd/MM/yyyy"),
+    ...(porVehiculo
+      ? []
+      : [falla.vehiculo?.placa ?? "", formatVehiculoFalla(falla)]),
+    formatSeveridadLabel(falla.severidad),
+    formatEstadoFallaLabel(falla.estado),
+    falla.descripcion,
+    mecanicoOTaller(falla),
+    diagnosticoFalla(falla),
+    fechaReparacionFalla(falla),
+    reportadorNombre(falla),
+  ];
+  return base;
 }
 
 function setCellUnderlineValue(
@@ -187,26 +214,81 @@ async function fetchLogoBuffer(): Promise<ArrayBuffer | null> {
   }
 }
 
+const PAGE_MARGINS = {
+  left: 0.3,
+  right: 0.3,
+  top: 0.4,
+  bottom: 0.4,
+  header: 0.2,
+  footer: 0.2,
+};
+
+function columnaExcel(col: number): string {
+  let n = col;
+  let label = "";
+  while (n > 0) {
+    const resto = (n - 1) % 26;
+    label = String.fromCharCode(65 + resto) + label;
+    n = Math.floor((n - 1) / 26);
+  }
+  return label;
+}
+
+function aplicarPaginaCartaHorizontal(
+  sheet: ExcelJS.Worksheet,
+  columnCount: number,
+  lastRow: number,
+) {
+  sheet.pageSetup = {
+    paperSize: 5,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    horizontalCentered: true,
+    verticalCentered: false,
+    margins: PAGE_MARGINS,
+    printArea: `A1:${columnaExcel(columnCount)}${lastRow}`,
+  };
+}
+
 function buildAveriaSheet(
   workbook: ExcelJS.Workbook,
   grupo: AveriaReporteGrupo,
   logoBuffer: ArrayBuffer | null,
 ) {
+  const porVehiculo = grupo.vehiculo !== null;
+  const columnCount = porVehiculo ? COLUMN_COUNT_VEHICULO : COLUMN_COUNT_CONSOLIDADO;
+  const tableHeaders = porVehiculo ? TABLE_HEADERS_VEHICULO : TABLE_HEADERS_CONSOLIDADO;
+  const titleEndCol = TITLE_START_COL + columnCount - 1;
+
   const sheet = workbook.addWorksheet("Averias", {
     views: [{ showGridLines: true }],
   });
 
-  sheet.columns = [
-    { width: 12 },
-    { width: 12 },
-    { width: 22 },
-    { width: 12 },
-    { width: 14 },
-    { width: 28 },
-    { width: 22 },
-    { width: 22 },
-    { width: 28 },
-  ];
+  sheet.columns = porVehiculo
+    ? [
+        { width: 11 },
+        { width: 10 },
+        { width: 12 },
+        { width: 24 },
+        { width: 16 },
+        { width: 18 },
+        { width: 14 },
+        { width: 16 },
+      ]
+    : [
+        { width: 11 },
+        { width: 10 },
+        { width: 16 },
+        { width: 10 },
+        { width: 12 },
+        { width: 22 },
+        { width: 16 },
+        { width: 18 },
+        { width: 14 },
+        { width: 16 },
+      ];
 
   sheet.mergeCells(1, LOGO_COL, 3, LOGO_COL);
   sheet.getCell(1, LOGO_COL).alignment = { vertical: "middle", horizontal: "center" };
@@ -217,55 +299,71 @@ function buildAveriaSheet(
       extension: "png",
     });
     sheet.addImage(imageId, {
-      tl: { col: 1.12, row: 0.12 },
-      ext: { width: 84, height: 68 },
+      tl: { col: 0.15, row: 0.1 },
+      ext: { width: 88, height: 72 },
     });
   }
 
-  setMergedValue(sheet, 1, TITLE_START_COL, TITLE_END_COL, TITLE_ROW_1, {
-    font: { bold: true, size: 11 },
+  setMergedValue(sheet, 1, TITLE_START_COL, titleEndCol, TITLE_ROW_1, {
+    font: { bold: true, size: 10 },
     alignment: { horizontal: "center", vertical: "middle", wrapText: true },
   });
-  setMergedValue(sheet, 2, TITLE_START_COL, TITLE_END_COL, TITLE_ROW_2, {
-    font: { bold: true, size: 11 },
+  setMergedValue(sheet, 2, TITLE_START_COL, titleEndCol, TITLE_ROW_2, {
+    font: { bold: true, size: 10 },
     alignment: { horizontal: "center", vertical: "middle", wrapText: true },
   });
+  sheet.mergeCells(3, TITLE_START_COL, 3, titleEndCol);
 
   sheet.getRow(1).height = 22;
   sheet.getRow(2).height = 22;
-  sheet.getRow(3).height = 18;
+  sheet.getRow(3).height = 16;
 
   const descripcion = formatDescripcionVehiculo(grupo.vehiculo);
   const placa = grupo.vehiculo ? formatPlacaReporte(grupo.vehiculo.placa) : "TODAS";
   const periodo = formatPeriodoReporte(grupo.mesLabel, grupo.anio);
+  const metaRow = 4;
 
-  sheet.getCell(4, LOGO_COL).value = "Descripción del Vehículo:";
-  sheet.getCell(4, LOGO_COL).font = { bold: true, size: 10 };
+  if (porVehiculo) {
+    setMergedValue(
+      sheet,
+      metaRow,
+      TITLE_START_COL,
+      titleEndCol,
+      `${descripcion}     PLACAS: ${placa}     ${periodo}`,
+      {
+        font: { size: 10, underline: true },
+        alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      },
+    );
+  } else {
+    sheet.getCell(metaRow, LOGO_COL).value = "Descripción del Vehículo:";
+    sheet.getCell(metaRow, LOGO_COL).font = { bold: true, size: 10 };
 
-  setMergedValue(sheet, 4, 3, 4, descripcion, {
-    font: { underline: true, size: 10 },
-    alignment: { horizontal: "left", vertical: "middle" },
-  });
+    setMergedValue(sheet, metaRow, 3, 4, descripcion, {
+      font: { underline: true, size: 10 },
+      alignment: { horizontal: "left", vertical: "middle" },
+    });
 
-  sheet.getCell(4, 5).value = "PLACAS:";
-  sheet.getCell(4, 5).font = { bold: true, size: 10 };
+    sheet.getCell(metaRow, 5).value = "PLACAS:";
+    sheet.getCell(metaRow, 5).font = { bold: true, size: 10 };
 
-  setCellUnderlineValue(sheet, 4, 6, placa, {
-    alignment: { horizontal: "left", vertical: "middle" },
-  });
+    setCellUnderlineValue(sheet, metaRow, 6, placa, {
+      alignment: { horizontal: "left", vertical: "middle" },
+    });
 
-  sheet.getCell(4, 7).value = "MES:";
-  sheet.getCell(4, 7).font = { bold: true, size: 10 };
+    sheet.getCell(metaRow, 7).value = "MES:";
+    sheet.getCell(metaRow, 7).font = { bold: true, size: 10 };
 
-  setCellUnderlineValue(sheet, 4, 8, periodo, {
-    alignment: { horizontal: "left", vertical: "middle" },
-  });
+    setCellUnderlineValue(sheet, metaRow, 8, periodo, {
+      alignment: { horizontal: "left", vertical: "middle" },
+    });
+  }
 
-  sheet.getRow(4).height = 20;
+  sheet.getRow(metaRow).height = 20;
   sheet.getRow(5).height = 8;
 
   const headerRowIndex = 6;
-  TABLE_HEADERS.forEach((header, index) => {
+  tableHeaders.forEach((header, index) => {
     const cell = sheet.getCell(headerRowIndex, index + 1);
     cell.value = header;
     cell.font = { bold: true, size: 10 };
@@ -285,36 +383,28 @@ function buildAveriaSheet(
 
   const dataStartRow = headerRowIndex + 1;
   const dataEndRow = dataStartRow + Math.max(sorted.length, MIN_DATA_ROWS) - 1;
+  const descripcionColIndex = porVehiculo ? 3 : 5;
+  const diagnosticoColIndex = porVehiculo ? 5 : 7;
 
   for (let offset = 0; offset < Math.max(sorted.length, MIN_DATA_ROWS); offset += 1) {
     const rowIndex = dataStartRow + offset;
     const falla = sorted[offset];
 
     const values: string[] = falla
-      ? (() => {
-          const reportador = reportadorNombre(falla);
-          return [
-            format(new Date(falla.created_at), "dd/MM/yyyy"),
-            falla.vehiculo?.placa ?? "",
-            formatVehiculoFalla(falla),
-            formatSeveridadLabel(falla.severidad),
-            formatEstadoFallaLabel(falla.estado),
-            falla.descripcion,
-            reportador,
-            mecanicoOTaller(falla),
-            reportador,
-          ];
-        })()
-      : ["", "", "", "", "", "", "", "", ""];
+      ? filaDatosFalla(falla, porVehiculo)
+      : Array.from({ length: columnCount }, () => "");
 
     values.forEach((value, colIndex) => {
       const cell = sheet.getCell(rowIndex, colIndex + 1);
       cell.value = value;
       cell.font = { size: 10 };
       cell.alignment = {
-        horizontal: colIndex === 8 ? "center" : colIndex <= 2 || colIndex === 5 ? "left" : "center",
+        horizontal:
+          colIndex === descripcionColIndex || colIndex === diagnosticoColIndex
+            ? "left"
+            : "center",
         vertical: "middle",
-        wrapText: colIndex === 5,
+        wrapText: colIndex === descripcionColIndex || colIndex === diagnosticoColIndex,
       };
       cell.border = thinBorder;
     });
@@ -322,18 +412,13 @@ function buildAveriaSheet(
     sheet.getRow(rowIndex).height = 22;
   }
 
-  applyBorderRange(sheet, headerRowIndex, dataEndRow, 1, COLUMN_COUNT);
+  applyBorderRange(sheet, headerRowIndex, dataEndRow, 1, columnCount);
+  aplicarPaginaCartaHorizontal(sheet, columnCount, dataEndRow);
 }
 
-export function buildAveriasReporteGrupo(fallas: FallaRow[]): AveriaReporteGrupo {
-  const { mesLabel, anio } = currentPeriodoGt();
-  return {
-    mesLabel,
-    anio,
-    vehiculo: null,
-    fallas,
-  };
-}
+export type ExportAveriasReporteResult =
+  | { ok: true }
+  | { ok: false; reason: "no_data" | "error" };
 
 export async function downloadAveriasReporteExcel(
   grupo: AveriaReporteGrupo,
@@ -355,27 +440,95 @@ export async function downloadAveriasReporteExcel(
   saveAs(blob, safeFilename(filename.replace(/\.xlsx$/i, "")) + ".xlsx");
 }
 
-export function buildAveriasReporteFilename(fecha = fechaCalendarioGt()): string {
-  return `Reporte_Averias_${fecha}.xlsx`;
+export function buildAveriasReporteGrupo(
+  fallas: FallaRow[],
+  options?: {
+    vehiculo?: { placa: string; marca: string; modelo: string } | null;
+    mes?: number;
+    anio?: number;
+  },
+): AveriaReporteGrupo {
+  const now = new Date();
+  const mesNum = options?.mes ?? now.getMonth() + 1;
+  const anioNum = options?.anio ?? now.getFullYear();
+  return {
+    mesLabel: MESES_LABEL[mesNum] ?? String(mesNum),
+    anio: String(anioNum),
+    vehiculo: options?.vehiculo ?? null,
+    fallas,
+  };
 }
 
-export type ExportAveriasReporteResult =
-  | { ok: true }
-  | { ok: false; reason: "no_data" | "error" };
+export function buildAveriasReporteFilename(
+  placa: string | null | undefined,
+  mes: number,
+  anio: number,
+  consolidado: boolean,
+): string {
+  const mesLabel = MESES_LABEL[mes] ?? String(mes);
+  if (consolidado) {
+    return `Reporte_Averias_General_${mesLabel}_${anio}.xlsx`;
+  }
+  return `Reporte_Averias_${safeFilename(placa ?? "vehiculo")}_${mesLabel}_${anio}.xlsx`;
+}
 
-export async function exportAveriasReporte(
-  fallas: FallaRow[],
-): Promise<ExportAveriasReporteResult> {
+export async function exportAveriasReporteVehiculo(input: {
+  fallas: FallaRow[];
+  vehiculoId: string;
+  vehiculos: Array<{ id?: string | null; placa: string; marca: string; modelo: string }>;
+  mes?: number;
+  anio?: number;
+}): Promise<ExportAveriasReporteResult> {
+  const now = new Date();
+  const mesNum = input.mes ?? now.getMonth() + 1;
+  const anioNum = input.anio ?? now.getFullYear();
+  const consolidado = input.vehiculoId === "all";
+
+  const fallas = consolidado
+    ? input.fallas
+    : input.fallas.filter((falla) => falla.vehiculo_id === input.vehiculoId);
+
   if (fallas.length === 0) {
     return { ok: false, reason: "no_data" };
   }
 
+  const vehiculo = consolidado
+    ? null
+    : (input.vehiculos.find((item) => item.id === input.vehiculoId) ??
+      (() => {
+        const falla = fallas.find((item) => item.vehiculo_id === input.vehiculoId);
+        if (!falla?.vehiculo) return null;
+        return {
+          placa: falla.vehiculo.placa,
+          marca: falla.vehiculo.marca,
+          modelo: falla.vehiculo.modelo,
+        };
+      })());
+
   try {
-    const grupo = buildAveriasReporteGrupo(fallas);
-    await downloadAveriasReporteExcel(grupo, buildAveriasReporteFilename());
+    const grupo = buildAveriasReporteGrupo(fallas, {
+      vehiculo,
+      mes: mesNum,
+      anio: anioNum,
+    });
+    const filename = buildAveriasReporteFilename(vehiculo?.placa, mesNum, anioNum, consolidado);
+    await downloadAveriasReporteExcel(grupo, filename);
     return { ok: true };
   } catch (error) {
-    console.error("exportAveriasReporte:", error);
+    console.error("exportAveriasReporteVehiculo:", error);
     return { ok: false, reason: "error" };
   }
+}
+
+export async function exportAveriasReporte(
+  fallas: FallaRow[],
+): Promise<ExportAveriasReporteResult> {
+  const now = new Date();
+  return exportAveriasReporteVehiculo({
+    fallas,
+    vehiculoId: "all",
+    vehiculos: [],
+    mes: now.getMonth() + 1,
+    anio: now.getFullYear(),
+  });
 }

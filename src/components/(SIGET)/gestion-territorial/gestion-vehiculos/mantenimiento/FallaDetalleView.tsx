@@ -33,6 +33,7 @@ import {
   formatVehiculoFalla,
   severidadBadgeClass,
 } from "./lib/helpers";
+import { GvImagenAmpliada } from "../lib/gv-imagen-ampliada";
 import { VerEditar } from "./forms/VerEditar";
 
 function EvidenciaFallaImagen({
@@ -45,18 +46,11 @@ function EvidenciaFallaImagen({
   onBroken: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
-      className="block w-full cursor-pointer overflow-hidden rounded-xl border-0 bg-zinc-200/60 p-0 dark:bg-zinc-900/60"
-    >
-      <img
-        src={src}
-        alt={`Evidencia: ${path}`}
-        onError={onBroken}
-        className="aspect-[4/3] w-full object-cover object-center"
-      />
-    </button>
+    <GvImagenAmpliada
+      src={src}
+      alt={`Evidencia: ${path}`}
+      onError={onBroken}
+    />
   );
 }
 

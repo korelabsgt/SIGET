@@ -16,7 +16,7 @@ export function SolicitudesPanel({
 }: {
   solicitudes: SolicitudRow[];
   catalogo?: SolicitudRow[];
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
+  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
   misionPendiente?: boolean;
   detail?: SolicitudRow | null;
   onDetailChange?: (solicitud: SolicitudRow | null) => void;

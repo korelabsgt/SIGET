@@ -13,6 +13,7 @@ import {
   type VehiculoFallaOption,
   type MecanicoOption,
 } from "./zod";
+import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import {
   canGestionarFallasMantenimiento,
@@ -88,6 +89,22 @@ export async function getMecanicos(): Promise<MecanicoOption[]> {
   if (error) throw new Error(error.message);
 
   return (data ?? []) as MecanicoOption[];
+}
+
+export async function vehiculoTieneAveriaActiva(vehiculoId: string): Promise<boolean> {
+  try {
+    const { supabase } = await requireAuth();
+    const { count, error } = await supabase
+      .from(TABLE)
+      .select("id", { count: "exact", head: true })
+      .eq("vehiculo_id", vehiculoId)
+      .in("estado", ["PENDIENTE", "EN_REPARACION"]);
+
+    if (error) return false;
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function createFalla(input: FallaMantenimientoFormData): Promise<void> {
@@ -182,7 +199,7 @@ export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
 
 export async function solventarFalla(input: SolventarFallaFormData): Promise<void> {
   try {
-    const { supabase, role } = await requireAuth();
+    const { supabase, user, role } = await requireAuth();
 
     if (!canGestionarFallasMantenimiento(role)) {
       throw new Error("No tienes permisos para solventar averías.");
@@ -195,7 +212,7 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
 
     const { data: falla, error: fetchError } = await supabase
       .from(TABLE)
-      .select("id, vehiculo_id")
+      .select("id, vehiculo_id, vehiculo:ter_vehiculos(kilometraje_actual)")
       .eq("id", parsed.data.falla_id)
       .maybeSingle();
 
@@ -218,6 +235,22 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
     }
 
     await sincronizarEstadoFlotaVehiculo(supabase, falla.vehiculo_id);
+
+    const vehiculoRel = falla.vehiculo as
+      | { kilometraje_actual: number }
+      | { kilometraje_actual: number }[]
+      | null;
+    const kmActual = Array.isArray(vehiculoRel)
+      ? vehiculoRel[0]?.kilometraje_actual
+      : vehiculoRel?.kilometraje_actual;
+
+    if (kmActual != null) {
+      await aplicarMantenimientoForzadoPorKm(supabase, {
+        vehiculoId: falla.vehiculo_id,
+        kmActual,
+        reportadoPor: user.id,
+      });
+    }
 
     revalidatePath(REVALIDATE_ROUTE);
     revalidatePath(VEHICULOS_ROUTE);

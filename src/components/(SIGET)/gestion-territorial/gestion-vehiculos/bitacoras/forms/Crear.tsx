@@ -55,6 +55,9 @@ import { useUser } from "@/components/(base)/providers/UserProvider";
 import { type BitacoraInput, bitacoraInputSchema } from "../lib/zod";
 import { useBitacoraFormOptions, useCrearBitacora } from "../lib/hooks";
 import { type VehiculoRow } from "../../flota/lib/zod";
+import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
+import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
+import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
 
 interface SolicitudActiva {
   id: string;
@@ -155,6 +158,11 @@ export function Crear({
   });
 
   const [editingIds, setEditingIds] = useState<Set<string>>(() => new Set());
+  const [consultaAveriaOpen, setConsultaAveriaOpen] = useState(false);
+  const [reportarAveriaOpen, setReportarAveriaOpen] = useState(false);
+  const [pendingBitacora, setPendingBitacora] = useState<BitacoraInput | null>(null);
+  const [averiaVehiculoId, setAveriaVehiculoId] = useState("");
+  const [averiaVehiculoFijo, setAveriaVehiculoFijo] = useState<VehiculoAveriaFijo | null>(null);
   const prevFieldsLen = useRef(0);
 
   const selectedMisionId = watch("solicitud_id");
@@ -242,19 +250,81 @@ export function Crear({
     }
   }, [selectedVehiculoId, selectedMisionId, vehiculos, setValue]);
 
-  const onFormSubmit = async (data: BitacoraInput) => {
+  const onFormValidated = (data: BitacoraInput) => {
+    setPendingBitacora(data);
+    setConsultaAveriaOpen(true);
+  };
+
+  const guardarBitacora = async (
+    data: BitacoraInput,
+    huboAveria: boolean,
+  ): Promise<"listo" | "reporte_pendiente" | "error"> => {
     try {
       const res = await crear.mutateAsync(data);
-      if (res.success) {
-        toast.success("Bitácora registrada con éxito");
-        onSaved();
-      } else {
+      if (!res.success) {
         toast.error(res.error || "Hubo un error al guardar la bitácora");
+        return "error";
       }
+
+      if (!huboAveria) {
+        toast.success("Bitácora registrada con éxito");
+        return "listo";
+      }
+
+      const yaReportada = await vehiculoTieneAveriaActiva(data.vehiculo_id);
+      if (yaReportada) {
+        toast.success("Bitácora registrada con éxito");
+        toast.info(
+          "Este vehículo ya tiene un reporte de avería activo en mantenimiento.",
+        );
+        return "listo";
+      }
+
+      const vehiculo = vehiculos.find((v) => v.id === data.vehiculo_id);
+      setAveriaVehiculoFijo(
+        vehiculo?.id
+          ? {
+              id: vehiculo.id,
+              placa: vehiculo.placa,
+              marca: vehiculo.marca,
+              modelo: vehiculo.modelo,
+            }
+          : {
+              id: data.vehiculo_id,
+              placa: "—",
+              marca: "",
+              modelo: "",
+            },
+      );
+      setAveriaVehiculoId(data.vehiculo_id);
+      setReportarAveriaOpen(true);
+      return "reporte_pendiente";
     } catch {
       toast.error("Error inesperado");
+      return "error";
     }
   };
+
+  const handleConsultaAveria = async (huboAveria: boolean) => {
+    if (!pendingBitacora) return;
+
+    const resultado = await guardarBitacora(pendingBitacora, huboAveria);
+    setConsultaAveriaOpen(false);
+    setPendingBitacora(null);
+
+    if (resultado === "listo") {
+      onSaved();
+    }
+  };
+
+  const handleAveriaReportada = () => {
+    setReportarAveriaOpen(false);
+    setAveriaVehiculoId("");
+    setAveriaVehiculoFijo(null);
+    onSaved();
+  };
+
+  const flujoBloqueado = consultaAveriaOpen || reportarAveriaOpen || crear.isPending;
 
   if (loading) {
     return (
@@ -265,7 +335,7 @@ export function Crear({
   }
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="w-full min-w-0">
+    <form onSubmit={handleSubmit(onFormValidated)} className="w-full min-w-0">
       <div className="mb-6 flex items-start gap-3">
         <button
           type="button"
@@ -648,14 +718,14 @@ export function Crear({
           <button
             type="button"
             onClick={onBack}
-            disabled={crear.isPending}
+            disabled={flujoBloqueado}
             className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-zinc-200 px-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            disabled={crear.isPending}
+            disabled={flujoBloqueado}
             className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-emerald-200 px-6 text-[10px] font-bold uppercase tracking-widest text-emerald-900 transition-colors hover:bg-emerald-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-800/70 dark:text-emerald-50 dark:hover:bg-emerald-700/80"
             data-morph-hover-scope
           >
@@ -668,6 +738,30 @@ export function Crear({
           </button>
         </div>
       </div>
+
+      <ConsultaAveriaModal
+        open={consultaAveriaOpen}
+        onOpenChange={(next) => {
+          if (!next && crear.isPending) return;
+          setConsultaAveriaOpen(next);
+          if (!next) setPendingBitacora(null);
+        }}
+        onConfirmar={handleConsultaAveria}
+        isPending={crear.isPending}
+      />
+
+      <ReportarAveriaModal
+        open={reportarAveriaOpen}
+        onOpenChange={(next) => {
+          if (!next && reportarAveriaOpen) return;
+          setReportarAveriaOpen(next);
+        }}
+        vehiculoIdInicial={averiaVehiculoId}
+        vehiculoFijo={averiaVehiculoFijo}
+        bloquearVehiculo
+        obligatorio
+        onSaved={handleAveriaReportada}
+      />
     </form>
   );
 }

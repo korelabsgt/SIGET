@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
+import { formatEstadoLabel } from "./helpers";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
 const TABLE = "ter_solicitudes";
@@ -133,7 +134,14 @@ export async function cambiarEstadoSolicitud(
     const { user, role } = await requireAuth();
     const esAdmin = canAprobarRechazarSolicitudes(role);
     const esSuper = isSuperRole(role);
-    const esTransicionMision = nuevoEstado === "EN_MISION" || nuevoEstado === "FINALIZADA";
+    if (nuevoEstado === "FINALIZADA") {
+      return {
+        success: false,
+        error: "La misión solo puede finalizarse registrando una bitácora vinculada.",
+      };
+    }
+
+    const esTransicionMision = nuevoEstado === "EN_MISION";
     const esTransicionAprobacion =
       nuevoEstado === "APROBADA" || nuevoEstado === "RECHAZADA";
 
@@ -141,7 +149,7 @@ export async function cambiarEstadoSolicitud(
       if (canManageSolicitudesVehiculos(role) && !esSuper) {
         return {
           success: false,
-          error: "Solo el solicitante puede iniciar o finalizar la misión.",
+          error: "Solo el solicitante puede iniciar la misión.",
         };
       }
     } else if (esTransicionAprobacion) {
@@ -168,7 +176,7 @@ export async function cambiarEstadoSolicitud(
       if (!esSuper && actual.solicitante_id !== user.id) {
         return {
           success: false,
-          error: "Solo el solicitante puede iniciar o finalizar esta misión.",
+          error: "Solo el solicitante puede iniciar esta misión.",
         };
       }
 
@@ -178,19 +186,12 @@ export async function cambiarEstadoSolicitud(
           error: "La misión solo puede iniciarse cuando la solicitud está aprobada.",
         };
       }
-
-      if (nuevoEstado === "FINALIZADA" && actual.estado !== "EN_MISION") {
-        return {
-          success: false,
-          error: "La misión solo puede finalizarse cuando está en curso.",
-        };
-      }
     }
 
     if (esTransicionAprobacion && actual.estado !== "PENDIENTE") {
       return {
         success: false,
-        error: "Solo se pueden aprobar o rechazar solicitudes pendientes.",
+        error: `Esta solicitud ya no está pendiente (estado actual: ${formatEstadoLabel(actual.estado as SolicitudRow["estado"])}). Actualice la lista.`,
       };
     }
 
@@ -277,18 +278,27 @@ export async function cambiarEstadoSolicitud(
 
 export async function searchProfiles(query: string) {
   try {
-    const supabase = await createClient();
+    const { supabase } = await requireAuth();
+    const term = query.trim();
+    if (term.length < 3) return [];
+
     const { data, error } = await supabase
       .from("profiles")
       .select("id, nombre, email")
-      .ilike("nombre", `%${query}%`)
+      .eq("activo", true)
+      .or(`nombre.ilike.%${term}%,email.ilike.%${term}%`)
+      .order("nombre", { ascending: true })
       .limit(10);
-      
+
     if (error) {
       console.error("Error searchProfiles:", error);
       return [];
     }
-    return data || [];
+
+    return (data ?? []).filter(
+      (profile): profile is { id: string; nombre: string; email: string } =>
+        Boolean(profile.id),
+    );
   } catch (err) {
     console.error("Excepción en searchProfiles:", err);
     return [];

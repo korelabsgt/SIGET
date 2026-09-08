@@ -15,6 +15,7 @@ import { GvTabFilter } from "../lib/gv-tab-filter";
 import { useInvalidateSolicitudes, useSolicitudes } from "./lib/hooks";
 import { cambiarEstadoSolicitud } from "./lib/actions";
 import { type SolicitudRow } from "./lib/zod";
+import { formatEstadoLabel } from "./lib/helpers";
 import { GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS } from "../lib/gv-header-ui";
 import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -26,7 +27,7 @@ import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 
 const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 type TabSolicitud = (typeof TABS)[number];
-type AccionSolicitud = "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR";
+type AccionSolicitud = "APROBAR" | "RECHAZAR" | "INICIAR";
 
 const TAB_LABELS: Record<TabSolicitud, string> = {
   TODAS: "Todas",
@@ -51,17 +52,16 @@ export function Solicitudes() {
   const [detailSolicitud, setDetailSolicitud] = useState<SolicitudRow | null>(null);
 
   const handleAction = async (solicitud: SolicitudRow, action: AccionSolicitud) => {
-    if (action === "INICIAR" || action === "FINALIZAR") {
+    if (action === "INICIAR") {
       if (misionPendiente) return;
       setMisionPendiente(true);
       try {
-        const nuevoEstado = action === "INICIAR" ? "EN_MISION" : "FINALIZADA";
-        const res = await cambiarEstadoSolicitud(solicitud.id, nuevoEstado);
+        const res = await cambiarEstadoSolicitud(solicitud.id, "EN_MISION");
         if (!res.success) {
           toast.error(res.error || "No se pudo actualizar la misión.");
           return;
         }
-        toast.success(action === "INICIAR" ? "Misión iniciada." : "Misión finalizada.");
+        toast.success("Misión iniciada.");
         invalidate();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "No se pudo actualizar la misión.");
@@ -71,9 +71,20 @@ export function Solicitudes() {
       return;
     }
 
-    setSelectedSolicitud(solicitud);
-    setActionType(action);
-    setActionModalOpen(true);
+    if (action === "APROBAR" || action === "RECHAZAR") {
+      const fresh = solicitudes.find((item) => item.id === solicitud.id) ?? solicitud;
+      if (fresh.estado !== "PENDIENTE") {
+        toast.warn(
+          `Esta solicitud ya está ${formatEstadoLabel(fresh.estado).toLowerCase()}.`,
+        );
+        invalidate();
+        return;
+      }
+      setSelectedSolicitud(fresh);
+      setActionType(action);
+      setActionModalOpen(true);
+      return;
+    }
   };
 
   const filtradas = useMemo(() => {
@@ -183,7 +194,11 @@ export function Solicitudes() {
       <SolicitudActionModal
         open={actionModalOpen}
         onOpenChange={setActionModalOpen}
-        solicitud={selectedSolicitud}
+        solicitud={
+          selectedSolicitud
+            ? solicitudes.find((item) => item.id === selectedSolicitud.id) ?? selectedSolicitud
+            : null
+        }
         actionType={actionType}
         onSaved={invalidate}
       />

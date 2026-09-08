@@ -7,7 +7,6 @@ import {
   MapPin,
   Play,
   Route,
-  Square,
   User,
   Users,
   X,
@@ -175,7 +174,7 @@ function AccionesSolicitud({
   canAprobarRechazar: boolean;
   puedeControlMision: boolean;
   misionPendiente: boolean;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
+  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
   anchoCompleto?: boolean;
 }) {
   const btnBase = cn(
@@ -226,19 +225,14 @@ function AccionesSolicitud({
 
   if (puedeControlMision && solicitud.estado === "EN_MISION") {
     return (
-      <button
-        type="button"
-        disabled={misionPendiente}
-        onClick={() => onAction(solicitud, "FINALIZAR")}
-        className={cn(btnBase, "bg-violet-600 dark:bg-violet-700", anchoCompleto && "col-span-2")}
-      >
-        {misionPendiente ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Square size={16} strokeWidth={2.5} />
+      <p
+        className={cn(
+          "rounded-xl bg-sky-50 px-4 py-3 text-xs font-medium leading-relaxed text-sky-800 dark:bg-sky-950/40 dark:text-sky-300",
+          anchoCompleto && "text-center",
         )}
-        Finalizar misión
-      </button>
+      >
+        Para finalizar la misión, registre una bitácora vinculada en Bitácoras.
+      </p>
     );
   }
 
@@ -258,7 +252,7 @@ function ContenidoDetalle({
   canAprobarRechazar: boolean;
   puedeControlMision: boolean;
   misionPendiente: boolean;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
+  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
   embedded: boolean;
   onClose?: () => void;
 }) {
@@ -411,7 +405,7 @@ export function SolicitudDetalleView({
   embedded?: boolean;
   onBack?: () => void;
   onClose?: () => void;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR" | "FINALIZAR") => void;
+  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
 }) {
   if (embedded) {
     return (

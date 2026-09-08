@@ -8,28 +8,52 @@ import { Crear } from "./forms/Crear";
 import { Loader2 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "react-toastify";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
+import { useVehiculos } from "../flota/lib/hooks";
+import { formatVehiculoOpcion } from "../flota/lib/helpers";
 import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
-import { GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS } from "../lib/gv-header-ui";
+import {
+  GV_FILTRO_FIELD_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS,
+} from "../lib/gv-header-ui";
 import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { GvTabFilter } from "../lib/gv-tab-filter";
-import { filtrarFallasMantenimiento } from "./lib/helpers";
+import {
+  extractVehiculosVinculadosFallas,
+  filtrarFallasMantenimiento,
+  filtrarFallasPorVehiculo,
+} from "./lib/helpers";
 import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 import { useGvTablePagination } from "../lib/table-pagination";
-import { mesCalendarioGt } from "@/lib/fechas-gt";
+import { mesCalendarioGt, normalizarMesCalendario } from "@/lib/fechas-gt";
+import { cn } from "@/lib/utils";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportMantenimientoReporte,
   canGestionarFallasMantenimiento,
   canManageMantenimiento,
+  canViewAllFallasMantenimiento,
 } from "../lib/permissions";
 import { type FallaRow } from "./lib/zod";
 
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
 type TabMantenimiento = (typeof TABS)[number];
+
+const TODOS_VEHICULOS = "__todos__";
 
 const TAB_LABELS: Record<TabMantenimiento, string> = {
   ACTIVAS: "Taller",
@@ -37,32 +61,58 @@ const TAB_LABELS: Record<TabMantenimiento, string> = {
   SOLVENTADAS: "Solventadas",
 };
 
+const filtroTriggerClass = cn(
+  GV_FILTRO_FIELD_CLASS,
+  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
+);
+
+const filtroContentClass =
+  "z-[200] max-h-60 border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
+
+const filtroItemClass =
+  "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
+
 export function Mantenimiento() {
   const gvRole = useGvPermissionRole();
   const canManage = canManageMantenimiento(gvRole);
   const canExport = canExportMantenimientoReporte(gvRole);
   const canGestionar = canGestionarFallasMantenimiento(gvRole);
+  const canViewAll = canViewAllFallasMantenimiento(gvRole);
   const { data: fallas = [], isLoading } = useFallasMantenimiento();
   const { data: mecanicos = [] } = useMecanicos();
+  const { data: vehiculosFlota = [] } = useVehiculos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
+  const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
   const [isExporting, setIsExporting] = useState(false);
   const [detailFalla, setDetailFalla] = useState<FallaRow | null>(null);
+
+  const vehiculosVinculados = useMemo(
+    () => extractVehiculosVinculadosFallas(fallas),
+    [fallas],
+  );
+
+  const vehiculosParaFiltro = canViewAll ? vehiculosFlota : vehiculosVinculados;
 
   const fallasDelPeriodo = useMemo(
     () => fallas.filter((f) => registroEnPeriodoCalendario(f.created_at, periodoFilter)),
     [fallas, periodoFilter],
   );
 
-  const fallasActivas = fallasDelPeriodo.filter((f) => f.estado !== "SOLVENTADA").length;
+  const fallasPorVehiculo = useMemo(
+    () => filtrarFallasPorVehiculo(fallasDelPeriodo, vehiculoFilter, TODOS_VEHICULOS),
+    [fallasDelPeriodo, vehiculoFilter],
+  );
+
+  const fallasActivas = fallasPorVehiculo.filter((f) => f.estado !== "SOLVENTADA").length;
 
   const unidadesFueraDeServicio = new Set(
-    fallasDelPeriodo
+    fallasPorVehiculo
       .filter((f) => f.estado !== "SOLVENTADA" && (f.severidad === "ALTA" || f.estado === "EN_REPARACION"))
-      .map((f) => f.vehiculo_id)
+      .map((f) => f.vehiculo_id),
   ).size;
 
-  const fallasSolventadas = fallasDelPeriodo.filter((f) => f.estado === "SOLVENTADA" && f.solventado_at);
+  const fallasSolventadas = fallasPorVehiculo.filter((f) => f.estado === "SOLVENTADA" && f.solventado_at);
   const totalDays = fallasSolventadas.reduce((acc, f) => {
     return acc + differenceInDays(new Date(f.solventado_at!), new Date(f.created_at));
   }, 0);
@@ -71,10 +121,10 @@ export function Mantenimiento() {
     : 0;
 
   const fallasFiltradas = filtrarFallasMantenimiento(
-    fallasDelPeriodo,
+    fallasPorVehiculo,
     canManage ? tabActiva : "ACTIVAS",
   );
-  const paginacionKey = `${canManage ? tabActiva : "ACTIVAS"}|${periodoFilter}`;
+  const paginacionKey = `${canManage ? tabActiva : "ACTIVAS"}|${periodoFilter}|${vehiculoFilter}`;
   const {
     pageItems: fallasPaginadas,
     pageSafe,
@@ -89,15 +139,26 @@ export function Mantenimiento() {
   useGvPanelChrome("mantenimiento");
 
   const handleExportReporte = async () => {
-    if (fallasDelPeriodo.length === 0) {
+    const vehiculoId =
+      vehiculoFilter === TODOS_VEHICULOS ? "all" : vehiculoFilter;
+
+    if (fallasPorVehiculo.length === 0) {
       toast.warning("No hay averías para exportar en el periodo seleccionado.");
       return;
     }
 
     setIsExporting(true);
     try {
-      const { exportAveriasReporte } = await import("./lib/averias-excel");
-      const result = await exportAveriasReporte(fallasDelPeriodo);
+      const { exportAveriasReporteVehiculo } = await import("./lib/averias-excel");
+      const mesNorm = normalizarMesCalendario(periodoFilter) || mesCalendarioGt();
+      const [anioNum, mesNum] = mesNorm.split("-").map(Number);
+      const result = await exportAveriasReporteVehiculo({
+        fallas: fallasPorVehiculo,
+        vehiculoId,
+        vehiculos: vehiculosFlota,
+        mes: mesNum,
+        anio: anioNum,
+      });
 
       if (result.ok) {
         toast.success("Reporte exportado exitosamente");
@@ -105,7 +166,11 @@ export function Mantenimiento() {
       }
 
       if (result.reason === "no_data") {
-        toast.warning("No hay registros para exportar.");
+        toast.warning(
+          vehiculoId === "all"
+            ? "No hay averías en el mes seleccionado."
+            : "No hay averías del vehículo seleccionado en el mes seleccionado.",
+        );
         return;
       }
 
@@ -114,6 +179,40 @@ export function Mantenimiento() {
       setIsExporting(false);
     }
   };
+
+  const vehiculoSelect = (
+    <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+      <SelectTrigger className={filtroTriggerClass}>
+        <SelectValue
+          placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+        />
+      </SelectTrigger>
+      <SelectContent position="popper" className={filtroContentClass}>
+        <SelectItem
+          value={TODOS_VEHICULOS}
+          textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+          className={filtroItemClass}
+        >
+          {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+        </SelectItem>
+        {vehiculosParaFiltro
+          .filter((v) => v.id)
+          .map((v) => {
+            const label = formatVehiculoOpcion(v);
+            return (
+              <SelectItem
+                key={v.id}
+                value={v.id as string}
+                textValue={label}
+                className={filtroItemClass}
+              >
+                {label}
+              </SelectItem>
+            );
+          })}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <>
@@ -156,6 +255,10 @@ export function Mantenimiento() {
                   />
                 ) : null}
 
+                <div className="w-full lg:hidden">
+                  {vehiculoSelect}
+                </div>
+
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
@@ -164,6 +267,9 @@ export function Mantenimiento() {
               </div>
 
               <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+                <div className={GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS}>
+                  <div className="hidden lg:block">{vehiculoSelect}</div>
+                </div>
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
@@ -172,7 +278,7 @@ export function Mantenimiento() {
                 {canExport ? (
                   <GvExportReporteButton
                     onClick={handleExportReporte}
-                    disabled={isLoading || fallasDelPeriodo.length === 0}
+                    disabled={isLoading || fallasPorVehiculo.length === 0}
                     loading={isExporting}
                   />
                 ) : null}
