@@ -9,14 +9,6 @@ export function isSuperRole(role: string | null | undefined): boolean {
   return normalizeRoleSlug(role) === "super";
 }
 
-export function resolveGvRoleForPermissions(
-  realRole: string | null | undefined,
-  effectiveRole: string | null | undefined,
-): string {
-  if (isSuperRole(realRole)) return realRole as string;
-  return effectiveRole || realRole || "user";
-}
-
 export function isAdministradorOtRole(role: string | null | undefined): boolean {
   if (!role) return false;
   const slug = normalizeRoleSlug(role);

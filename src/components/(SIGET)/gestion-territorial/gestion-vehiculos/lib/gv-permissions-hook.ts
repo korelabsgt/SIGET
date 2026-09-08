@@ -2,13 +2,9 @@
 
 import { useMemo } from "react";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
-import { resolveGvRoleForPermissions } from "./permissions";
 
 export function useGvPermissionRole() {
-  const { realRole, effectiveRole } = useUserContext();
+  const { effectiveRole } = useUserContext();
 
-  return useMemo(
-    () => resolveGvRoleForPermissions(realRole, effectiveRole),
-    [realRole, effectiveRole],
-  );
+  return useMemo(() => effectiveRole || "user", [effectiveRole]);
 }
