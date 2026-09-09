@@ -30,6 +30,8 @@ import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
 import { GvFechaHoraInput } from "../../lib/gv-fecha-input";
+import { devAutofillSolicitudInput } from "../../lib/dev-autofill";
+import { GvDevAutofillButton } from "../../lib/gv-dev-autofill-button";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
@@ -100,6 +102,12 @@ export function Crear({
 
   const onClose = () => onOpenChange(false);
 
+  const handleAutofill = () => {
+    const vehiculoId = vehiculosLibres.find((v) => v.id)?.id ?? "";
+    reset(devAutofillSolicitudInput(vehiculoId || undefined));
+    toast.success("Solicitud rellenada automáticamente.");
+  };
+
   return (
     <GvModalShell
       open={open}
@@ -110,6 +118,9 @@ export function Crear({
       {open ? (
         <GvModalForm onSubmit={handleSubmit(onSubmit)}>
           <GvModalFormBody className="space-y-3">
+          <div className="flex justify-center">
+            <GvDevAutofillButton onClick={handleAutofill} />
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>

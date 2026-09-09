@@ -54,6 +54,7 @@ export function VehiculoCard({
   exporting = false,
   onDelete,
   canManage,
+  canDelete,
 }: {
   vehiculo: VehiculoRow;
   onEdit: () => void;
@@ -62,6 +63,7 @@ export function VehiculoCard({
   exporting?: boolean;
   onDelete: () => void;
   canManage: boolean;
+  canDelete: boolean;
 }) {
   const checkVencimiento = (fecha: string | null | undefined) => {
     if (!fecha) return null;
@@ -180,7 +182,7 @@ export function VehiculoCard({
                   <GvMorphIcon icon={Image} hoverIcon={Image} size={14} morphOnHover={false} className="text-current" />
                   Fotos
                 </DropdownMenuItem>
-                {canManage ? (
+                {canDelete ? (
                   <DropdownMenuItem
                     className={cn(
                       "cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60",

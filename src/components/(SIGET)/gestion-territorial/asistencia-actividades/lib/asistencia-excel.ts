@@ -1,6 +1,11 @@
 import type ExcelJSType from "exceljs";
 import { saveAs } from "file-saver";
 
+import {
+  aplicarPaginaCarta,
+  ultimaFilaExcelJS,
+} from "../../lib/excel-carta";
+
 type ExcelJSModule = typeof ExcelJSType;
 
 async function cargarExcelJS(): Promise<ExcelJSModule> {
@@ -40,6 +45,19 @@ const ENCABEZADOS = [
 ] as const;
 
 const ANCHOS = [20, 16, 30, 30, 16, 26, 24, 12, 18];
+const RESUMEN_COL_COUNT = 24;
+
+function finalizarHojaCarta(
+  ws: ExcelJSType.Worksheet,
+  columnCount: number,
+  orientation: "portrait" | "landscape" = "landscape",
+) {
+  aplicarPaginaCarta(ws, {
+    columnCount,
+    lastRow: ultimaFilaExcelJS(ws),
+    orientation,
+  });
+}
 
 function safeFilename(name: string): string {
   return (
@@ -274,6 +292,7 @@ function hojaTodos(
     from: { row: inicio, column: 1 },
     to: { row: Math.max(inicio, fin - 1), column: ENCABEZADOS.length },
   };
+  finalizarHojaCarta(ws, ENCABEZADOS.length);
 }
 
 function hojaPorGenero(
@@ -315,6 +334,7 @@ function hojaPorGenero(
   } else {
     pintarFilas(ws, fila, mujeres);
   }
+  finalizarHojaCarta(ws, ENCABEZADOS.length);
 }
 
 function hojaPorInstitucion(
@@ -343,6 +363,7 @@ function hojaPorInstitucion(
   if (claves.length === 0) {
     ws.getCell(fila, 1).value = "Sin registros";
     ws.getCell(fila, 1).font = { italic: true, color: { argb: "FF9CA3AF" } };
+    finalizarHojaCarta(ws, ENCABEZADOS.length);
     return;
   }
 
@@ -355,6 +376,7 @@ function hojaPorInstitucion(
     fila += 1;
     fila = pintarFilas(ws, fila, lista);
   });
+  finalizarHojaCarta(ws, ENCABEZADOS.length);
 }
 
 function hojaResumen(
@@ -535,6 +557,7 @@ function hojaResumen(
     dibujarBarra(fila, nombre, valor, maxInst, COLOR_BARRA);
     fila += 1;
   });
+  finalizarHojaCarta(ws, RESUMEN_COL_COUNT, "landscape");
 }
 
 export function buildAsistenciaExcelRows(

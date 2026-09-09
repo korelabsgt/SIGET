@@ -120,11 +120,8 @@ export function Mantenimiento() {
     ? Math.round((totalDays / fallasSolventadas.length) * 10) / 10
     : 0;
 
-  const fallasFiltradas = filtrarFallasMantenimiento(
-    fallasPorVehiculo,
-    canManage ? tabActiva : "ACTIVAS",
-  );
-  const paginacionKey = `${canManage ? tabActiva : "ACTIVAS"}|${periodoFilter}|${vehiculoFilter}`;
+  const fallasFiltradas = filtrarFallasMantenimiento(fallasPorVehiculo, tabActiva);
+  const paginacionKey = `${tabActiva}|${periodoFilter}|${vehiculoFilter}`;
   const {
     pageItems: fallasPaginadas,
     pageSafe,
@@ -238,42 +235,38 @@ export function Mantenimiento() {
         toolbar={
             <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
               <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
-                {canManage ? (
-                  <GvTabFilter
-                    value={tabActiva}
-                    onChange={setTabActiva}
-                    layoutId="gv-mantenimiento-tabs"
-                    layout="responsive-grid"
-                    fill
-                    compact
-                    className="min-w-0 w-full flex-1 lg:w-auto"
-                    options={TABS.map((tab) => ({
-                      value: tab,
-                      label: TAB_LABELS[tab],
-                      tone: tab === "CRITICAS" ? "danger" : "default",
-                    }))}
-                  />
-                ) : null}
+                <GvTabFilter
+                  value={tabActiva}
+                  onChange={setTabActiva}
+                  layoutId="gv-mantenimiento-tabs"
+                  layout="responsive-grid"
+                  fill
+                  compact
+                  className="min-w-0 w-full flex-1 lg:w-auto"
+                  options={TABS.map((tab) => ({
+                    value: tab,
+                    label: TAB_LABELS[tab],
+                    tone: tab === "CRITICAS" ? "danger" : "default",
+                  }))}
+                />
 
-                <div className="w-full lg:hidden">
-                  {vehiculoSelect}
-                </div>
+                <div className="w-full lg:hidden">{vehiculoSelect}</div>
 
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
-                  className="!h-11 min-w-0 w-full text-xs lg:hidden sm:w-[10.5rem]"
+                  className="!h-11 min-w-0 w-full text-xs sm:w-[10.5rem] lg:hidden"
                 />
               </div>
 
-              <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "shrink-0 flex-nowrap gap-1.5")}>
                 <div className={GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS}>
                   <div className="hidden lg:block">{vehiculoSelect}</div>
                 </div>
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
-                  className="hidden lg:inline-flex"
+                  className="hidden shrink-0 lg:inline-flex"
                 />
                 {canExport ? (
                   <GvExportReporteButton

@@ -118,6 +118,13 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     href: "/siget/gestion-territorial/gestion-vehiculos",
     animatedIcon: "cdxxgczv",
   },
+  {
+    id: "solicitud-combustible",
+    title: "Solicitud de Combustible",
+    desc: "Solicitud, seguimiento y control de vales de combustible institucional.",
+    href: "/siget/gestion-territorial/solicitud-combustible",
+    animatedIcon: "cdxxgczv",
+  },
 ] as const;
 
 export const PERFIL_MENU_OPTIONS = [

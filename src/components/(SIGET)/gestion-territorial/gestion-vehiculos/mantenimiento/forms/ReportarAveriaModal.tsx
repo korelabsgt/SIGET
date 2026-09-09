@@ -38,6 +38,8 @@ import {
 } from "../../lib/gv-modal-shell";
 import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
 import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
+import { devAutofillFallaInput } from "../../lib/dev-autofill";
+import { GvDevAutofillButton } from "../../lib/gv-dev-autofill-button";
 
 export type VehiculoAveriaFijo = {
   id: string;
@@ -186,6 +188,17 @@ export function ReportarAveriaModal({
     }
   }
 
+  const handleAutofill = () => {
+    const vehiculoId =
+      vehiculoFijo?.id ??
+      vehiculoIdInicial ??
+      vehiculos.find((v) => v.id)?.id ??
+      "";
+    form.reset(devAutofillFallaInput(vehiculoId || undefined));
+    clearFile();
+    toast.success("Reporte de avería rellenado automáticamente.");
+  };
+
   return (
     <GvModalShell
       open={open}
@@ -203,6 +216,9 @@ export function ReportarAveriaModal({
         <Form {...form}>
           <GvModalForm onSubmit={form.handleSubmit(onSubmit)}>
             <GvModalFormBody className="space-y-4">
+              <div className="flex justify-center">
+                <GvDevAutofillButton onClick={handleAutofill} />
+              </div>
               {obligatorio ? (
                 <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />

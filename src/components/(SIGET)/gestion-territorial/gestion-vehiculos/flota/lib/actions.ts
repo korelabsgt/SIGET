@@ -19,7 +19,7 @@ import {
   normalizeVehiculoStoragePath,
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
-import { canManageFlota } from "../../lib/permissions";
+import { canManageFlota, isSuperRole } from "../../lib/permissions";
 import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
@@ -46,6 +46,14 @@ async function requireFlotaManageAuth() {
   const auth = await requireAuth();
   if (!canManageFlota(auth.role)) {
     throw new Error("No tienes permisos para gestionar la flota vehicular.");
+  }
+  return auth;
+}
+
+async function requireSuperFlotaAuth() {
+  const auth = await requireFlotaManageAuth();
+  if (!isSuperRole(auth.role)) {
+    throw new Error("Solo super puede eliminar registros de la flota.");
   }
   return auth;
 }
@@ -192,7 +200,7 @@ export async function removeVehiculoImagen(
   id: string,
   storagePath: string,
 ): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase } = await requireSuperFlotaAuth();
   const path = normalizeVehiculoStoragePath(storagePath);
   if (!path) {
     throw new Error("No se pudo identificar la fotografía.");
@@ -297,7 +305,7 @@ export async function deleteVehiculo(
   id: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const { supabase } = await requireFlotaManageAuth();
+    const { supabase } = await requireSuperFlotaAuth();
 
     const bloqueos = await contarDependenciasVehiculo(supabase, id);
     if (bloqueos.length > 0) {

@@ -16,9 +16,11 @@ import {
   FilePlus,
   FileText,
   FolderKanban,
+  Fuel,
   Globe2,
   KeyRound,
   Map,
+  Receipt,
   Route,
   Settings,
   Truck,
@@ -150,6 +152,43 @@ const GT_CARDS = [
       },
     ] satisfies GtCardFeature[],
     colSpan: "md:col-span-2 lg:col-span-1",
+  },
+  {
+    id: "card-solicitud-combustible",
+    href: "/siget/gestion-territorial/solicitud-combustible",
+    badge: "Gestión de Combustible",
+    title: "Solicitud de Combustible",
+    description:
+      "Solicitud, seguimiento y control de vales de combustible para misiones institucionales.",
+    cta: "Acceder a Solicitudes",
+    iconFrom: Fuel,
+    iconTo: Receipt,
+    iconColor: "#34d399",
+    accent: {
+      border: "border-emerald-300/40 dark:border-emerald-400/20",
+      ring: "ring-emerald-300/20",
+      badge: "bg-emerald-400/90",
+      button: "bg-emerald-400 hover:bg-emerald-500",
+      check: "text-emerald-400",
+      iconBg: "bg-emerald-50 dark:bg-emerald-400/10",
+    },
+    features: [
+      {
+        label: "Registro de solicitudes",
+        iconFrom: FilePlus,
+        iconTo: ClipboardList,
+      },
+      {
+        label: "Control de vales",
+        iconFrom: Receipt,
+        iconTo: Fuel,
+      },
+      {
+        label: "Reporte de consumo",
+        iconFrom: BarChart3,
+        iconTo: ChartPie,
+      },
+    ] satisfies GtCardFeature[],
   },
 ] as const;
 

@@ -10,6 +10,7 @@ export function VehiculosCards({
   exportingVehiculoId = null,
   onDelete,
   canManage,
+  canDelete,
 }: {
   vehiculos: VehiculoRow[];
   onEdit: (vehiculo: VehiculoRow) => void;
@@ -18,6 +19,7 @@ export function VehiculosCards({
   exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => void;
   canManage: boolean;
+  canDelete: boolean;
 }) {
   return (
     <GvMobileRecordList>
@@ -31,6 +33,7 @@ export function VehiculosCards({
           exporting={exportingVehiculoId === (vehiculo.id ?? vehiculo.placa)}
           onDelete={() => onDelete(vehiculo)}
           canManage={canManage}
+          canDelete={canDelete}
         />
       ))}
     </GvMobileRecordList>

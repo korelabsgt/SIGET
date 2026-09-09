@@ -1,6 +1,7 @@
 import type ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
+import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import type { FallaRow } from "./zod";
 import {
   formatEstadoFallaLabel,
@@ -18,14 +19,14 @@ const TITLE_ROW_1 = "PLAN TRIFINIO/ DIRECCION EJECUTIVA NACIONAL DE GUATEMALA";
 const TITLE_ROW_2 = "FORMULARIO DE REPORTE DE AVERIAS Y MANTENIMIENTO VEHICULAR";
 
 const TABLE_HEADERS_VEHICULO = [
-  "FECHA",
+  "Fecha",
+  "Reportado por",
+  "Descripción de la avería",
   "Severidad",
   "Estado",
-  "Descripción de la Avería",
   "Mecánico / Taller",
-  "Diagnostico",
-  "Fecha de reparacion",
-  "Reportado",
+  "Diagnóstico",
+  "Fecha de reparación",
 ] as const;
 
 const TABLE_HEADERS_CONSOLIDADO = [
@@ -138,11 +139,23 @@ function fechaReparacionFalla(falla: FallaRow): string {
 }
 
 function filaDatosFalla(falla: FallaRow, porVehiculo: boolean): string[] {
-  const base = [
+  if (porVehiculo) {
+    return [
+      format(new Date(falla.created_at), "dd/MM/yyyy"),
+      reportadorNombre(falla),
+      falla.descripcion,
+      formatSeveridadLabel(falla.severidad),
+      formatEstadoFallaLabel(falla.estado),
+      mecanicoOTaller(falla),
+      diagnosticoFalla(falla),
+      fechaReparacionFalla(falla),
+    ];
+  }
+
+  return [
     format(new Date(falla.created_at), "dd/MM/yyyy"),
-    ...(porVehiculo
-      ? []
-      : [falla.vehiculo?.placa ?? "", formatVehiculoFalla(falla)]),
+    falla.vehiculo?.placa ?? "",
+    formatVehiculoFalla(falla),
     formatSeveridadLabel(falla.severidad),
     formatEstadoFallaLabel(falla.estado),
     falla.descripcion,
@@ -151,7 +164,6 @@ function filaDatosFalla(falla: FallaRow, porVehiculo: boolean): string[] {
     fechaReparacionFalla(falla),
     reportadorNombre(falla),
   ];
-  return base;
 }
 
 function setCellUnderlineValue(
@@ -214,44 +226,6 @@ async function fetchLogoBuffer(): Promise<ArrayBuffer | null> {
   }
 }
 
-const PAGE_MARGINS = {
-  left: 0.3,
-  right: 0.3,
-  top: 0.4,
-  bottom: 0.4,
-  header: 0.2,
-  footer: 0.2,
-};
-
-function columnaExcel(col: number): string {
-  let n = col;
-  let label = "";
-  while (n > 0) {
-    const resto = (n - 1) % 26;
-    label = String.fromCharCode(65 + resto) + label;
-    n = Math.floor((n - 1) / 26);
-  }
-  return label;
-}
-
-function aplicarPaginaCartaHorizontal(
-  sheet: ExcelJS.Worksheet,
-  columnCount: number,
-  lastRow: number,
-) {
-  sheet.pageSetup = {
-    paperSize: 5,
-    orientation: "landscape",
-    fitToPage: true,
-    fitToWidth: 1,
-    fitToHeight: 0,
-    horizontalCentered: true,
-    verticalCentered: false,
-    margins: PAGE_MARGINS,
-    printArea: `A1:${columnaExcel(columnCount)}${lastRow}`,
-  };
-}
-
 function buildAveriaSheet(
   workbook: ExcelJS.Workbook,
   grupo: AveriaReporteGrupo,
@@ -269,13 +243,13 @@ function buildAveriaSheet(
   sheet.columns = porVehiculo
     ? [
         { width: 11 },
+        { width: 18 },
+        { width: 28 },
         { width: 10 },
         { width: 12 },
-        { width: 24 },
-        { width: 16 },
         { width: 18 },
+        { width: 20 },
         { width: 14 },
-        { width: 16 },
       ]
     : [
         { width: 11 },
@@ -383,8 +357,9 @@ function buildAveriaSheet(
 
   const dataStartRow = headerRowIndex + 1;
   const dataEndRow = dataStartRow + Math.max(sorted.length, MIN_DATA_ROWS) - 1;
-  const descripcionColIndex = porVehiculo ? 3 : 5;
-  const diagnosticoColIndex = porVehiculo ? 5 : 7;
+  const descripcionColIndex = porVehiculo ? 2 : 5;
+  const diagnosticoColIndex = porVehiculo ? 6 : 7;
+  const reportadoColIndex = porVehiculo ? 1 : 9;
 
   for (let offset = 0; offset < Math.max(sorted.length, MIN_DATA_ROWS); offset += 1) {
     const rowIndex = dataStartRow + offset;
@@ -400,11 +375,16 @@ function buildAveriaSheet(
       cell.font = { size: 10 };
       cell.alignment = {
         horizontal:
-          colIndex === descripcionColIndex || colIndex === diagnosticoColIndex
+          colIndex === descripcionColIndex ||
+          colIndex === diagnosticoColIndex ||
+          colIndex === reportadoColIndex
             ? "left"
             : "center",
         vertical: "middle",
-        wrapText: colIndex === descripcionColIndex || colIndex === diagnosticoColIndex,
+        wrapText:
+          colIndex === descripcionColIndex ||
+          colIndex === diagnosticoColIndex ||
+          colIndex === reportadoColIndex,
       };
       cell.border = thinBorder;
     });
@@ -413,7 +393,11 @@ function buildAveriaSheet(
   }
 
   applyBorderRange(sheet, headerRowIndex, dataEndRow, 1, columnCount);
-  aplicarPaginaCartaHorizontal(sheet, columnCount, dataEndRow);
+  aplicarPaginaCarta(sheet, {
+    columnCount,
+    lastRow: dataEndRow,
+    orientation: "landscape",
+  });
 }
 
 export type ExportAveriasReporteResult =

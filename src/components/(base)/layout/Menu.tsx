@@ -12,6 +12,7 @@ import {
   Car,
   ChevronDown,
   FileText,
+  Fuel,
   Globe,
   Home,
   KeyRound,
@@ -60,6 +61,7 @@ const MENU_OPTION_ICONS: Record<string, LucideIcon> = {
   "memoria-labores": FileText,
   "asistencia-actividades": CalendarCheck,
   "gestion-vehiculos": Car,
+  "solicitud-combustible": Fuel,
 };
 
 const MODULE_ICONS: Record<string, LucideIcon> = {

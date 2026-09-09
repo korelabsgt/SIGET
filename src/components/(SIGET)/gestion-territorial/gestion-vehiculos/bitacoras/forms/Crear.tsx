@@ -58,6 +58,8 @@ import { type VehiculoRow } from "../../flota/lib/zod";
 import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
 import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
 import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
+import { devAutofillBitacoraInput } from "../../lib/dev-autofill";
+import { GvDevAutofillButton } from "../../lib/gv-dev-autofill-button";
 
 interface SolicitudActiva {
   id: string;
@@ -326,6 +328,26 @@ export function Crear({
 
   const flujoBloqueado = consultaAveriaOpen || reportarAveriaOpen || crear.isPending;
 
+  const handleAutofill = () => {
+    const mision = misiones.find((m) => m.id);
+    const vehiculo = vehiculos.find((v) => v.id);
+    const kmInicial = mision
+      ? kmDeMision(mision.ter_vehiculos)
+      : vehiculo?.kilometraje_actual ?? 12500;
+
+    reset(
+      devAutofillBitacoraInput({
+        misionId: mision?.id ?? "",
+        vehiculoId: mision?.vehiculo_id ?? vehiculo?.id ?? "",
+        kmInicial,
+      }),
+    );
+    if (user?.id) {
+      setValue("conductor_id", user.id);
+    }
+    toast.success("Bitácora rellenada automáticamente.");
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -351,12 +373,17 @@ export function Crear({
           />
         </button>
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-black leading-tight tracking-tight text-foreground dark:text-zinc-50">
-            Nuevo registro de bitácora de viaje
-          </h2>
-          <p className="text-sm text-muted-foreground dark:text-zinc-400">
-            Formulario operativo de recorrido — Gestión vehicular
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-black leading-tight tracking-tight text-foreground dark:text-zinc-50">
+                Nuevo registro de bitácora de viaje
+              </h2>
+              <p className="text-sm text-muted-foreground dark:text-zinc-400">
+                Formulario operativo de recorrido — Gestión vehicular
+              </p>
+            </div>
+            <GvDevAutofillButton onClick={handleAutofill} className="shrink-0 self-start" />
+          </div>
         </div>
       </div>
 

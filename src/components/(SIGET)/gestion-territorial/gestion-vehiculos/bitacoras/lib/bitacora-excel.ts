@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
 
+import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import type { VehiculoRow } from "../../flota/lib/zod";
 import { getDatosReporteBitacora } from "./actions";
 import type { BitacoraRow } from "./zod";
@@ -172,20 +173,6 @@ function buildBitacoraSheet(
 ) {
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
-    pageSetup: {
-      orientation: "portrait",
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 0,
-      margins: {
-        left: 0.4,
-        right: 0.4,
-        top: 0.5,
-        bottom: 0.5,
-        header: 0.2,
-        footer: 0.2,
-      },
-    },
   });
 
   sheet.columns = [
@@ -324,6 +311,11 @@ function buildBitacoraSheet(
   }
 
   applyBorderRange(sheet, HEADER_ROW, dataEndRow, 1, COLUMN_COUNT);
+  aplicarPaginaCarta(sheet, {
+    columnCount: COLUMN_COUNT,
+    lastRow: dataEndRow,
+    orientation: "landscape",
+  });
 }
 
 export function buildBitacoraReporteGrupos(

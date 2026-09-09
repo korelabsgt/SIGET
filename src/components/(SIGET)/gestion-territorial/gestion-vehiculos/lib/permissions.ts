@@ -24,8 +24,12 @@ export function canManageFlota(role: string | null | undefined): boolean {
   return slug === "admin" || isAdministradorOtRole(role);
 }
 
+export function canDeleteVehiculo(role: string | null | undefined): boolean {
+  return isSuperRole(role);
+}
+
 export function canDeleteVehiculoFotos(role: string | null | undefined): boolean {
-  return canManageFlota(role);
+  return isSuperRole(role);
 }
 
 export function canExportFlotaReporte(role: string | null | undefined): boolean {
@@ -103,3 +107,4 @@ export function canGestionarFallasMantenimiento(role: string | null | undefined)
   const slug = normalizeRoleSlug(role);
   return slug === "taller" || slug === "mecanico";
 }
+
