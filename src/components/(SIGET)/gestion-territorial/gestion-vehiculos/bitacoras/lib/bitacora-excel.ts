@@ -336,11 +336,11 @@ export function buildBitacoraReporteGrupos(
       vehiculos.find((item) => item.id === id) ??
       (() => {
         const row = bitacoras.find((item) => item.vehiculo_id === id);
-        if (!row?.ter_vehiculos) return null;
+        if (!row?.ot_vehiculos) return null;
         return {
-          placa: row.ter_vehiculos.placa,
-          marca: row.ter_vehiculos.marca,
-          modelo: row.ter_vehiculos.modelo,
+          placa: row.ot_vehiculos.placa,
+          marca: row.ot_vehiculos.marca,
+          modelo: row.ot_vehiculos.modelo,
           color: "",
         };
       })();

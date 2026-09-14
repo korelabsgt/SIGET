@@ -18,7 +18,7 @@ function db() {
 
 export async function fetchVehiculos(): Promise<VehiculoRow[]> {
   const { data, error } = await db()
-    .from("ter_vehiculos")
+    .from("ot_vehiculos")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -29,7 +29,7 @@ export async function fetchVehiculos(): Promise<VehiculoRow[]> {
 export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
   const client = db();
   const { data, error } = await client
-    .from("ter_vehiculos")
+    .from("ot_vehiculos")
     .select("*")
     .order("placa", { ascending: true });
 
@@ -51,13 +51,13 @@ export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
     (user.user_metadata?.rol as string | undefined) || user.role || "user";
 
   let query = client
-    .from("ter_solicitudes")
+    .from("ot_solicitudes")
     .select(
       `
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
-        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
+        vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `,
     )
     .order("created_at", { ascending: false });
@@ -83,11 +83,11 @@ export async function fetchBitacoras(): Promise<BitacoraRow[]> {
     (user.user_metadata?.rol as string | undefined) || user.role || "user";
 
   let query = client
-    .from("ter_bitacoras")
+    .from("ot_bitacoras")
     .select(
       `
         *,
-        ter_vehiculos (placa, marca, modelo),
+        ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre)
       `,
     )
@@ -114,13 +114,13 @@ export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
     (user.user_metadata?.rol as string | undefined) || user.role || "user";
 
   let query = client
-    .from("ter_fallas_mantenimiento")
+    .from("ot_fallas_mantenimiento")
     .select(
       `
       *,
-      vehiculo:ter_vehiculos(placa, marca, modelo),
-      reportador:profiles!ter_fallas_mantenimiento_reportado_por_fkey(nombre),
-      mecanico:profiles!ter_fallas_mantenimiento_mecanico_id_fkey(nombre)
+      vehiculo:ot_vehiculos(placa, marca, modelo),
+      reportador:profiles!ot_fallas_mantenimiento_reportado_por_fkey(nombre),
+      mecanico:profiles!ot_fallas_mantenimiento_mecanico_id_fkey(nombre)
     `,
     )
     .order("created_at", { ascending: false });

@@ -93,7 +93,7 @@ export type BitacoraRow = {
   comentarios: BitacoraComentariosJsonb;
   created_at: string;
 
-  ter_vehiculos?: {
+  ot_vehiculos?: {
     placa: string;
     marca: string;
     modelo: string;

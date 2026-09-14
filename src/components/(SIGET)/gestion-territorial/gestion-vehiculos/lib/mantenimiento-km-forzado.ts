@@ -6,7 +6,7 @@ import {
 } from "../flota/lib/helpers";
 import { sincronizarEstadoFlotaVehiculo } from "./sincronizar-estado-vehiculo";
 
-const FALLAS_TABLE = "ter_fallas_mantenimiento";
+const FALLAS_TABLE = "ot_fallas_mantenimiento";
 const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
 
 export async function aplicarMantenimientoForzadoPorKm(

@@ -22,7 +22,7 @@ import {
 import { vehiculoDisponibleParaReporteFalla, evidenciasFalla, normalizeFallaRow } from "./helpers";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
-const TABLE = "ter_fallas_mantenimiento";
+const TABLE = "ot_fallas_mantenimiento";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 const VEHICULOS_ROUTE = GV_BASE_ROUTE;
 
@@ -47,9 +47,9 @@ export async function getFallasMantenimiento(): Promise<FallaRow[]> {
     .from(TABLE)
     .select(`
       *,
-      vehiculo:ter_vehiculos(placa, marca, modelo),
-      reportador:profiles!ter_fallas_mantenimiento_reportado_por_fkey(nombre),
-      mecanico:profiles!ter_fallas_mantenimiento_mecanico_id_fkey(nombre)
+      vehiculo:ot_vehiculos(placa, marca, modelo),
+      reportador:profiles!ot_fallas_mantenimiento_reportado_por_fkey(nombre),
+      mecanico:profiles!ot_fallas_mantenimiento_mecanico_id_fkey(nombre)
     `)
     .order("created_at", { ascending: false });
 
@@ -68,7 +68,7 @@ export async function getVehiculosParaFallas(): Promise<VehiculoFallaOption[]> {
   const { supabase } = await requireAuth();
   
   const { data, error } = await supabase
-    .from("ter_vehiculos")
+    .from("ot_vehiculos")
     .select("id, placa, marca, modelo, estado")
     .neq("estado", "EN_MANTENIMIENTO")
     .order("placa", { ascending: true });
@@ -117,7 +117,7 @@ export async function createFalla(input: FallaMantenimientoFormData): Promise<vo
     }
 
     const { data: vehiculo, error: vehiculoError } = await supabase
-      .from("ter_vehiculos")
+      .from("ot_vehiculos")
       .select("estado")
       .eq("id", parsed.data.vehiculo_id)
       .maybeSingle();
@@ -212,7 +212,7 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
 
     const { data: falla, error: fetchError } = await supabase
       .from(TABLE)
-      .select("id, vehiculo_id, vehiculo:ter_vehiculos(kilometraje_actual)")
+      .select("id, vehiculo_id, vehiculo:ot_vehiculos(kilometraje_actual)")
       .eq("id", parsed.data.falla_id)
       .maybeSingle();
 

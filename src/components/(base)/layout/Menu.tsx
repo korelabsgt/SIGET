@@ -23,6 +23,7 @@ import {
   Smartphone,
   User,
   Users,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -477,6 +478,26 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
     }
     return simulatableRoles;
   }, [simulatableRoles, simulatedRole]);
+
+  const handleSimulatedRoleChange = (nextRaw: string) => {
+    const next = nextRaw === "" ? null : nextRaw;
+    if (next === simulatedRole) {
+      setSimulatedRole(null);
+      return;
+    }
+    setSimulatedRole(next);
+  };
+
+  const handleSimulatedRoleOptionClick = (
+    event: React.MouseEvent<HTMLSelectElement>,
+  ) => {
+    const target = event.target as HTMLElement;
+    if (target.tagName !== "OPTION") return;
+    const val = (target as HTMLOptionElement).value;
+    if (val === "" || val === simulatedRole) {
+      setSimulatedRole(null);
+    }
+  };
   const { data: appSettings } = useAppSettings();
   const [openAccordionId, setOpenAccordionId] = useState<MenuAccordionId | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -760,17 +781,30 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
             <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/50 p-3 rounded-xl">
               <ShieldAlert className="size-5 text-yellow-600 shrink-0" />
               <select
-                value={simulatedRole || ""}
-                onChange={(e) => setSimulatedRole(e.target.value || null)}
-                className="bg-transparent text-xs font-bold text-yellow-700 outline-none cursor-pointer w-full"
+                value={simulatedRole ?? ""}
+                onChange={(e) => handleSimulatedRoleChange(e.target.value)}
+                onClick={handleSimulatedRoleOptionClick}
+                className="min-w-0 flex-1 bg-transparent text-xs font-bold text-yellow-700 outline-none cursor-pointer"
+                aria-label="Simular rol de usuario"
               >
-                <option value="">Rol Real: {realRole.toUpperCase()}</option>
+                <option value="">Rol real: {realRole.toUpperCase()}</option>
                 {displaySimulatableRoles.map((role) => (
                   <option key={role} value={role}>
                     Simular: {formatSimulatedRoleLabel(role).toUpperCase()}
                   </option>
                 ))}
               </select>
+              {simulatedRole ? (
+                <button
+                  type="button"
+                  onClick={() => setSimulatedRole(null)}
+                  className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 transition-colors hover:bg-yellow-500/20 dark:text-yellow-400"
+                  aria-label="Desactivar simulación de rol"
+                  title="Volver al rol real"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
             </div>
           </div>
         )}

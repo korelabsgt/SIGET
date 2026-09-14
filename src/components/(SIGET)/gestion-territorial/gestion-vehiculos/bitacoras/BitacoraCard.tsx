@@ -21,7 +21,7 @@ export function BitacoraCard({
   bitacora: BitacoraRow;
   onDetail: (bitacora: BitacoraRow) => void;
 }) {
-  const vehiculo = bitacora.ter_vehiculos;
+  const vehiculo = bitacora.ot_vehiculos;
   const combustible = formatMontoCombustibleBitacora(Number(bitacora.monto_combustible));
 
   return (

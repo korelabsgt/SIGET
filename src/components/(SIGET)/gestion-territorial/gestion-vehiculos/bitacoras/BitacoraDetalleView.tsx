@@ -36,9 +36,9 @@ function ContenidoBitacora({
   onClose?: () => void;
 }) {
   const conductor = bitacora.profiles?.nombre?.trim() || "Desconocido";
-  const placa = bitacora.ter_vehiculos?.placa ?? "—";
-  const marca = bitacora.ter_vehiculos?.marca;
-  const modelo = bitacora.ter_vehiculos?.modelo;
+  const placa = bitacora.ot_vehiculos?.placa ?? "—";
+  const marca = bitacora.ot_vehiculos?.marca;
+  const modelo = bitacora.ot_vehiculos?.modelo;
   const comentarios = bitacora.comentarios ?? [];
   const sinRecarga = Number(bitacora.monto_combustible) <= 0;
 

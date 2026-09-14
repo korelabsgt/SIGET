@@ -5,8 +5,8 @@ import {
   type MisionVinculableBitacora,
 } from "./helpers";
 
-const SOLICITUDES_TABLE = "ter_solicitudes";
-const BITACORAS_TABLE = "ter_bitacoras";
+const SOLICITUDES_TABLE = "ot_solicitudes";
+const BITACORAS_TABLE = "ot_bitacoras";
 
 export async function loadMisionesVinculablesBitacora(
   supabase: SupabaseClient,

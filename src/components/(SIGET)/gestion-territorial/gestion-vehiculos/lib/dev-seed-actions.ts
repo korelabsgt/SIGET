@@ -8,8 +8,11 @@ import { CIRCULACION_PATH_MARKER } from "../flota/lib/helpers";
 import { isSuperRole } from "./permissions";
 import { sincronizarEstadoFlotaVehiculo } from "./sincronizar-estado-vehiculo";
 import { GV_BASE_ROUTE } from "./routes";
+import { VEHICULOS_STORAGE_BUCKET } from "./storage";
 
 const DEMO_PLACA_MARKER = "SIM";
+const DEMO_JUSTIFICACION_MARKER =
+  "Registro generado automáticamente para vista previa del módulo.";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 type DemoVehiculo = {
@@ -108,13 +111,181 @@ async function requireSuperSeedAuth() {
 export type GvDemoSeedResult = {
   success: boolean;
   error?: string;
+  mode?: "seeded" | "cleared";
   created?: {
     vehiculos: number;
     solicitudes: number;
     bitacoras: number;
     fallas: number;
   };
+  removed?: {
+    vehiculos: number;
+    solicitudes: number;
+    bitacoras: number;
+    fallas: number;
+  };
 };
+
+async function demoVehiculosExist(
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<boolean> {
+  const { count } = await admin
+    .from("ot_vehiculos")
+    .select("id", { count: "exact", head: true })
+    .like("placa", `%${DEMO_PLACA_MARKER}`);
+
+  return (count ?? 0) > 0;
+}
+
+export async function hasGvDemoData(): Promise<boolean> {
+  try {
+    const auth = await requireSuperSeedAuth();
+    if (!auth.ok) return false;
+    return demoVehiculosExist(auth.admin);
+  } catch {
+    return false;
+  }
+}
+
+export async function toggleGvDemoData(): Promise<GvDemoSeedResult> {
+  try {
+    const auth = await requireSuperSeedAuth();
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
+    if (await demoVehiculosExist(auth.admin)) {
+      return clearGvDemoData(auth);
+    }
+
+    return seedGvDemoDataInternal(auth);
+  } catch {
+    return {
+      success: false,
+      error: "No se pudo alternar los datos demo.",
+    };
+  }
+}
+
+async function clearGvDemoData(
+  auth: Extract<
+    Awaited<ReturnType<typeof requireSuperSeedAuth>>,
+    { ok: true }
+  >,
+): Promise<GvDemoSeedResult> {
+  const { admin } = auth;
+
+  const { data: demoVehiculos, error: vehiculosError } = await admin
+    .from("ot_vehiculos")
+    .select("id, imagen_url")
+    .like("placa", `%${DEMO_PLACA_MARKER}`);
+
+  if (vehiculosError) {
+    return {
+      success: false,
+      error: "No se pudieron localizar los vehículos demo.",
+    };
+  }
+
+  const demoVehiculoIds = (demoVehiculos ?? []).map((row) => row.id);
+
+  let demoSolicitudIds: string[] = [];
+
+  if (demoVehiculoIds.length > 0) {
+    const { data: solicitudesPorVehiculo } = await admin
+      .from("ot_solicitudes")
+      .select("id")
+      .in("vehiculo_id", demoVehiculoIds);
+
+    demoSolicitudIds = (solicitudesPorVehiculo ?? []).map((row) => row.id);
+  }
+
+  const { data: solicitudesDemo } = await admin
+    .from("ot_solicitudes")
+    .select("id")
+    .eq("justificacion", DEMO_JUSTIFICACION_MARKER);
+
+  demoSolicitudIds = [
+    ...new Set([
+      ...demoSolicitudIds,
+      ...(solicitudesDemo ?? []).map((row) => row.id),
+    ]),
+  ];
+
+  let bitacorasEliminadas = 0;
+  let fallasEliminadas = 0;
+  let solicitudesEliminadas = 0;
+
+  if (demoVehiculoIds.length > 0 || demoSolicitudIds.length > 0) {
+    const bitacoraFilters: string[] = [];
+
+    if (demoVehiculoIds.length > 0) {
+      bitacoraFilters.push(`vehiculo_id.in.(${demoVehiculoIds.join(",")})`);
+    }
+    if (demoSolicitudIds.length > 0) {
+      bitacoraFilters.push(`solicitud_id.in.(${demoSolicitudIds.join(",")})`);
+    }
+
+    const { count: bitacorasCount } = await admin
+      .from("ot_bitacoras")
+      .delete({ count: "exact" })
+      .or(bitacoraFilters.join(","));
+
+    bitacorasEliminadas = bitacorasCount ?? 0;
+  }
+
+  if (demoVehiculoIds.length > 0) {
+    const { count: fallasCount } = await admin
+      .from("ot_fallas_mantenimiento")
+      .delete({ count: "exact" })
+      .in("vehiculo_id", demoVehiculoIds);
+
+    fallasEliminadas = fallasCount ?? 0;
+  }
+
+  if (demoSolicitudIds.length > 0) {
+    const { count: solicitudesCount } = await admin
+      .from("ot_solicitudes")
+      .delete({ count: "exact" })
+      .in("id", demoSolicitudIds);
+
+    solicitudesEliminadas = solicitudesCount ?? 0;
+  }
+
+  const storagePaths = (demoVehiculos ?? []).flatMap((row) => {
+    const urls = row.imagen_url;
+    if (!Array.isArray(urls)) return [];
+    return urls.filter((path): path is string => typeof path === "string");
+  });
+
+  if (storagePaths.length > 0) {
+    await admin.storage.from(VEHICULOS_STORAGE_BUCKET).remove(storagePaths);
+  }
+
+  let vehiculosEliminados = 0;
+
+  if (demoVehiculoIds.length > 0) {
+    const { count: vehiculosCount } = await admin
+      .from("ot_vehiculos")
+      .delete({ count: "exact" })
+      .in("id", demoVehiculoIds);
+
+    vehiculosEliminados = vehiculosCount ?? 0;
+  }
+
+  revalidatePath(REVALIDATE_ROUTE);
+
+  return {
+    success: true,
+    mode: "cleared",
+    removed: {
+      vehiculos: vehiculosEliminados,
+      solicitudes: solicitudesEliminadas,
+      bitacoras: bitacorasEliminadas,
+      fallas: fallasEliminadas,
+    },
+  };
+}
 
 export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
   try {
@@ -123,25 +294,29 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
       return { success: false, error: auth.error };
     }
 
+    return seedGvDemoDataInternal(auth);
+  } catch {
+    return {
+      success: false,
+      error: "No se pudieron generar los datos demo.",
+    };
+  }
+}
+
+async function seedGvDemoDataInternal(
+  auth: Extract<
+    Awaited<ReturnType<typeof requireSuperSeedAuth>>,
+    { ok: true }
+  >,
+): Promise<GvDemoSeedResult> {
+  try {
     const { user, admin } = auth;
-
-    const { count: demoExistentes } = await admin
-      .from("ter_vehiculos")
-      .select("id", { count: "exact", head: true })
-      .like("placa", `%${DEMO_PLACA_MARKER}`);
-
-    if ((demoExistentes ?? 0) > 0) {
-      return {
-        success: false,
-        error: "Ya existen vehículos demo (placa *SIM). Elimínelos antes de volver a generar.",
-      };
-    }
 
     const vehiculoIds: string[] = [];
 
     for (const demo of DEMO_VEHICULOS) {
       const { data, error } = await admin
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .insert({
           placa: demo.placa,
           marca: demo.marca,
@@ -204,7 +379,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
 
     for (const item of solicitudesDemo) {
       const { data, error } = await admin
-        .from("ter_solicitudes")
+        .from("ot_solicitudes")
         .insert({
           solicitante_id: user.id,
           vehiculo_id: item.vehiculo_id,
@@ -212,7 +387,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
           fecha_fin_estimada: item.fin,
           destino: item.destino,
           ruta_planificada: "Ruta demo CA-1",
-          justificacion: "Registro generado automáticamente para vista previa del módulo.",
+          justificacion: DEMO_JUSTIFICACION_MARKER,
           pasajeros: null,
           estado: item.estado,
         })
@@ -261,7 +436,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
 
     for (const item of bitacorasDemo) {
       const fecha = fechaIsoRelativa(item.dias, 14);
-      const { error } = await admin.from("ter_bitacoras").insert({
+      const { error } = await admin.from("ot_bitacoras").insert({
         solicitud_id: item.solicitud_id,
         vehiculo_id: item.vehiculo_id,
         conductor_id: user.id,
@@ -288,7 +463,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
       }
 
       await admin
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .update({ kilometraje_actual: item.km_final })
         .eq("id", item.vehiculo_id);
 
@@ -323,7 +498,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
       const solventadoAt =
         item.estado === "SOLVENTADA" ? fechaIsoRelativa(-1, 16) : null;
 
-      const { error } = await admin.from("ter_fallas_mantenimiento").insert({
+      const { error } = await admin.from("ot_fallas_mantenimiento").insert({
         vehiculo_id: item.vehiculo_id,
         reportado_por: user.id,
         severidad: item.severidad,
@@ -356,6 +531,7 @@ export async function seedGvDemoData(): Promise<GvDemoSeedResult> {
 
     return {
       success: true,
+      mode: "seeded",
       created: {
         vehiculos: vehiculoIds.length,
         solicitudes: solicitudesCreadas,

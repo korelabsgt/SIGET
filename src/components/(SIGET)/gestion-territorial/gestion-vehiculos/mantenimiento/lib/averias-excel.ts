@@ -25,7 +25,7 @@ const TABLE_HEADERS_VEHICULO = [
   "Severidad",
   "Estado",
   "Mecánico / Taller",
-  "Diagnóstico",
+  "Reparación",
   "Fecha de reparación",
 ] as const;
 
@@ -37,7 +37,7 @@ const TABLE_HEADERS_CONSOLIDADO = [
   "Estado",
   "Descripción de la Avería",
   "Mecánico / Taller",
-  "Diagnostico",
+  "Reparación",
   "Fecha de reparacion",
   "Reportado",
 ] as const;
@@ -129,8 +129,8 @@ function mecanicoOTaller(falla: FallaRow): string {
   return mecanico || taller || "";
 }
 
-function diagnosticoFalla(falla: FallaRow): string {
-  return falla.diagnostico?.trim() ?? "";
+function reparacionFalla(falla: FallaRow): string {
+  return falla.reparacion_detalle?.trim() ?? "";
 }
 
 function fechaReparacionFalla(falla: FallaRow): string {
@@ -147,7 +147,7 @@ function filaDatosFalla(falla: FallaRow, porVehiculo: boolean): string[] {
       formatSeveridadLabel(falla.severidad),
       formatEstadoFallaLabel(falla.estado),
       mecanicoOTaller(falla),
-      diagnosticoFalla(falla),
+      reparacionFalla(falla),
       fechaReparacionFalla(falla),
     ];
   }
@@ -160,7 +160,7 @@ function filaDatosFalla(falla: FallaRow, porVehiculo: boolean): string[] {
     formatEstadoFallaLabel(falla.estado),
     falla.descripcion,
     mecanicoOTaller(falla),
-    diagnosticoFalla(falla),
+    reparacionFalla(falla),
     fechaReparacionFalla(falla),
     reportadorNombre(falla),
   ];
@@ -358,7 +358,7 @@ function buildAveriaSheet(
   const dataStartRow = headerRowIndex + 1;
   const dataEndRow = dataStartRow + Math.max(sorted.length, MIN_DATA_ROWS) - 1;
   const descripcionColIndex = porVehiculo ? 2 : 5;
-  const diagnosticoColIndex = porVehiculo ? 6 : 7;
+  const reparacionColIndex = porVehiculo ? 6 : 7;
   const reportadoColIndex = porVehiculo ? 1 : 9;
 
   for (let offset = 0; offset < Math.max(sorted.length, MIN_DATA_ROWS); offset += 1) {
@@ -376,14 +376,14 @@ function buildAveriaSheet(
       cell.alignment = {
         horizontal:
           colIndex === descripcionColIndex ||
-          colIndex === diagnosticoColIndex ||
+          colIndex === reparacionColIndex ||
           colIndex === reportadoColIndex
             ? "left"
             : "center",
         vertical: "middle",
         wrapText:
           colIndex === descripcionColIndex ||
-          colIndex === diagnosticoColIndex ||
+          colIndex === reparacionColIndex ||
           colIndex === reportadoColIndex,
       };
       cell.border = thinBorder;

@@ -10,7 +10,7 @@ import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-veh
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
-const TABLE = "ter_bitacoras";
+const TABLE = "ot_bitacoras";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
@@ -34,7 +34,7 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
       .from(TABLE)
       .select(`
         *,
-        ter_vehiculos (placa, marca, modelo),
+        ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre)
       `)
       .order("fecha", { ascending: false });
@@ -62,7 +62,7 @@ export async function createBitacora(input: BitacoraInput) {
 
     if (solicitudId) {
       const { data: solicitud, error: solicitudError } = await supabase
-        .from("ter_solicitudes")
+        .from("ot_solicitudes")
         .select("id, solicitante_id, estado")
         .eq("id", solicitudId)
         .maybeSingle();
@@ -108,7 +108,7 @@ export async function createBitacora(input: BitacoraInput) {
     if (error) throw error;
 
     const { error: kmError } = await supabase
-      .from("ter_vehiculos")
+      .from("ot_vehiculos")
       .update({ kilometraje_actual: parsed.km_final })
       .eq("id", parsed.vehiculo_id);
 
@@ -124,7 +124,7 @@ export async function createBitacora(input: BitacoraInput) {
 
     if (solicitudId) {
       const { data: solicitudActual, error: solicitudActualError } = await supabase
-        .from("ter_solicitudes")
+        .from("ot_solicitudes")
         .select("estado")
         .eq("id", solicitudId)
         .eq("solicitante_id", user.id)
@@ -134,7 +134,7 @@ export async function createBitacora(input: BitacoraInput) {
         console.error("Error reading solicitud estado:", solicitudActualError);
       } else if (solicitudActual.estado === "EN_MISION") {
         const { error: updateError } = await supabase
-          .from("ter_solicitudes")
+          .from("ot_solicitudes")
           .update({ estado: "FINALIZADA" })
           .eq("id", solicitudId)
           .eq("solicitante_id", user.id)
@@ -241,7 +241,7 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
         km_recorrido,
         vale_combustible,
         monto_combustible,
-        ter_vehiculos (placa, marca, modelo),
+        ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre)
       `)
       .gte("fecha", startDate)

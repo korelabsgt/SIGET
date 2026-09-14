@@ -34,7 +34,6 @@ import {
 } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
 import { useGvTablePagination } from "../lib/table-pagination";
-import { useGvDetailScrollToTop } from "../lib/scroll-detail-to-top";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
@@ -43,8 +42,6 @@ import {
   canViewBitacoraMetricas,
 } from "../lib/permissions";
 import { type BitacoraRow } from "./lib/zod";
-
-type BitacorasView = { mode: "list" } | { mode: "create" };
 
 const TODOS_VEHICULOS = "__todos__";
 
@@ -67,7 +64,7 @@ export function Bitacoras() {
   const puedeExportar = canExportBitacoraReporte(gvRole);
   const { data: bitacoras = [], isLoading: loadingBitacoras } = useBitacoras();
   const { data: vehiculosFlota = [] } = useVehiculos();
-  const [view, setView] = useState<BitacorasView>({ mode: "list" });
+  const [createOpen, setCreateOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
@@ -128,9 +125,9 @@ export function Bitacoras() {
       if (!q) return true;
       return (
         b.destino.toLowerCase().includes(q) ||
-        b.ter_vehiculos?.placa.toLowerCase().includes(q) ||
-        b.ter_vehiculos?.marca.toLowerCase().includes(q) ||
-        b.ter_vehiculos?.modelo.toLowerCase().includes(q) ||
+        b.ot_vehiculos?.placa.toLowerCase().includes(q) ||
+        b.ot_vehiculos?.marca.toLowerCase().includes(q) ||
+        b.ot_vehiculos?.modelo.toLowerCase().includes(q) ||
         (b.profiles?.nombre?.toLowerCase().includes(q) ?? false) ||
         (b.vale_combustible?.toLowerCase().includes(q) ?? false)
       );
@@ -166,18 +163,15 @@ export function Bitacoras() {
     [bitacoras, periodoFilter],
   );
 
-  useGvDetailScrollToTop(true, view.mode);
-
-  useGvPanelChrome("bitacoras", {
-    hideChrome: view.mode === "create",
-  });
-
-  if (view.mode === "create") {
-    return <Crear onBack={() => setView({ mode: "list" })} onSaved={() => setView({ mode: "list" })} />;
-  }
+  useGvPanelChrome("bitacoras");
 
   return (
     <>
+      <Crear
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSaved={() => setCreateOpen(false)}
+      />
       <GvHeaderExtras panelId="bitacoras">
         {!loading ? <BitacorasNotificaciones bitacoras={bitacorasParaAlertas} /> : null}
       </GvHeaderExtras>
@@ -262,7 +256,7 @@ export function Bitacoras() {
 
                 <button
                   type="button"
-                  onClick={() => setView({ mode: "create" })}
+                  onClick={() => setCreateOpen(true)}
                   className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-auto shrink-0")}
                 >
                   <Plus className="h-4 w-4 shrink-0" />

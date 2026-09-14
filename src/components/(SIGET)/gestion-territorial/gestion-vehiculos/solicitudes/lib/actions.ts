@@ -8,7 +8,7 @@ import { GV_BASE_ROUTE } from "../../lib/routes";
 import { formatEstadoLabel } from "./helpers";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
-const TABLE = "ter_solicitudes";
+const TABLE = "ot_solicitudes";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 const FLOTA_ROUTE = GV_BASE_ROUTE;
 
@@ -38,7 +38,7 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
-        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
+        vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `)
       .order("created_at", { ascending: false });
 
@@ -72,7 +72,7 @@ export async function createSolicitud(input: SolicitudInput) {
 
     if (vehiculo_id) {
       const { data: vehiculo, error: vehiculoError } = await supabase
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .select("id, estado")
         .eq("id", vehiculo_id)
         .maybeSingle();
@@ -206,7 +206,7 @@ export async function cambiarEstadoSolicitud(
       }
 
       const { data: vehiculo, error: vehiculoError } = await supabase
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .select("id, estado")
         .eq("id", vehiculoAsignado)
         .maybeSingle();

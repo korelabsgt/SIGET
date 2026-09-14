@@ -23,7 +23,7 @@ import { canManageFlota, isSuperRole } from "../../lib/permissions";
 import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
-const TABLE = "ter_vehiculos";
+const TABLE = "ot_vehiculos";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
@@ -257,13 +257,13 @@ export async function removeVehiculoImagen(
 function mapDeleteVehiculoError(message: string, code?: string): string {
   const m = message.toLowerCase();
   if (code === "23503" || m.includes("foreign key")) {
-    if (m.includes("ter_bitacoras")) {
+    if (m.includes("ot_bitacoras")) {
       return "No se puede eliminar el vehículo porque tiene bitácoras de viaje registradas.";
     }
-    if (m.includes("ter_solicitudes")) {
+    if (m.includes("ot_solicitudes")) {
       return "No se puede eliminar el vehículo porque está asignado a una o más solicitudes.";
     }
-    if (m.includes("ter_fallas_mantenimiento") || m.includes("fallas")) {
+    if (m.includes("ot_fallas_mantenimiento") || m.includes("fallas")) {
       return "No se puede eliminar el vehículo porque tiene registros de mantenimiento asociados.";
     }
     return "No se puede eliminar el vehículo porque tiene registros relacionados en el sistema.";
@@ -274,15 +274,15 @@ function mapDeleteVehiculoError(message: string, code?: string): string {
 async function contarDependenciasVehiculo(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [bitacoras, solicitudes, fallas] = await Promise.all([
     supabase
-      .from("ter_bitacoras")
+      .from("ot_bitacoras")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
     supabase
-      .from("ter_solicitudes")
+      .from("ot_solicitudes")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
     supabase
-      .from("ter_fallas_mantenimiento")
+      .from("ot_fallas_mantenimiento")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
   ]);
