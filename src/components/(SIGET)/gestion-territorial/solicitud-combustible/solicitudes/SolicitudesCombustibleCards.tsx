@@ -11,7 +11,8 @@ import { SolicitudCombustibleCard } from "./SolicitudCombustibleCard";
 export function SolicitudesCombustibleCards({
   solicitudes,
   canResolver,
-  showAccionesColumn = true,
+  showAccionesColumn,
+  showAcciones,
   onResolver,
   exportingId = null,
   onExportExcel,
@@ -19,10 +20,12 @@ export function SolicitudesCombustibleCards({
   solicitudes: SolicitudCombustibleRow[];
   canResolver: boolean;
   showAccionesColumn?: boolean;
+  showAcciones?: boolean;
   onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
   exportingId?: string | null;
   onExportExcel?: (row: SolicitudCombustibleRow) => void;
 }) {
+  const mostrarAcciones = showAccionesColumn ?? showAcciones ?? true;
   if (solicitudes.length === 0) {
     return (
       <GestionVehiculosTableEmpty
@@ -40,7 +43,7 @@ export function SolicitudesCombustibleCards({
           key={row.id}
           row={row}
           canResolver={canResolver}
-          showAcciones={showAccionesColumn}
+          showAcciones={mostrarAcciones}
           onResolver={onResolver}
           exporting={exportingId === row.id}
           onExportExcel={onExportExcel}

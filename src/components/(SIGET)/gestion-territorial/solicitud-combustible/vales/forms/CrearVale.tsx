@@ -52,8 +52,8 @@ export function CrearVale({
     watch,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<ValeLoteFormValues>({
-    resolver: zodResolver(valeLoteInputSchema) as never,
+  } = useForm<ValeLoteFormValues, unknown, ValeLoteInput>({
+    resolver: zodResolver(valeLoteInputSchema),
     defaultValues: { fondo: "OT" },
   });
 
