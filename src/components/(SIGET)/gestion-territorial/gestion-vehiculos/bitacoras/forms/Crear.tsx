@@ -39,8 +39,8 @@ import { type VehiculoRow } from "../../flota/lib/zod";
 import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
 import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
 import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
-import { devAutofillBitacoraInput } from "../../lib/dev-autofill";
-import { GvDevAutofillButton } from "../../lib/gv-dev-autofill-button";
+import { getCombustibleAprobadoPorMision } from "../lib/actions";
+import { combustibleAprobadoParaBitacora } from "../lib/combustible-mision";
 import {
   GvModalForm,
   GvModalFormBody,
@@ -133,6 +133,7 @@ export function Crear({
   const [pendingBitacora, setPendingBitacora] = useState<BitacoraInput | null>(null);
   const [averiaVehiculoId, setAveriaVehiculoId] = useState("");
   const [averiaVehiculoFijo, setAveriaVehiculoFijo] = useState<VehiculoAveriaFijo | null>(null);
+  const [combustibleMisionAviso, setCombustibleMisionAviso] = useState<string | null>(null);
   const prevFieldsLen = useRef(0);
 
   const selectedMisionId = watch("solicitud_id");
@@ -191,6 +192,7 @@ export function Crear({
       setAveriaVehiculoId("");
       setAveriaVehiculoFijo(null);
       setEditingIds(new Set());
+      setCombustibleMisionAviso(null);
       return;
     }
 
@@ -219,6 +221,55 @@ export function Crear({
       }
     }
   }, [selectedMisionId, misiones, setValue]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (!selectedMisionId) {
+      setCombustibleMisionAviso(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void getCombustibleAprobadoPorMision(selectedMisionId).then((row) => {
+      if (cancelled) return;
+
+      if (!row) {
+        setValue("vale_combustible", "", { shouldValidate: false });
+        setValue("monto_combustible", 0, { shouldValidate: false });
+        setCombustibleMisionAviso(
+          "No hay solicitud de combustible aprobada vinculada a esta misión. Puede registrar vale y monto manualmente.",
+        );
+        return;
+      }
+
+      const datos = combustibleAprobadoParaBitacora(row);
+      if (!datos) {
+        setCombustibleMisionAviso(
+          "La solicitud de combustible no tiene rango de cupones. Complete vale y monto manualmente.",
+        );
+        return;
+      }
+
+      setValue("vale_combustible", datos.vale, { shouldValidate: true });
+      setValue("monto_combustible", datos.monto, { shouldValidate: true });
+
+      if (datos.monto > 0) {
+        setCombustibleMisionAviso(
+          `${datos.cantidad} cupón(es) asignados a esta misión · vale ${datos.vale}`,
+        );
+      } else {
+        setCombustibleMisionAviso(
+          `Vale ${datos.vale} (${datos.cantidad} cupón(es)). Indique el monto total si la aprobación es anterior a registrar la denominación.`,
+        );
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedMisionId, setValue]);
 
   useEffect(() => {
     if (selectedVehiculoId && !selectedMisionId) {
@@ -313,26 +364,6 @@ export function Crear({
     onOpenChange(false);
   };
 
-  const handleAutofill = () => {
-    const mision = misiones.find((m) => m.id);
-    const vehiculo = vehiculos.find((v) => v.id);
-    const kmInicial = mision
-      ? kmDeMision(mision.ot_vehiculos)
-      : vehiculo?.kilometraje_actual ?? 12500;
-
-    reset(
-      devAutofillBitacoraInput({
-        misionId: mision?.id ?? "",
-        vehiculoId: mision?.vehiculo_id ?? vehiculo?.id ?? "",
-        kmInicial,
-      }),
-    );
-    if (user?.id) {
-      setValue("conductor_id", user.id);
-    }
-    toast.success("Bitácora rellenada automáticamente.");
-  };
-
   return (
     <>
       <GvModalShell
@@ -348,10 +379,6 @@ export function Crear({
         ) : open ? (
           <GvModalForm onSubmit={handleSubmit(onFormValidated)} className="w-full min-w-0">
             <GvModalFormBody className="space-y-4">
-              <div className="flex justify-center">
-                <GvDevAutofillButton onClick={handleAutofill} />
-              </div>
-
               <ModalField>
                 <ModalLabel htmlFor="solicitud_id">Misión a vincular (opcional)</ModalLabel>
                 <Controller
@@ -507,7 +534,11 @@ export function Crear({
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <ModalField>
                   <ModalLabel htmlFor="vale_combustible">Vale de combustible</ModalLabel>
-                  <ModalInput id="vale_combustible" {...register("vale_combustible")} />
+                  <ModalInput
+                    id="vale_combustible"
+                    placeholder="Ej. 15001 – 15050"
+                    {...register("vale_combustible")}
+                  />
                 </ModalField>
                 <ModalField>
                   <ModalLabel htmlFor="monto_combustible">Monto (Q.)</ModalLabel>
@@ -516,10 +547,14 @@ export function Crear({
                     type="number"
                     step="0.01"
                     className="tabular-nums"
+                    placeholder="Total cupones entregados"
                     {...register("monto_combustible")}
                   />
                 </ModalField>
               </div>
+              {combustibleMisionAviso ? (
+                <p className="text-xs text-muted-foreground">{combustibleMisionAviso}</p>
+              ) : null}
 
               <ModalField>
                 <ModalLabel>Comentarios del viaje</ModalLabel>

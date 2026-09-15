@@ -9,8 +9,10 @@ import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-for
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
+import type { CombustibleAprobadoMision } from "./combustible-mision";
 
 const TABLE = "ot_bitacoras";
+const SOLICITUD_COMBUSTIBLE_TABLE = "ot_solicitud_combustible";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
@@ -216,6 +218,58 @@ export async function getSolicitudesEnMision() {
   } catch (error) {
     console.error("Error fetching solicitudes activas:", error);
     return [];
+  }
+}
+
+export async function getCombustibleAprobadoPorMision(
+  solicitudVehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = solicitudVehiculoId.trim();
+  if (!id) return null;
+
+  try {
+    const { supabase } = await requireAuth();
+
+    const { data, error } = await supabase
+      .from(SOLICITUD_COMBUSTIBLE_TABLE)
+      .select("cupon_del, cupon_al, denominacion_cupon")
+      .eq("solicitud_vehiculo_id", id)
+      .eq("estado", "APROBADO")
+      .order("fecha_aprobacion", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error?.message?.includes("denominacion_cupon")) {
+      const { data: legacy, error: legacyError } = await supabase
+        .from(SOLICITUD_COMBUSTIBLE_TABLE)
+        .select("cupon_del, cupon_al")
+        .eq("solicitud_vehiculo_id", id)
+        .eq("estado", "APROBADO")
+        .order("fecha_aprobacion", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (legacyError || !legacy) return null;
+      return {
+        cupon_del: legacy.cupon_del as number,
+        cupon_al: legacy.cupon_al as number,
+        denominacion_cupon: null,
+      };
+    }
+
+    if (error || !data) return null;
+
+    if (data.cupon_del == null || data.cupon_al == null) return null;
+
+    return {
+      cupon_del: Number(data.cupon_del),
+      cupon_al: Number(data.cupon_al),
+      denominacion_cupon:
+        data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
+    };
+  } catch (error) {
+    console.error("getCombustibleAprobadoPorMision:", error);
+    return null;
   }
 }
 

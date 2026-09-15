@@ -95,7 +95,11 @@ export function GvMobileRecordFooter({
       <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {left}
       </div>
-      {right ? <div className="flex shrink-0 items-center gap-1.5">{right}</div> : null}
+      {right ? (
+        <div className="flex max-w-[65%] shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {right}
+        </div>
+      ) : null}
     </div>
   );
 }

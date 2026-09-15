@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GV_QUERY_OPTIONS, shareInflight } from "../../../gestion-vehiculos/lib/query";
-import { REQUISICIONES_COMBUSTIBLE_KEY } from "../../requisiciones/lib/hooks";
+import { VALES_COMBUSTIBLE_KEY } from "../../vales/lib/hooks";
 import {
   createSolicitudCombustible,
   getSolicitudesCombustible,
@@ -51,7 +51,7 @@ export function useResolverSolicitudCombustible() {
       await Promise.all([
         qc.refetchQueries({ queryKey: SOLICITUDES_COMBUSTIBLE_KEY, type: "all" }),
         variables.input.accion === "APROBAR"
-          ? qc.refetchQueries({ queryKey: REQUISICIONES_COMBUSTIBLE_KEY, type: "all" })
+          ? qc.refetchQueries({ queryKey: VALES_COMBUSTIBLE_KEY, type: "all" })
           : Promise.resolve(),
       ]);
       invalidate();

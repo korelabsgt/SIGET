@@ -11,6 +11,7 @@ import {
   Trash,
   Trash2,
   Image,
+  Images,
 } from "lucide";
 import { AlertTriangle, Car, Route } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
@@ -76,6 +77,7 @@ export function VehiculoCard({
   const vencSeguro = checkVencimiento(vehiculo.vencimiento_seguro);
   const vencCirculacion = checkVencimiento(vehiculo.vencimiento_circulacion);
   const tieneAlerta = Boolean(vencSeguro || vencCirculacion);
+  const mostrarMenu = canManage || canDelete;
 
   return (
     <GvMobileRecordRow>
@@ -130,71 +132,78 @@ export function VehiculoCard({
         }
         right={
           <>
-            {canManage ? (
-              <GvSigetActionButton
-                label="Editar"
-                accentColor={sigetAccent.editar}
-                morphFrom={PenSquare}
-                morphTo={Pencil}
-                onClick={onEdit}
-                ariaLabel={`Editar ${vehiculo.placa}`}
-                className="h-8 w-auto shrink-0 rounded-lg px-3"
-              />
-            ) : null}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
-                  aria-label={`Más acciones de ${vehiculo.placa}`}
-                >
-                  <GvMorphIcon
-                    icon={EllipsisVertical}
-                    hoverIcon={MoreVertical}
-                    size={16}
-                    className="text-current"
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
-              >
-                {canManage ? (
-                  <DropdownMenuItem
-                    className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
-                    onSelect={onExportExcel}
-                    disabled={exporting}
+            <GvSigetActionButton
+              label="Fotos"
+              accentColor={sigetAccent.abrir}
+              morphFrom={Image}
+              morphTo={Images}
+              onClick={onOpenGaleria}
+              ariaLabel={`Ver fotos de ${vehiculo.placa}`}
+              className="h-8 w-auto shrink-0 rounded-lg px-3"
+            />
+            {mostrarMenu ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-sky-100 text-azul-trifinio transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900"
+                    aria-label={`Más acciones de ${vehiculo.placa}`}
                   >
                     <GvMorphIcon
-                      icon={FileSpreadsheet}
-                      hoverIcon={ArrowDownToLine}
-                      size={14}
+                      icon={EllipsisVertical}
+                      hoverIcon={MoreVertical}
+                      size={16}
                       className="text-current"
                     />
-                    Excel
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
-                  onSelect={onOpenGaleria}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="z-[200] min-w-[10rem] rounded-xl border border-border bg-white p-1 text-foreground opacity-100 shadow-lg dark:bg-zinc-900"
                 >
-                  <GvMorphIcon icon={Image} hoverIcon={Image} size={14} morphOnHover={false} className="text-current" />
-                  Fotos
-                </DropdownMenuItem>
-                {canDelete ? (
-                  <DropdownMenuItem
-                    className={cn(
-                      "cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60",
-                    )}
-                    onSelect={onDelete}
-                  >
-                    <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
-                    Eliminar
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {canManage ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                      onSelect={onExportExcel}
+                      disabled={exporting}
+                    >
+                      <GvMorphIcon
+                        icon={FileSpreadsheet}
+                        hoverIcon={ArrowDownToLine}
+                        size={14}
+                        className="text-current"
+                      />
+                      Excel
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canManage ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 bg-white text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800"
+                      onSelect={onEdit}
+                    >
+                      <GvMorphIcon
+                        icon={PenSquare}
+                        hoverIcon={Pencil}
+                        size={14}
+                        className="text-current"
+                      />
+                      Editar
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canDelete ? (
+                    <DropdownMenuItem
+                      className={cn(
+                        "cursor-pointer gap-2 bg-white text-red-600 focus:bg-red-50 focus:text-red-600 dark:bg-zinc-900 dark:text-red-400 dark:focus:bg-red-950/60",
+                      )}
+                      onSelect={onDelete}
+                    >
+                      <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={14} className="text-current" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </>
         }
       />

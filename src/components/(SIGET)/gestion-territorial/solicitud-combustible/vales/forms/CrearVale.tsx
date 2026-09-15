@@ -28,12 +28,13 @@ import {
 
 import {
   FONDOS_COMBUSTIBLE,
-  requisicionInputSchema,
-  type RequisicionInput,
+  valeLoteInputSchema,
+  type ValeLoteFormValues,
+  type ValeLoteInput,
 } from "../lib/zod";
-import { useCrearRequisicionCombustible } from "../lib/hooks";
+import { useCrearValeCombustible } from "../lib/hooks";
 
-export function CrearRequisicion({
+export function CrearVale({
   open,
   onOpenChange,
   onSaved,
@@ -42,7 +43,7 @@ export function CrearRequisicion({
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
 }) {
-  const crear = useCrearRequisicionCombustible();
+  const crear = useCrearValeCombustible();
 
   const {
     register,
@@ -51,53 +52,30 @@ export function CrearRequisicion({
     watch,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<RequisicionInput>({
-    resolver: zodResolver(requisicionInputSchema) as never,
-    defaultValues: {
-      cantidad: 10,
-      denominacion: 100,
-      cupon_del: 1,
-      cupon_al: 10,
-      fondo: "OT",
-    },
+  } = useForm<ValeLoteFormValues>({
+    resolver: zodResolver(valeLoteInputSchema) as never,
+    defaultValues: { fondo: "OT" },
   });
-
-  const cuponDel = watch("cupon_del");
-  const cuponAl = watch("cupon_al");
 
   useEffect(() => {
     if (!open) return;
-    reset({
-      cantidad: 10,
-      denominacion: 100,
-      cupon_del: 1,
-      cupon_al: 10,
-      fondo: "OT",
-    });
+    reset({ fondo: "OT" });
   }, [open, reset]);
-
-  useEffect(() => {
-    const del = Number(cuponDel) || 0;
-    const al = Number(cuponAl) || 0;
-    if (del > 0 && al >= del) {
-      setValue("cantidad", al - del + 1, { shouldValidate: true });
-    }
-  }, [cuponDel, cuponAl, setValue]);
 
   const onClose = () => onOpenChange(false);
 
-  const onSubmit = async (data: RequisicionInput) => {
+  const onSubmit = async (data: ValeLoteInput) => {
     try {
       const res = await crear.mutateAsync(data);
       if (!res.success) {
         toast.error(res.error);
         return;
       }
-      toast.success("Requisición registrada");
+      toast.success("Lote de vales registrado");
       onSaved?.();
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo registrar la requisición");
+      toast.error(error instanceof Error ? error.message : "No se pudo registrar el lote");
     }
   };
 
@@ -105,8 +83,8 @@ export function CrearRequisicion({
     <GvModalShell
       open={open}
       onClose={onClose}
-      title="Registrar requisición de cupones"
-      subtitle="Lote o talonario de vales de combustible"
+      title="Registrar lote de vales"
+      subtitle="Inventario de cupones por fondo y denominación"
       maxWidth="max-w-lg"
     >
       {open ? (
@@ -117,7 +95,7 @@ export function CrearRequisicion({
               <Select
                 value={watch("fondo")}
                 onValueChange={(value) =>
-                  setValue("fondo", value as RequisicionInput["fondo"], {
+                  setValue("fondo", value as ValeLoteFormValues["fondo"], {
                     shouldValidate: true,
                   })
                 }
@@ -137,7 +115,16 @@ export function CrearRequisicion({
 
             <div className="space-y-2">
               <Label htmlFor="denominacion">Denominación (Q.)</Label>
-              <Input id="denominacion" type="number" step="0.01" {...register("denominacion")} />
+              <Input
+                id="denominacion"
+                type="number"
+                step="0.01"
+                placeholder="Ej. 100.00"
+                {...register("denominacion")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Valor en quetzales de cada cupón del talonario (ej. Q. 100.00).
+              </p>
               {errors.denominacion ? (
                 <p className="text-xs text-red-500">{errors.denominacion.message}</p>
               ) : null}
@@ -146,27 +133,33 @@ export function CrearRequisicion({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="cupon_del">Cupón del</Label>
-                <Input id="cupon_del" type="number" {...register("cupon_del")} />
+                <Input
+                  id="cupon_del"
+                  type="number"
+                  placeholder="Ej. 15001"
+                  {...register("cupon_del")}
+                />
                 {errors.cupon_del ? (
                   <p className="text-xs text-red-500">{errors.cupon_del.message}</p>
                 ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cupon_al">Cupón al</Label>
-                <Input id="cupon_al" type="number" {...register("cupon_al")} />
+                <Input
+                  id="cupon_al"
+                  type="number"
+                  placeholder="Ej. 15050"
+                  {...register("cupon_al")}
+                />
                 {errors.cupon_al ? (
                   <p className="text-xs text-red-500">{errors.cupon_al.message}</p>
                 ) : null}
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cantidad">Cantidad de cupones</Label>
-              <Input id="cantidad" type="number" readOnly {...register("cantidad")} />
-              {errors.cantidad ? (
-                <p className="text-xs text-red-500">{errors.cantidad.message}</p>
-              ) : null}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Numeración del primer y último cupón físico del lote. La cantidad de cupones se calcula
+              sola (ej. del 15001 al 15050 = 50 cupones).
+            </p>
           </GvModalFormBody>
 
           <GvModalFooter>
@@ -178,3 +171,4 @@ export function CrearRequisicion({
     </GvModalShell>
   );
 }
+

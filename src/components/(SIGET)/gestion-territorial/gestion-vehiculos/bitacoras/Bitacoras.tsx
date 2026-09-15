@@ -202,7 +202,7 @@ export function Bitacoras() {
                 />
               </div>
 
-              <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-end gap-2 sm:w-auto">
+              <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-end gap-1 sm:w-auto">
                 <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
                   <SelectTrigger
                     className={cn(

@@ -1,8 +1,7 @@
 "use client";
 
-import { Fuel } from "lucide-react";
-import { Trash, Trash2 } from "lucide";
-import { toast } from "react-toastify";
+import { FileText } from "lucide-react";
+import { ArrowDownToLine, FileSpreadsheet } from "lucide";
 
 import {
   GestionVehiculosTable,
@@ -15,84 +14,74 @@ import {
 import { GvTableMorphRow } from "../../gestion-vehiculos/lib/gv-table-morph-row";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
 
-import type { RequisicionRow } from "./lib/zod";
+import type { SolicitudCombustibleRow } from "../solicitudes/lib/zod";
 import {
-  formatDenominacion,
-  formatFondoLabel,
-  formatRangoCupones,
-  formatRequisicionFecha,
-} from "./lib/helpers";
-import { useEliminarRequisicionCombustible } from "./lib/hooks";
+  cantidadCuponesSolicitud,
+  formatCuponesAsignados,
+  formatEntreganteNombre,
+  formatFechaAprobacionCombustible,
+  formatSolicitanteNombre,
+  formatVehiculoSolicitudCombustible,
+} from "../solicitudes/lib/helpers";
 
 function RequisicionRowItem({
   row,
-  canDelete,
+  exporting,
+  onExportExcel,
 }: {
-  row: RequisicionRow;
-  canDelete: boolean;
+  row: SolicitudCombustibleRow;
+  exporting: boolean;
+  onExportExcel: (row: SolicitudCombustibleRow) => void;
 }) {
-  const eliminar = useEliminarRequisicionCombustible();
-
-  const handleDelete = async () => {
-    const res = await eliminar.mutateAsync(row.id);
-    if (!res.success) {
-      toast.error(res.error);
-      return;
-    }
-    toast.success("Requisición eliminada");
-  };
+  const cantidad = cantidadCuponesSolicitud(row);
 
   return (
     <GvTableMorphRow>
-      <td className="px-4 py-3 align-middle text-sm font-semibold">{formatFondoLabel(row.fondo)}</td>
       <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {formatDenominacion(row.denominacion)}
+        {formatFechaAprobacionCombustible(row.fecha_aprobacion)}
       </td>
+      <td className="px-4 py-3 align-middle text-sm font-semibold">
+        {formatVehiculoSolicitudCombustible(row)}
+      </td>
+      <td className="px-4 py-3 align-middle text-sm">{formatSolicitanteNombre(row)}</td>
+      <td className="px-4 py-3 align-middle text-sm">{formatEntreganteNombre(row)}</td>
       <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {formatRangoCupones(row.cupon_del, row.cupon_al)}
+        {formatCuponesAsignados(row)}
       </td>
-      <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {row.disponibles} / {row.cantidad}
+      <td className="px-4 py-3 align-middle text-sm tabular-nums">{cantidad > 0 ? cantidad : "—"}</td>
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <GvSigetActionButton
+            label="Excel"
+            accentColor={sigetAccent.excel}
+            morphFrom={FileSpreadsheet}
+            morphTo={ArrowDownToLine}
+            onClick={() => onExportExcel(row)}
+            disabled={exporting}
+            ariaLabel="Descargar requisición en Excel"
+            className="w-auto shrink-0"
+          />
+        </GestionVehiculosActionCell>
       </td>
-      <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {row.ultimo_entregado ?? "—"}
-      </td>
-      <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {formatRequisicionFecha(row.created_at)}
-      </td>
-      {canDelete ? (
-        <td className={gvTableActionTdClass}>
-          <GestionVehiculosActionCell>
-            <GvSigetActionButton
-              label="Quitar"
-              accentColor={sigetAccent.quitar}
-              morphFrom={Trash2}
-              morphTo={Trash}
-              onClick={() => void handleDelete()}
-              disabled={eliminar.isPending}
-              ariaLabel="Eliminar requisición"
-              className="w-auto shrink-0"
-            />
-          </GestionVehiculosActionCell>
-        </td>
-      ) : null}
     </GvTableMorphRow>
   );
 }
 
 export function RequisicionesList({
   requisiciones,
-  canDelete,
+  exportingId = null,
+  onExportExcel,
 }: {
-  requisiciones: RequisicionRow[];
-  canDelete: boolean;
+  requisiciones: SolicitudCombustibleRow[];
+  exportingId?: string | null;
+  onExportExcel: (row: SolicitudCombustibleRow) => void;
 }) {
   if (requisiciones.length === 0) {
     return (
       <GestionVehiculosTableEmpty
-        icon={<Fuel className="size-10" strokeWidth={1.75} />}
+        icon={<FileText className="size-10" strokeWidth={1.75} />}
         title="Sin requisiciones"
-        description="Registre un lote de cupones para comenzar a aprobar solicitudes."
+        description="Apruebe una solicitud de combustible para generar la requisición oficial."
       />
     );
   }
@@ -101,20 +90,23 @@ export function RequisicionesList({
     <GestionVehiculosTable>
       <GestionVehiculosThead
         cells={[
-          { key: "fondo", label: "Fondo" },
-          { key: "denominacion", label: "Denominación" },
-          { key: "rango", label: "Rango" },
-          { key: "disponibles", label: "Disponibles" },
-          { key: "ultimo", label: "Último entregado" },
-          { key: "registro", label: "Registro" },
-          ...(canDelete
-            ? [{ key: "acciones", label: "Acciones", className: gvTableActionThClass }]
-            : []),
+          { key: "fecha", label: "Fecha aprobación" },
+          { key: "vehiculo", label: "Vehículo" },
+          { key: "solicitante", label: "Solicitante" },
+          { key: "entregante", label: "Entregado por" },
+          { key: "cupones", label: "Cupones (del – al)" },
+          { key: "cantidad", label: "Cantidad" },
+          { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}
       />
       <tbody>
         {requisiciones.map((row) => (
-          <RequisicionRowItem key={row.id} row={row} canDelete={canDelete} />
+          <RequisicionRowItem
+            key={row.id}
+            row={row}
+            exporting={exportingId === row.id}
+            onExportExcel={onExportExcel}
+          />
         ))}
       </tbody>
     </GestionVehiculosTable>

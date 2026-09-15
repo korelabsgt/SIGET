@@ -1,7 +1,7 @@
 "use client";
 
 import { Fuel } from "lucide-react";
-import { Ban, Check } from "lucide";
+import { ArrowRight, Eye } from "lucide";
 
 import {
   GestionVehiculosTable,
@@ -20,30 +20,58 @@ import {
   formatCuponesAsignados,
   formatEstadoSolicitudCombustible,
   formatFechaSolicitudCombustible,
-  formatSolicitanteNombre,
-  formatVehiculoSolicitudCombustible,
+  formatMisionVinculadaCombustible,
 } from "./lib/helpers";
 
 function SolicitudCombustibleRowItem({
   row,
-  canResolver,
-  onResolver,
+  onDetail,
 }: {
   row: SolicitudCombustibleRow;
-  canResolver: boolean;
-  onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
+  onDetail: (row: SolicitudCombustibleRow) => void;
 }) {
-  const pendiente = row.estado === "PENDIENTE";
+  const vehiculo = row.vehiculo;
+  const mision = formatMisionVinculadaCombustible(row);
+  const solicitanteNombre = row.solicitante?.nombre?.trim() || "Desconocido";
+  const solicitanteEmail = row.solicitante?.email?.trim();
 
   return (
     <GvTableMorphRow>
-      <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {formatFechaSolicitudCombustible(row.fecha_solicitud)}
+      <td className="px-4 py-3 align-middle">
+        <p className="text-sm font-bold tabular-nums text-foreground">
+          {formatFechaSolicitudCombustible(row.fecha_solicitud)}
+        </p>
       </td>
-      <td className="px-4 py-3 align-middle text-sm font-semibold">
-        {formatVehiculoSolicitudCombustible(row)}
+      <td className="px-4 py-3 align-middle">
+        {vehiculo ? (
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {vehiculo.marca} {vehiculo.modelo}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{vehiculo.placa}</p>
+          </div>
+        ) : (
+          <span className="text-xs italic text-muted-foreground">Sin vehículo</span>
+        )}
       </td>
-      <td className="px-4 py-3 align-middle text-sm">{formatSolicitanteNombre(row)}</td>
+      <td className="px-4 py-3 align-middle">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{mision === "—" ? "Sin misión" : mision}</p>
+          {row.solicitud_vehiculo?.fecha_inicio ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {formatFechaSolicitudCombustible(row.solicitud_vehiculo.fecha_inicio)}
+            </p>
+          ) : null}
+        </div>
+      </td>
+      <td className="px-4 py-3 align-middle">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-foreground">{solicitanteNombre}</p>
+          {solicitanteEmail ? (
+            <p className="truncate text-xs text-muted-foreground">{solicitanteEmail}</p>
+          ) : null}
+        </div>
+      </td>
       <td className="whitespace-nowrap px-4 py-3 align-middle">
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoBadgeClassCombustible(row.estado)}`}
@@ -51,54 +79,41 @@ function SolicitudCombustibleRowItem({
           {formatEstadoSolicitudCombustible(row.estado)}
         </span>
       </td>
-      <td className="px-4 py-3 align-middle text-sm tabular-nums">
-        {formatCuponesAsignados(row)}
+      <td className="px-4 py-3 align-middle">
+        <p className="text-sm font-semibold tabular-nums text-foreground">
+          {formatCuponesAsignados(row)}
+        </p>
       </td>
-      {canResolver ? (
-        <td className={gvTableActionTdClass}>
-          {pendiente ? (
-            <GestionVehiculosActionCell>
-              <GvSigetActionButton
-                label="Aprobar"
-                accentColor={sigetAccent.guardar}
-                morphFrom={Check}
-                morphTo={Check}
-                onClick={() => onResolver(row, "APROBAR")}
-                ariaLabel="Aprobar solicitud"
-                className="w-auto shrink-0"
-              />
-              <GvSigetActionButton
-                label="Rechazar"
-                accentColor={sigetAccent.quitar}
-                morphFrom={Ban}
-                morphTo={Ban}
-                onClick={() => onResolver(row, "RECHAZAR")}
-                ariaLabel="Rechazar solicitud"
-                className="w-auto shrink-0"
-              />
-            </GestionVehiculosActionCell>
-          ) : null}
-        </td>
-      ) : null}
+      <td className={gvTableActionTdClass}>
+        <GestionVehiculosActionCell>
+          <GvSigetActionButton
+            label="Ver"
+            accentColor={sigetAccent.abrir}
+            morphFrom={Eye}
+            morphTo={ArrowRight}
+            onClick={() => onDetail(row)}
+            ariaLabel="Ver solicitud de combustible"
+            className="w-auto shrink-0"
+          />
+        </GestionVehiculosActionCell>
+      </td>
     </GvTableMorphRow>
   );
 }
 
 export function SolicitudesCombustibleList({
   solicitudes,
-  canResolver,
-  onResolver,
+  onDetail,
 }: {
   solicitudes: SolicitudCombustibleRow[];
-  canResolver: boolean;
-  onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
+  onDetail: (row: SolicitudCombustibleRow) => void;
 }) {
   if (solicitudes.length === 0) {
     return (
       <GestionVehiculosTableEmpty
         icon={<Fuel className="size-10" strokeWidth={1.75} />}
         title="Sin solicitudes"
-        description="Aún no hay solicitudes de combustible registradas."
+        description="No se encontraron solicitudes en este filtro."
       />
     );
   }
@@ -109,22 +124,16 @@ export function SolicitudesCombustibleList({
         cells={[
           { key: "fecha", label: "Fecha" },
           { key: "vehiculo", label: "Vehículo" },
+          { key: "mision", label: "Misión vinculada" },
           { key: "solicitante", label: "Solicitante" },
           { key: "estado", label: "Estado" },
           { key: "cupones", label: "Cupones" },
-          ...(canResolver
-            ? [{ key: "acciones", label: "Acciones", className: gvTableActionThClass }]
-            : []),
+          { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}
       />
       <tbody>
         {solicitudes.map((row) => (
-          <SolicitudCombustibleRowItem
-            key={row.id}
-            row={row}
-            canResolver={canResolver}
-            onResolver={onResolver}
-          />
+          <SolicitudCombustibleRowItem key={row.id} row={row} onDetail={onDetail} />
         ))}
       </tbody>
     </GestionVehiculosTable>

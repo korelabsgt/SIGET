@@ -6,6 +6,12 @@ export type EstadoSolicitudCombustible = (typeof ESTADOS_SOLICITUD_COMBUSTIBLE)[
 
 export const solicitudCombustibleInputSchema = z.object({
   vehiculo_id: z.string().uuid("Seleccione un vehículo"),
+  solicitud_vehiculo_id: z
+    .string()
+    .uuid("Solicitud de vehículo inválida")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   comentarios: z.string().trim().max(2000).optional().nullable(),
 });
 
@@ -39,11 +45,22 @@ export const resolverSolicitudCombustibleSchema = z
 
 export type ResolverSolicitudCombustibleInput = z.infer<typeof resolverSolicitudCombustibleSchema>;
 
+export type SolicitudCombustibleVehiculoVinculo = {
+  id: string;
+  destino: string;
+  fecha_inicio: string;
+  fecha_fin_estimada: string;
+  estado: string;
+  vehiculo_id: string | null;
+};
+
 export type SolicitudCombustibleRow = {
   id: string;
   vehiculo_id: string;
+  solicitud_vehiculo_id: string | null;
   cupon_del: number | null;
   cupon_al: number | null;
+  denominacion_cupon: number | null;
   solicitante_id: string;
   entregante_id: string | null;
   estado: EstadoSolicitudCombustible;
@@ -68,4 +85,5 @@ export type SolicitudCombustibleRow = {
     nombre: string | null;
     email: string | null;
   } | null;
+  solicitud_vehiculo?: SolicitudCombustibleVehiculoVinculo | null;
 };

@@ -73,13 +73,20 @@ CREATE TABLE IF NOT EXISTS ot_solicitud_combustible (
     fecha_solicitud TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     fecha_aprobacion TIMESTAMPTZ,
     url_comprobante TEXT,
+    solicitud_vehiculo_id UUID REFERENCES ot_solicitudes(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT chk_ot_sol_rango CHECK (cupon_al IS NULL OR cupon_del IS NULL OR cupon_al >= cupon_del)
 );
 
+ALTER TABLE ot_solicitud_combustible
+    ADD COLUMN IF NOT EXISTS solicitud_vehiculo_id UUID REFERENCES ot_solicitudes(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_ot_solicitud_vehiculo
     ON ot_solicitud_combustible(vehiculo_id);
+
+CREATE INDEX IF NOT EXISTS idx_ot_solicitud_combustible_solicitud_vehiculo
+    ON ot_solicitud_combustible(solicitud_vehiculo_id);
 
 CREATE INDEX IF NOT EXISTS idx_ot_solicitud_estado
     ON ot_solicitud_combustible(estado);

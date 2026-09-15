@@ -15,8 +15,6 @@ import { GV_PANEL_STACK_CLASS, GV_TABLE_AREA_CLASS } from "./lib/page-shell";
 import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
 import { useGvDetailScrollToTop } from "./lib/scroll-detail-to-top";
 import { cn } from "@/lib/utils";
-import { GvModuleDevTools } from "./lib/gv-module-dev-tools";
-
 function PanelFallback() {
   return (
     <div className="flex min-h-[40vh] flex-1 items-center justify-center">
@@ -133,7 +131,6 @@ function GestionVehiculosShellInner() {
               )}
             </div>
           </div>
-          <GvModuleDevTools />
         </div>
       </GvPageChromeProvider>
     </GvSectionProvider>

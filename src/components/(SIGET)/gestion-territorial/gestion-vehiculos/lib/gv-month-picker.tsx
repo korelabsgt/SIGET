@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale/es";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, CalendarDays } from "lucide";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { mesCalendarioGt, normalizarMesCalendario } from "@/lib/fechas-gt";
 import { GV_FILTRO_FIELD_CLASS } from "./gv-header-ui";
+import { GvMorphIcon } from "./morph-icon";
 
 const MESES_CORTOS = [
   "Ene",
@@ -71,6 +73,7 @@ export function GvMonthPicker({
       <PopoverTrigger asChild>
         <button
           type="button"
+          data-morph-hover-scope
           className={cn(
             GV_FILTRO_FIELD_CLASS,
             "inline-flex h-11 w-[10.5rem] shrink-0 cursor-pointer items-center justify-between gap-2 px-3 text-left capitalize",
@@ -78,7 +81,12 @@ export function GvMonthPicker({
           )}
         >
           <span className="truncate text-sm font-semibold">{label}</span>
-          <CalendarIcon className="size-4 shrink-0 text-celeste-trifinio" />
+          <GvMorphIcon
+            icon={Calendar}
+            hoverIcon={CalendarDays}
+            size={16}
+            className="text-celeste-trifinio"
+          />
         </button>
       </PopoverTrigger>
 

@@ -1,35 +1,56 @@
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import type { RequisicionRow } from "./zod";
+import { registroEnPeriodoCalendario } from "../../../gestion-vehiculos/lib/periodo-filtro";
+import type { SolicitudCombustibleRow } from "../../solicitudes/lib/zod";
 
-export function formatFondoLabel(fondo: string): string {
-  return fondo.trim().toUpperCase();
+export const TODOS_VEHICULOS_REQUISICION = "__todos__";
+
+function pasaFiltroVehiculoCombustible(
+  row: SolicitudCombustibleRow,
+  vehiculoFilter: string,
+): boolean {
+  if (vehiculoFilter === TODOS_VEHICULOS_REQUISICION) return true;
+  return row.vehiculo_id === vehiculoFilter;
 }
 
-export function formatDenominacion(value: number): string {
-  return `Q. ${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+export function filtrarSolicitudesCombustible(
+  solicitudes: SolicitudCombustibleRow[],
+  periodoFilter: string,
+  vehiculoFilter: string,
+): SolicitudCombustibleRow[] {
+  return solicitudes.filter((row) => {
+    if (!registroEnPeriodoCalendario(row.fecha_solicitud, periodoFilter)) return false;
+    return pasaFiltroVehiculoCombustible(row, vehiculoFilter);
+  });
 }
 
-export function formatRangoCupones(cuponDel: number, cuponAl: number): string {
-  return cuponDel === cuponAl ? String(cuponDel) : `${cuponDel} – ${cuponAl}`;
+export function vehiculosEnRequisiciones(rows: SolicitudCombustibleRow[]) {
+  const map = new Map<
+    string,
+    NonNullable<SolicitudCombustibleRow["vehiculo"]> & { id: string }
+  >();
+  for (const row of rows) {
+    const vehiculo = row.vehiculo;
+    if (vehiculo?.id) {
+      map.set(vehiculo.id, vehiculo);
+    }
+  }
+  return [...map.values()].sort((a, b) => a.placa.localeCompare(b.placa, "es"));
 }
 
-export function formatRequisicionResumen(row: RequisicionRow): string {
-  return `${formatFondoLabel(row.fondo)} · ${formatDenominacion(row.denominacion)} · ${formatRangoCupones(row.cupon_del, row.cupon_al)}`;
-}
-
-export function formatRequisicionFecha(value: string): string {
-  return format(new Date(value), "dd/MM/yyyy", { locale: es });
-}
-
-export function cuponesDisponiblesRequisicion(row: RequisicionRow): number {
-  return Math.max(0, row.disponibles);
-}
-
-export function proximoCuponDisponible(row: RequisicionRow): number | null {
-  if (row.disponibles <= 0) return null;
-  return (row.ultimo_entregado ?? row.cupon_del - 1) + 1;
+export function filtrarRequisicionesCombustible(
+  solicitudes: SolicitudCombustibleRow[],
+  vehiculoFilter: string,
+  periodoFilter: string,
+): SolicitudCombustibleRow[] {
+  return solicitudes
+    .filter((row) => row.estado === "APROBADO")
+    .filter((row) => {
+      const fecha = row.fecha_aprobacion ?? row.fecha_solicitud;
+      return registroEnPeriodoCalendario(fecha, periodoFilter);
+    })
+    .filter((row) => pasaFiltroVehiculoCombustible(row, vehiculoFilter))
+    .sort((a, b) => {
+      const ta = a.fecha_aprobacion ? new Date(a.fecha_aprobacion).getTime() : 0;
+      const tb = b.fecha_aprobacion ? new Date(b.fecha_aprobacion).getTime() : 0;
+      return tb - ta;
+    });
 }

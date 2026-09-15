@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
@@ -244,7 +245,8 @@ export async function cambiarEstadoSolicitud(
       updateData.vehiculo_id = payload.vehiculo_id;
     }
 
-    const { data, error } = await supabase
+    const admin = createAdminClient();
+    const { data, error } = await admin
       .from(TABLE)
       .update(updateData)
       .eq("id", id)
@@ -252,8 +254,25 @@ export async function cambiarEstadoSolicitud(
       .single();
 
     if (error) {
+      console.error("Error cambiarEstadoSolicitud update:", error);
       if (error.code === "23P01" || error.message?.includes("no_empalmes")) {
-         return { success: false, error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas." };
+        return {
+          success: false,
+          error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas.",
+        };
+      }
+      if (error.code === "23503") {
+        return {
+          success: false,
+          error: "No se pudo registrar la aprobación (referencia de usuario o vehículo inválida).",
+        };
+      }
+      if (error.code === "42P01" && error.message?.includes("ter_vehiculos")) {
+        return {
+          success: false,
+          error:
+            "La base de datos tiene un trigger antiguo (ter_vehiculos). Ejecute en Supabase el script db/migrations/ot_fix_legacy_ter_table_names_in_functions.sql y vuelva a intentar.",
+        };
       }
       return { success: false, error: "No se pudo actualizar el estado de la solicitud." };
     }
@@ -263,7 +282,7 @@ export async function cambiarEstadoSolicitud(
     if (data.vehiculo_id) vehiculosAfectados.add(data.vehiculo_id);
 
     for (const vehiculoId of vehiculosAfectados) {
-      await sincronizarEstadoFlotaVehiculo(supabase, vehiculoId);
+      await sincronizarEstadoFlotaVehiculo(admin, vehiculoId);
     }
 
     revalidatePath(REVALIDATE_ROUTE);

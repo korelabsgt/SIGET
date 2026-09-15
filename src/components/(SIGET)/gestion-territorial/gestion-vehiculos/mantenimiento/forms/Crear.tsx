@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { GV_DANGER_OUTLINE_BUTTON_CLASS } from "../../lib/gv-danger-ui";
 import { ReportarAveriaModal } from "./ReportarAveriaModal";
 
-export function Crear() {
+export function Crear({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -13,7 +14,7 @@ export function Crear() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={GV_DANGER_OUTLINE_BUTTON_CLASS}
+        className={cn(GV_DANGER_OUTLINE_BUTTON_CLASS, compact && "px-3")}
       >
         <AlertTriangle className="h-4 w-4 shrink-0" />
         <span className="lg:hidden">Avería</span>

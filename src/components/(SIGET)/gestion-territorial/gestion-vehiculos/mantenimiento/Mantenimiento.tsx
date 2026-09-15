@@ -25,7 +25,6 @@ import {
   GV_TABLE_TOOLBAR_PRIMARY_CLASS,
   GV_TABLE_TOOLBAR_ROW_CLASS,
   GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
-  GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS,
 } from "../lib/gv-header-ui";
 import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -177,9 +176,16 @@ export function Mantenimiento() {
     }
   };
 
+  const vehiculoFiltroTriggerClass = cn(
+    filtroTriggerClass,
+    canViewAll
+      ? "w-full min-w-0 max-w-none lg:min-w-[12rem] lg:max-w-[min(26rem,32vw)]"
+      : "w-full min-w-0 max-w-none lg:!w-auto lg:min-w-[8.75rem] lg:max-w-[10.5rem] shrink-0",
+  );
+
   const vehiculoSelect = (
     <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-      <SelectTrigger className={filtroTriggerClass}>
+      <SelectTrigger className={vehiculoFiltroTriggerClass}>
         <SelectValue
           placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
         />
@@ -250,7 +256,9 @@ export function Mantenimiento() {
                   }))}
                 />
 
-                <div className="w-full lg:hidden">{vehiculoSelect}</div>
+                <div className="w-full min-w-0 lg:hidden [&_[data-slot=select-trigger]]:w-full">
+                  {vehiculoSelect}
+                </div>
 
                 <GvMonthPicker
                   value={periodoFilter}
@@ -259,14 +267,21 @@ export function Mantenimiento() {
                 />
               </div>
 
-              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "shrink-0 flex-nowrap gap-1.5")}>
-                <div className={GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS}>
-                  <div className="hidden lg:block">{vehiculoSelect}</div>
-                </div>
+              <div
+                className={cn(
+                  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+                  "shrink-0 flex-nowrap",
+                  !canExport && "w-full gap-0.5 lg:!w-auto",
+                )}
+              >
+                <div className="hidden w-auto shrink-0 lg:block">{vehiculoSelect}</div>
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
-                  className="hidden shrink-0 lg:inline-flex"
+                  className={cn(
+                    "hidden shrink-0 lg:inline-flex",
+                    canExport ? "!w-[10.5rem]" : "!w-[9.75rem]",
+                  )}
                 />
                 {canExport ? (
                   <GvExportReporteButton
@@ -275,7 +290,7 @@ export function Mantenimiento() {
                     loading={isExporting}
                   />
                 ) : null}
-                <Crear />
+                <Crear compact={!canExport} />
               </div>
             </div>
           }

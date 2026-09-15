@@ -44,8 +44,6 @@ import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
 } from "../../lib/storage-hooks";
-import { devAutofillVehiculoInput } from "../../lib/dev-autofill";
-import { GvDevAutofillButton } from "../../lib/gv-dev-autofill-button";
 
 export function VerEditar({
   open,
@@ -260,12 +258,6 @@ export function VerEditar({
   const isWorking = crear.isPending || editar.isPending || isSubmitting || subiendoFotos;
   const onClose = () => onOpenChange(false);
 
-  const handleAutofill = () => {
-    if (!esNuevo) return;
-    reset(devAutofillVehiculoInput());
-    toast.success("Datos de prueba cargados. Sube fotos antes de guardar.");
-  };
-
   return (
     <GvModalShell
       open={open}
@@ -276,11 +268,6 @@ export function VerEditar({
       {open ? (
         <GvModalForm onSubmit={handleSubmit(onSubmit)}>
           <GvModalFormBody>
-          {esNuevo ? (
-            <div className="flex justify-center pb-1">
-              <GvDevAutofillButton onClick={handleAutofill} />
-            </div>
-          ) : null}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="placa">Placa</Label>

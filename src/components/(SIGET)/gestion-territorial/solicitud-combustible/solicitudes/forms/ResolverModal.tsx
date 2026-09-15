@@ -27,12 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useRequisicionesCombustible } from "../../requisiciones/lib/hooks";
+import { useValesCombustible } from "../../vales/lib/hooks";
 import {
   formatDenominacion,
-  formatRequisicionResumen,
-  cuponesDisponiblesRequisicion,
-} from "../../requisiciones/lib/helpers";
+  formatValeLoteResumen,
+  cuponesDisponiblesVale,
+} from "../../vales/lib/helpers";
 import {
   resolverSolicitudCombustibleSchema,
   type ResolverSolicitudCombustibleInput,
@@ -58,9 +58,9 @@ export function ResolverSolicitudCombustibleModal({
   onSaved?: () => void;
 }) {
   const resolver = useResolverSolicitudCombustible();
-  const { data: requisiciones = [] } = useRequisicionesCombustible();
+  const { data: vales = [] } = useValesCombustible();
 
-  const lotesDisponibles = requisiciones.filter((row) => cuponesDisponiblesRequisicion(row) > 0);
+  const lotesDisponibles = vales.filter((row) => cuponesDisponiblesVale(row) > 0);
 
   const {
     register,
@@ -81,14 +81,14 @@ export function ResolverSolicitudCombustibleModal({
 
   useEffect(() => {
     if (!open || !accion) return;
-    const primerLote = requisiciones.find((row) => cuponesDisponiblesRequisicion(row) > 0);
+    const primerLote = vales.find((row) => cuponesDisponiblesVale(row) > 0);
     reset({
       accion,
       requisicion_id: primerLote?.id ?? "",
       cantidad_cupones: 1,
       comentarios: solicitud?.comentarios ?? "",
     });
-  }, [open, accion, reset, solicitud?.comentarios, requisiciones]);
+  }, [open, accion, reset, solicitud?.comentarios, vales]);
 
   const onClose = () => onOpenChange(false);
 
@@ -100,7 +100,11 @@ export function ResolverSolicitudCombustibleModal({
         toast.error(res.error);
         return;
       }
-      toast.success(data.accion === "APROBAR" ? "Solicitud aprobada" : "Solicitud rechazada");
+      toast.success(
+        data.accion === "APROBAR"
+          ? "Solicitud aprobada. Requisición generada."
+          : "Solicitud rechazada",
+      );
       onSaved?.();
       onOpenChange(false);
     } catch (error) {
@@ -150,10 +154,10 @@ export function ResolverSolicitudCombustibleModal({
                             <SelectItem
                               key={row.id}
                               value={row.id}
-                              textValue={formatRequisicionResumen(row)}
+                              textValue={formatValeLoteResumen(row)}
                               className={GV_MODAL_SELECT_ITEM_CLASS}
                             >
-                              {formatRequisicionResumen(row)} · disp. {row.disponibles}
+                              {formatValeLoteResumen(row)} · disp. {row.disponibles}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -165,7 +169,7 @@ export function ResolverSolicitudCombustibleModal({
                   ) : null}
                   {lotesDisponibles.length === 0 ? (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      No hay lotes con cupones disponibles. Registre una requisición primero.
+                      No hay lotes con cupones disponibles. Registre un lote en Vales primero.
                     </p>
                   ) : null}
                 </div>
