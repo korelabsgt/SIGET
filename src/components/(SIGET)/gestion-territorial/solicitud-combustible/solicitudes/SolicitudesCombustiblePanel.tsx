@@ -49,7 +49,7 @@ export function SolicitudesCombustiblePanel({
           <SolicitudesCombustibleCards
             solicitudes={solicitudes}
             canResolver={canResolver}
-            showAcciones={showAccionesEnCards}
+            showAccionesColumn={showAccionesEnCards}
             onResolver={onResolver}
             exportingId={exportingId}
             onExportExcel={onExportExcel}
