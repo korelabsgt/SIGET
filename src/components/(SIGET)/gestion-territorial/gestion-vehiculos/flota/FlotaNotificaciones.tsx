@@ -5,13 +5,24 @@ import { AlertTriangle, Bell, BellRing, CircleAlert } from "lucide";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GvNotificacionItem, GvNotificacionesCampana } from "../lib/gv-notificaciones-ui";
 import { useGvNotificacionesVistas } from "../lib/gv-notificaciones-vistas";
+import { useFallasMantenimiento } from "../mantenimiento/lib/hooks";
 import { getFleetAllAlerts } from "./lib/helpers";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 
 export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] }) {
   const [open, setOpen] = useState(false);
-  const alertas = getFleetAllAlerts(vehiculos);
+  const { data: fallas = [] } = useFallasMantenimiento();
+  const fallasServicioKm = useMemo(
+    () =>
+      fallas.map((falla) => ({
+        vehiculo_id: falla.vehiculo_id,
+        descripcion: falla.descripcion,
+        estado: falla.estado,
+      })),
+    [fallas],
+  );
+  const alertas = getFleetAllAlerts(vehiculos, fallasServicioKm);
   const total = alertas.length;
   const criticas = alertas.filter((a) => a.severidad === "error").length;
   const alertKey = useMemo(() => alertas.map((alerta) => alerta.id).sort().join("|"), [alertas]);
@@ -46,7 +57,7 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
         <div className="px-4 py-8 text-center">
           <GvMorphIcon icon={Bell} hoverIcon={BellRing} size={32} className="mx-auto mb-2 text-muted-foreground/40" />
           <p className="text-sm font-medium text-foreground">Todo al día</p>
-          <p className="mt-1 text-xs text-muted-foreground">No hay alertas de documentos ni mantenimiento.</p>
+          <p className="mt-1 text-xs text-muted-foreground">No hay alertas de documentos, mantenimiento ni servicio por km.</p>
         </div>
       ) : (
         <ul className="max-h-80 overflow-y-auto py-1">

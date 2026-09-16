@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { gvTableRowClass, gvTableRowMorphProps } from "./table-ui";
@@ -14,10 +14,12 @@ export function useGvTableRowMorphHover(): boolean | null {
 export function GvTableMorphRow({
   children,
   className,
+  style,
   as = "tr",
 }: {
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
   as?: "tr" | "div";
 }) {
   const [hovered, setHovered] = useState(false);
@@ -42,6 +44,7 @@ export function GvTableMorphRow({
       ) : (
         <tr
           className={cn(gvTableRowClass, className)}
+          style={style}
           {...gvTableRowMorphProps}
           {...pointerHandlers}
         >

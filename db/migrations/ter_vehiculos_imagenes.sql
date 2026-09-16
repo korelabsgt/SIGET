@@ -1,2 +1,2 @@
 -- imagen_url es text[] (PostgreSQL _text), default '{}'::text[]
--- evidencia_url en ter_fallas_mantenimiento también es text[]
+-- evidencia_url en ot_fallas_mantenimiento también es text[]

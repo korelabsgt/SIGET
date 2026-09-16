@@ -7,6 +7,7 @@ import {
   VEHICULOS_SIGNED_URL_TTL_SEC,
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
+import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import {
   combinarFotosVehiculo,
   formatEstadoVehiculoLabel,
@@ -508,9 +509,14 @@ async function pintarHojaVehiculo(
   pintarSubtitulo(ws, 8, "Información del vehículo");
   pintarEncabezadoTablaDetalle(ws, 9);
   const filaFinTabla = pintarFilasDetalle(ws, 10, vehiculo);
-  await pintarSeccionFotografias(wb, ws, vehiculo, filaFinTabla + 1);
+  const ultimaFila = await pintarSeccionFotografias(wb, ws, vehiculo, filaFinTabla + 1);
 
   ws.views = [{ state: "frozen", ySplit: 9 }];
+  aplicarPaginaCarta(ws, {
+    columnCount: SPAN_COLS,
+    lastRow: ultimaFila,
+    orientation: "portrait",
+  });
 }
 
 async function crearWorkbookVehiculos(

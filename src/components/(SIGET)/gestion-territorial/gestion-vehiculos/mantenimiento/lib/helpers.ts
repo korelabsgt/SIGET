@@ -131,3 +131,32 @@ export function filtrarFallasMantenimiento(
     return true;
   });
 }
+
+export function filtrarFallasPorVehiculo(
+  fallas: FallaRow[],
+  vehiculoId: string,
+  todosVehiculosValue: string,
+) {
+  if (vehiculoId === todosVehiculosValue) return fallas;
+  return fallas.filter((falla) => falla.vehiculo_id === vehiculoId);
+}
+
+export function extractVehiculosVinculadosFallas(fallas: FallaRow[]) {
+  const map = new Map<
+    string,
+    { id: string; placa: string; marca: string; modelo: string }
+  >();
+
+  for (const falla of fallas) {
+    if (!falla.vehiculo_id || !falla.vehiculo) continue;
+    if (map.has(falla.vehiculo_id)) continue;
+    map.set(falla.vehiculo_id, {
+      id: falla.vehiculo_id,
+      placa: falla.vehiculo.placa,
+      marca: falla.vehiculo.marca,
+      modelo: falla.vehiculo.modelo,
+    });
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.placa.localeCompare(b.placa, "es"));
+}

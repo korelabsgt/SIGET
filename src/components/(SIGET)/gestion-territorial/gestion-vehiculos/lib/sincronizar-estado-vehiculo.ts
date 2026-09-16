@@ -4,9 +4,9 @@ import { estadoVehiculoConReservaFija } from "../flota/lib/helpers";
 
 type SupabaseServer = SupabaseClient;
 
-const VEHICULOS_TABLE = "ter_vehiculos";
-const FALLAS_TABLE = "ter_fallas_mantenimiento";
-const SOLICITUDES_TABLE = "ter_solicitudes";
+const VEHICULOS_TABLE = "ot_vehiculos";
+const FALLAS_TABLE = "ot_fallas_mantenimiento";
+const SOLICITUDES_TABLE = "ot_solicitudes";
 
 const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
 const SOLICITUDES_RESERVAN = ["APROBADA", "EN_MISION"] as const;

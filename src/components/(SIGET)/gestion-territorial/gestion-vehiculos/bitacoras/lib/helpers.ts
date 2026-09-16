@@ -91,7 +91,7 @@ export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[]
 
   for (const bitacora of bitacoras) {
     if (bitacoraSinCombustible(bitacora)) {
-      const placa = bitacora.ter_vehiculos?.placa ?? "Vehículo";
+      const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
       alertas.push({
         id: `${bitacora.id}-combustible`,
         bitacora,
@@ -100,7 +100,7 @@ export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[]
         detalle: `${placa} · ${bitacora.km_recorrido} km sin vale ni monto`,
       });
     } else if (bitacoraSinSolicitud(bitacora)) {
-      const placa = bitacora.ter_vehiculos?.placa ?? "Vehículo";
+      const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
       alertas.push({
         id: `${bitacora.id}-solicitud`,
         bitacora,
@@ -124,13 +124,13 @@ export function extractVehiculosVinculadosBitacoras(bitacoras: BitacoraRow[]) {
   >();
 
   for (const bitacora of bitacoras) {
-    if (!bitacora.vehiculo_id || !bitacora.ter_vehiculos) continue;
+    if (!bitacora.vehiculo_id || !bitacora.ot_vehiculos) continue;
     if (map.has(bitacora.vehiculo_id)) continue;
     map.set(bitacora.vehiculo_id, {
       id: bitacora.vehiculo_id,
-      placa: bitacora.ter_vehiculos.placa,
-      marca: bitacora.ter_vehiculos.marca,
-      modelo: bitacora.ter_vehiculos.modelo,
+      placa: bitacora.ot_vehiculos.placa,
+      marca: bitacora.ot_vehiculos.marca,
+      modelo: bitacora.ot_vehiculos.modelo,
     });
   }
 
@@ -152,7 +152,7 @@ export const MISION_VINCULABLE_SELECT = `
   vehiculo_id,
   estado,
   fecha_inicio,
-  vehiculo:ter_vehiculos!vehiculo_id (kilometraje_actual)
+  vehiculo:ot_vehiculos!vehiculo_id (kilometraje_actual)
 `;
 
 export type MisionVinculableBitacora = {
@@ -161,7 +161,7 @@ export type MisionVinculableBitacora = {
   conductor_id: string;
   vehiculo_id: string;
   estado: string;
-  ter_vehiculos: { kilometraje_actual: number } | null;
+  ot_vehiculos: { kilometraje_actual: number } | null;
 };
 
 type SolicitudMisionRow = {
@@ -182,7 +182,7 @@ export function mapSolicitudAMisionVinculable(
   if (!row.id || !row.vehiculo_id || !row.solicitante_id || !row.destino) return null;
 
   const vehiculoJoin = row.vehiculo;
-  const ter_vehiculos = Array.isArray(vehiculoJoin)
+  const ot_vehiculos = Array.isArray(vehiculoJoin)
     ? (vehiculoJoin[0] ?? null)
     : (vehiculoJoin ?? null);
 
@@ -192,7 +192,7 @@ export function mapSolicitudAMisionVinculable(
     conductor_id: row.solicitante_id,
     vehiculo_id: row.vehiculo_id,
     estado: row.estado ?? "",
-    ter_vehiculos: ter_vehiculos as { kilometraje_actual: number } | null,
+    ot_vehiculos: ot_vehiculos as { kilometraje_actual: number } | null,
   };
 }
 

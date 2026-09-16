@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+
+import { aplicarPaginaCartaSheetJS } from "@/components/(SIGET)/gestion-territorial/lib/excel-carta";
 import type { ReportRow } from "./actions";
 import {
   aggregateReportByNacPerfil,
@@ -47,6 +49,15 @@ export function downloadWorkbook(sheets: ExcelSheetDef[], filename: string) {
   for (const sheet of sheets) {
     if (sheet.rows.length === 0) continue;
     const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
+    const maxCols = sheet.rows.reduce(
+      (max, row) => Math.max(max, Array.isArray(row) ? row.length : 0),
+      1,
+    );
+    aplicarPaginaCartaSheetJS(ws, {
+      orientation: maxCols > 6 ? "landscape" : "portrait",
+      lastCol: maxCols,
+      lastRow: sheet.rows.length,
+    });
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(sheet.name, used));
   }
   if (used.size === 0) return;

@@ -28,7 +28,7 @@ export const GV_TABLE_TOOLBAR_PRIMARY_CLASS =
   "flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:items-center";
 
 export const GV_TABLE_TOOLBAR_ACTIONS_CLASS =
-  "flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-2 [&_button]:w-auto";
+  "flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-1 [&_button]:w-auto";
 
 export const GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS =
   "hidden min-w-[12rem] w-max max-w-[min(26rem,42vw)] shrink-0 lg:block";

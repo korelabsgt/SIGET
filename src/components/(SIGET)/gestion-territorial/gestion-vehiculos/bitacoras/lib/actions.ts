@@ -5,11 +5,14 @@ import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
 import { normalizeBitacoraRow } from "./helpers";
 import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
+import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
+import type { CombustibleAprobadoMision } from "./combustible-mision";
 
-const TABLE = "ter_bitacoras";
+const TABLE = "ot_bitacoras";
+const SOLICITUD_COMBUSTIBLE_TABLE = "ot_solicitud_combustible";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
@@ -33,7 +36,7 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
       .from(TABLE)
       .select(`
         *,
-        ter_vehiculos (placa, marca, modelo),
+        ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre)
       `)
       .order("fecha", { ascending: false });
@@ -61,7 +64,7 @@ export async function createBitacora(input: BitacoraInput) {
 
     if (solicitudId) {
       const { data: solicitud, error: solicitudError } = await supabase
-        .from("ter_solicitudes")
+        .from("ot_solicitudes")
         .select("id, solicitante_id, estado")
         .eq("id", solicitudId)
         .maybeSingle();
@@ -107,17 +110,23 @@ export async function createBitacora(input: BitacoraInput) {
     if (error) throw error;
 
     const { error: kmError } = await supabase
-      .from("ter_vehiculos")
+      .from("ot_vehiculos")
       .update({ kilometraje_actual: parsed.km_final })
       .eq("id", parsed.vehiculo_id);
 
     if (kmError) {
       console.error("Error updating vehiculo kilometraje:", kmError);
+    } else {
+      await aplicarMantenimientoForzadoPorKm(supabase, {
+        vehiculoId: parsed.vehiculo_id,
+        kmActual: parsed.km_final,
+        reportadoPor: user.id,
+      });
     }
 
     if (solicitudId) {
       const { data: solicitudActual, error: solicitudActualError } = await supabase
-        .from("ter_solicitudes")
+        .from("ot_solicitudes")
         .select("estado")
         .eq("id", solicitudId)
         .eq("solicitante_id", user.id)
@@ -127,7 +136,7 @@ export async function createBitacora(input: BitacoraInput) {
         console.error("Error reading solicitud estado:", solicitudActualError);
       } else if (solicitudActual.estado === "EN_MISION") {
         const { error: updateError } = await supabase
-          .from("ter_solicitudes")
+          .from("ot_solicitudes")
           .update({ estado: "FINALIZADA" })
           .eq("id", solicitudId)
           .eq("solicitante_id", user.id)
@@ -212,6 +221,58 @@ export async function getSolicitudesEnMision() {
   }
 }
 
+export async function getCombustibleAprobadoPorMision(
+  solicitudVehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = solicitudVehiculoId.trim();
+  if (!id) return null;
+
+  try {
+    const { supabase } = await requireAuth();
+
+    const { data, error } = await supabase
+      .from(SOLICITUD_COMBUSTIBLE_TABLE)
+      .select("cupon_del, cupon_al, denominacion_cupon")
+      .eq("solicitud_vehiculo_id", id)
+      .eq("estado", "APROBADO")
+      .order("fecha_aprobacion", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error?.message?.includes("denominacion_cupon")) {
+      const { data: legacy, error: legacyError } = await supabase
+        .from(SOLICITUD_COMBUSTIBLE_TABLE)
+        .select("cupon_del, cupon_al")
+        .eq("solicitud_vehiculo_id", id)
+        .eq("estado", "APROBADO")
+        .order("fecha_aprobacion", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (legacyError || !legacy) return null;
+      return {
+        cupon_del: legacy.cupon_del as number,
+        cupon_al: legacy.cupon_al as number,
+        denominacion_cupon: null,
+      };
+    }
+
+    if (error || !data) return null;
+
+    if (data.cupon_del == null || data.cupon_al == null) return null;
+
+    return {
+      cupon_del: Number(data.cupon_del),
+      cupon_al: Number(data.cupon_al),
+      denominacion_cupon:
+        data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
+    };
+  } catch (error) {
+    console.error("getCombustibleAprobadoPorMision:", error);
+    return null;
+  }
+}
+
 export async function getDatosReporteBitacora(mes: number, anio: number, vehiculo_id: string) {
   try {
     const { supabase, user, role } = await requireAuth();
@@ -234,7 +295,7 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
         km_recorrido,
         vale_combustible,
         monto_combustible,
-        ter_vehiculos (placa, marca, modelo),
+        ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre)
       `)
       .gte("fecha", startDate)

@@ -206,6 +206,9 @@ export function Crear({
 
           <div className="space-y-1.5">
             <Label>Pasajeros / Acompañantes (Opcional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Busque y seleccione usuarios registrados en el sistema.
+            </p>
             <Controller
               control={control}
               name="pasajeros"

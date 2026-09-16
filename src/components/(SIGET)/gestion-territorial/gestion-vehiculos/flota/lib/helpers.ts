@@ -71,9 +71,89 @@ export function getAlertStatusClasses(estado: AlertStatus) {
   }
 }
 
+export const KM_INTERVALO_SERVICIO = 5000;
+export const KM_MARGEN_MANTENIMIENTO_FORZADO = 500;
+export const PREFIJO_FALLA_SERVICIO_KM = "[SERVICIO-KM:";
+
+export function getUmbralMantenimientoForzadoKm(kmActual: number): number | null {
+  const minimo = KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
+  if (kmActual < minimo) return null;
+  return (
+    Math.floor((kmActual - KM_MARGEN_MANTENIMIENTO_FORZADO) / KM_INTERVALO_SERVICIO)
+      * KM_INTERVALO_SERVICIO
+    + KM_MARGEN_MANTENIMIENTO_FORZADO
+  );
+}
+
+export function getUmbralesMantenimientoForzadoAlcanzados(kmActual: number): number[] {
+  const ultimo = getUmbralMantenimientoForzadoKm(kmActual);
+  if (ultimo === null) return [];
+  const primero = KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
+  const umbrales: number[] = [];
+  for (let umbral = primero; umbral <= ultimo; umbral += KM_INTERVALO_SERVICIO) {
+    umbrales.push(umbral);
+  }
+  return umbrales;
+}
+
+export function buildDescripcionFallaServicioKm(umbral: number): string {
+  return `${PREFIJO_FALLA_SERVICIO_KM}${umbral}] Servicio programado: el vehículo alcanzó ${umbral.toLocaleString("es-GT")} km.`;
+}
+
+export function parseUmbralServicioKm(descripcion: string): number | null {
+  const match = descripcion.match(/\[SERVICIO-KM:(\d+)\]/);
+  return match ? Number(match[1]) : null;
+}
+
+export function esFallaServicioKmProgramado(descripcion: string): boolean {
+  return parseUmbralServicioKm(descripcion) !== null;
+}
+
+export type FallaServicioKmRef = {
+  vehiculo_id: string;
+  descripcion: string;
+  estado: string;
+};
+
+export type FleetAlertItem = {
+  id: string;
+  vehiculo_id: string;
+  placa: string;
+  titulo: string;
+  detalle: string;
+  severidad: "error" | "warn";
+};
+
+export function getFleetServicioKmForzadoAlerts(
+  vehiculos: VehiculoRow[],
+  fallas: FallaServicioKmRef[],
+): FleetAlertItem[] {
+  const placaById = new Map(
+    vehiculos.filter((v) => v.id).map((v) => [v.id as string, v.placa]),
+  );
+  const alerts: FleetAlertItem[] = [];
+
+  for (const falla of fallas) {
+    if (falla.estado !== "PENDIENTE" && falla.estado !== "EN_REPARACION") continue;
+    const umbral = parseUmbralServicioKm(falla.descripcion);
+    if (umbral === null) continue;
+
+    alerts.push({
+      id: `${falla.vehiculo_id}-servicio-km-${umbral}`,
+      vehiculo_id: falla.vehiculo_id,
+      placa: placaById.get(falla.vehiculo_id) ?? "—",
+      titulo: "En mantenimiento por servicio",
+      detalle: `Alcanzó ${umbral.toLocaleString("es-GT")} km y pasó automáticamente a mantenimiento.`,
+      severidad: "error",
+    });
+  }
+
+  return alerts;
+}
+
 export function getMantenimientoAlertStatus(kmActual: number): { estado: AlertStatus; kmFaltantes: number; siguienteServicio: number } {
 
-  const siguienteServicio = Math.ceil((kmActual + 1) / 5000) * 5000;
+  const siguienteServicio = Math.ceil((kmActual + 1) / KM_INTERVALO_SERVICIO) * KM_INTERVALO_SERVICIO;
 
   const kmFaltantes = siguienteServicio - kmActual;
 
@@ -87,7 +167,7 @@ export function getMantenimientoAlertStatus(kmActual: number): { estado: AlertSt
 
     estado = "ROJO";
 
-  } else if (kmFaltantes <= 500) {
+  } else if (kmFaltantes <= KM_MARGEN_MANTENIMIENTO_FORZADO) {
 
     estado = "AMARILLO";
 
@@ -141,6 +221,8 @@ export function getFleetAlertNotifications(
 
   vehiculos: VehiculoRow[],
 
+  fallasServicioKm: FallaServicioKmRef[] = [],
+
 ): FleetAlertNotification[] {
 
   const docsError: string[] = [];
@@ -150,6 +232,8 @@ export function getFleetAlertNotifications(
   const mantError: string[] = [];
 
   const mantWarn: string[] = [];
+
+  const servicioKm: string[] = [];
 
 
 
@@ -197,6 +281,17 @@ export function getFleetAlertNotifications(
 
     }
 
+  }
+
+  for (const falla of fallasServicioKm) {
+    if (falla.estado !== "PENDIENTE" && falla.estado !== "EN_REPARACION") continue;
+    const umbral = parseUmbralServicioKm(falla.descripcion);
+    if (umbral === null) continue;
+    const placa =
+      vehiculos.find((vehiculo) => vehiculo.id === falla.vehiculo_id)?.placa ?? "—";
+    servicioKm.push(
+      formatPlacaLine(placa, `pasó a mantenimiento al alcanzar ${umbral.toLocaleString("es-GT")} km`),
+    );
   }
 
 
@@ -267,22 +362,30 @@ export function getFleetAlertNotifications(
 
   }
 
+  if (servicioKm.length > 0) {
+
+    notifications.push({
+
+      id: "flota-servicio-km",
+
+      severidad: "error",
+
+      mensaje: `Pasaron a mantenimiento por kilometraje (${servicioKm.length})\n${formatPlacaList(servicioKm)}`,
+
+    });
+
+  }
+
 
 
   return notifications;
 
 }
 
-export type FleetAlertItem = {
-  id: string;
-  vehiculo_id: string;
-  placa: string;
-  titulo: string;
-  detalle: string;
-  severidad: "error" | "warn";
-};
-
-export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
+export function getFleetAllAlerts(
+  vehiculos: VehiculoRow[],
+  fallasServicioKm: FallaServicioKmRef[] = [],
+): FleetAlertItem[] {
   const alerts: FleetAlertItem[] = [];
 
   for (const vehiculo of vehiculos) {
@@ -334,13 +437,18 @@ export function getFleetAllAlerts(vehiculos: VehiculoRow[]): FleetAlertItem[] {
     }
   }
 
+  alerts.push(...getFleetServicioKmForzadoAlerts(vehiculos, fallasServicioKm));
+
   return alerts;
 }
 
 export type FleetMediumAlert = FleetAlertItem;
 
-export function getFleetMediumAlerts(vehiculos: VehiculoRow[]): FleetMediumAlert[] {
-  return getFleetAllAlerts(vehiculos).filter((alerta) => alerta.severidad === "warn");
+export function getFleetMediumAlerts(
+  vehiculos: VehiculoRow[],
+  fallasServicioKm: FallaServicioKmRef[] = [],
+): FleetMediumAlert[] {
+  return getFleetAllAlerts(vehiculos, fallasServicioKm).filter((alerta) => alerta.severidad === "warn");
 }
 
 export function estadoVehiculoNormalizado(

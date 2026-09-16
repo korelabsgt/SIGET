@@ -96,6 +96,16 @@ function VehiculoListRow({
           {vehiculo.placa}
         </span>
       </td>
+      <td className={cn(cellPad, "w-0 whitespace-nowrap text-left align-middle")}>
+        <span className="inline-flex min-w-[4.5rem] flex-col tabular-nums leading-tight">
+          <span className="text-sm font-semibold text-foreground">
+            {vehiculo.kilometraje_actual.toLocaleString("es-GT")}
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            km
+          </span>
+        </span>
+      </td>
       <td className={cn(cellPad, "w-0 pr-2.5 text-center align-middle")}>
         <VehiculoTablaFoto vehiculo={vehiculo} onOpenGaleria={onOpenGaleria} />
       </td>
@@ -167,6 +177,7 @@ export function VehiculosList({
           <tr className="border-b border-border bg-sky-50/80 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950/30">
             <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>No.</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>Placa</th>
+            <th className={cn(cellPad, "w-0 whitespace-nowrap text-left")}>Km</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap pr-2.5 text-center")}>Foto</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap pl-2.5 pr-1 text-left")}>Marca / modelo</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap pl-1 text-left")}>Color</th>

@@ -24,9 +24,9 @@ type GvPageChromeDispatch = {
 };
 
 const GvPageChromeDispatchContext = createContext<GvPageChromeDispatch | null>(null);
-const GvHeaderExtrasContainerContext = createContext<RefObject<HTMLDivElement | null> | null>(
-  null,
-);
+export const GvHeaderExtrasContainerContext = createContext<
+  RefObject<HTMLDivElement | null> | null
+>(null);
 
 export function GvPageChromeProvider({ children }: { children: ReactNode }) {
   const [hideChrome, setHideChromeState] = useState(false);

@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
+import { formatEstadoLabel } from "./helpers";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
-const TABLE = "ter_solicitudes";
+const TABLE = "ot_solicitudes";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 const FLOTA_ROUTE = GV_BASE_ROUTE;
 
@@ -37,7 +39,7 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
-        vehiculo:ter_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
+        vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `)
       .order("created_at", { ascending: false });
 
@@ -71,7 +73,7 @@ export async function createSolicitud(input: SolicitudInput) {
 
     if (vehiculo_id) {
       const { data: vehiculo, error: vehiculoError } = await supabase
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .select("id, estado")
         .eq("id", vehiculo_id)
         .maybeSingle();
@@ -133,7 +135,14 @@ export async function cambiarEstadoSolicitud(
     const { user, role } = await requireAuth();
     const esAdmin = canAprobarRechazarSolicitudes(role);
     const esSuper = isSuperRole(role);
-    const esTransicionMision = nuevoEstado === "EN_MISION" || nuevoEstado === "FINALIZADA";
+    if (nuevoEstado === "FINALIZADA") {
+      return {
+        success: false,
+        error: "La misión solo puede finalizarse registrando una bitácora vinculada.",
+      };
+    }
+
+    const esTransicionMision = nuevoEstado === "EN_MISION";
     const esTransicionAprobacion =
       nuevoEstado === "APROBADA" || nuevoEstado === "RECHAZADA";
 
@@ -141,7 +150,7 @@ export async function cambiarEstadoSolicitud(
       if (canManageSolicitudesVehiculos(role) && !esSuper) {
         return {
           success: false,
-          error: "Solo el solicitante puede iniciar o finalizar la misión.",
+          error: "Solo el solicitante puede iniciar la misión.",
         };
       }
     } else if (esTransicionAprobacion) {
@@ -168,7 +177,7 @@ export async function cambiarEstadoSolicitud(
       if (!esSuper && actual.solicitante_id !== user.id) {
         return {
           success: false,
-          error: "Solo el solicitante puede iniciar o finalizar esta misión.",
+          error: "Solo el solicitante puede iniciar esta misión.",
         };
       }
 
@@ -178,19 +187,12 @@ export async function cambiarEstadoSolicitud(
           error: "La misión solo puede iniciarse cuando la solicitud está aprobada.",
         };
       }
-
-      if (nuevoEstado === "FINALIZADA" && actual.estado !== "EN_MISION") {
-        return {
-          success: false,
-          error: "La misión solo puede finalizarse cuando está en curso.",
-        };
-      }
     }
 
     if (esTransicionAprobacion && actual.estado !== "PENDIENTE") {
       return {
         success: false,
-        error: "Solo se pueden aprobar o rechazar solicitudes pendientes.",
+        error: `Esta solicitud ya no está pendiente (estado actual: ${formatEstadoLabel(actual.estado as SolicitudRow["estado"])}). Actualice la lista.`,
       };
     }
 
@@ -205,7 +207,7 @@ export async function cambiarEstadoSolicitud(
       }
 
       const { data: vehiculo, error: vehiculoError } = await supabase
-        .from("ter_vehiculos")
+        .from("ot_vehiculos")
         .select("id, estado")
         .eq("id", vehiculoAsignado)
         .maybeSingle();
@@ -243,7 +245,8 @@ export async function cambiarEstadoSolicitud(
       updateData.vehiculo_id = payload.vehiculo_id;
     }
 
-    const { data, error } = await supabase
+    const admin = createAdminClient();
+    const { data, error } = await admin
       .from(TABLE)
       .update(updateData)
       .eq("id", id)
@@ -251,8 +254,25 @@ export async function cambiarEstadoSolicitud(
       .single();
 
     if (error) {
+      console.error("Error cambiarEstadoSolicitud update:", error);
       if (error.code === "23P01" || error.message?.includes("no_empalmes")) {
-         return { success: false, error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas." };
+        return {
+          success: false,
+          error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas.",
+        };
+      }
+      if (error.code === "23503") {
+        return {
+          success: false,
+          error: "No se pudo registrar la aprobación (referencia de usuario o vehículo inválida).",
+        };
+      }
+      if (error.code === "42P01" && error.message?.includes("ter_vehiculos")) {
+        return {
+          success: false,
+          error:
+            "La base de datos tiene un trigger antiguo (ter_vehiculos). Ejecute en Supabase el script db/migrations/ot_fix_legacy_ter_table_names_in_functions.sql y vuelva a intentar.",
+        };
       }
       return { success: false, error: "No se pudo actualizar el estado de la solicitud." };
     }
@@ -262,7 +282,7 @@ export async function cambiarEstadoSolicitud(
     if (data.vehiculo_id) vehiculosAfectados.add(data.vehiculo_id);
 
     for (const vehiculoId of vehiculosAfectados) {
-      await sincronizarEstadoFlotaVehiculo(supabase, vehiculoId);
+      await sincronizarEstadoFlotaVehiculo(admin, vehiculoId);
     }
 
     revalidatePath(REVALIDATE_ROUTE);
@@ -277,18 +297,27 @@ export async function cambiarEstadoSolicitud(
 
 export async function searchProfiles(query: string) {
   try {
-    const supabase = await createClient();
+    const { supabase } = await requireAuth();
+    const term = query.trim();
+    if (term.length < 3) return [];
+
     const { data, error } = await supabase
       .from("profiles")
       .select("id, nombre, email")
-      .ilike("nombre", `%${query}%`)
+      .eq("activo", true)
+      .or(`nombre.ilike.%${term}%,email.ilike.%${term}%`)
+      .order("nombre", { ascending: true })
       .limit(10);
-      
+
     if (error) {
       console.error("Error searchProfiles:", error);
       return [];
     }
-    return data || [];
+
+    return (data ?? []).filter(
+      (profile): profile is { id: string; nombre: string; email: string } =>
+        Boolean(profile.id),
+    );
   } catch (err) {
     console.error("Excepción en searchProfiles:", err);
     return [];

@@ -13,6 +13,7 @@ export function VehiculosPanel({
   exportingVehiculoId = null,
   onDelete,
   canManage,
+  canDelete,
 }: {
   vehiculos: VehiculoRow[];
   rowOffset?: number;
@@ -22,6 +23,7 @@ export function VehiculosPanel({
   exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => Promise<boolean>;
   canManage: boolean;
+  canDelete: boolean;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -48,6 +50,7 @@ export function VehiculosPanel({
             void onDelete(vehiculo);
           }}
           canManage={canManage}
+          canDelete={canDelete}
         />
       </div>
     </div>

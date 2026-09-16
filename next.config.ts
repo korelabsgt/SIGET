@@ -1,15 +1,22 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
     },
-    optimizePackageImports: ["lucide", "morphicons/react"],
+    optimizePackageImports: [
+      "lucide-react",
+      "morphicons/react",
+      "framer-motion",
+      "date-fns",
+    ],
     turbopackFileSystemCacheForDev: false,
   },
-  reactCompiler: true,
+  reactCompiler: !isDev,
   images: {
     remotePatterns: [
       {

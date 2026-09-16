@@ -29,6 +29,7 @@ import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportFlotaReporte,
+  canDeleteVehiculo,
   canManageFlota,
   canViewAlertasFlota,
 } from "../lib/permissions";
@@ -59,6 +60,7 @@ const filtroEstadoItemClass =
 export function Flota() {
   const gvRole = useGvPermissionRole();
   const canManage = canManageFlota(gvRole);
+  const canDelete = canDeleteVehiculo(gvRole);
   const puedeExportar = canExportFlotaReporte(gvRole);
   const puedeVerAlertas = canViewAlertasFlota(gvRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
@@ -297,6 +299,7 @@ export function Flota() {
               exportingVehiculoId={exportingVehiculoId}
               onDelete={handleDelete}
               canManage={canManage}
+              canDelete={canDelete}
             />
           )}
         </GestionVehiculosTableShell>

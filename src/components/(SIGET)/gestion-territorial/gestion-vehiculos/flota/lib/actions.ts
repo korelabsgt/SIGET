@@ -19,10 +19,11 @@ import {
   normalizeVehiculoStoragePath,
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
-import { canManageFlota } from "../../lib/permissions";
+import { canManageFlota, isSuperRole } from "../../lib/permissions";
+import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
-const TABLE = "ter_vehiculos";
+const TABLE = "ot_vehiculos";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 
 async function requireAuth() {
@@ -45,6 +46,14 @@ async function requireFlotaManageAuth() {
   const auth = await requireAuth();
   if (!canManageFlota(auth.role)) {
     throw new Error("No tienes permisos para gestionar la flota vehicular.");
+  }
+  return auth;
+}
+
+async function requireSuperFlotaAuth() {
+  const auth = await requireFlotaManageAuth();
+  if (!isSuperRole(auth.role)) {
+    throw new Error("Solo super puede eliminar registros de la flota.");
   }
   return auth;
 }
@@ -107,7 +116,7 @@ function mapImagenesDbError(message: string) {
 }
 
 export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase, user } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -134,12 +143,19 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
+  const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
+  await aplicarMantenimientoForzadoPorKm(supabase, {
+    vehiculoId: vehiculo.id ?? "",
+    kmActual: vehiculo.kilometraje_actual,
+    reportadoPor: user.id,
+  });
+
   revalidatePath(REVALIDATE_ROUTE);
-  return normalizeVehiculoRow(data as VehiculoRow);
+  return vehiculo;
 }
 
 export async function updateVehiculo(id: string, input: VehiculoInput): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase, user } = await requireFlotaManageAuth();
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -169,15 +185,22 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
+  const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
+  await aplicarMantenimientoForzadoPorKm(supabase, {
+    vehiculoId: id,
+    kmActual: vehiculo.kilometraje_actual,
+    reportadoPor: user.id,
+  });
+
   revalidatePath(REVALIDATE_ROUTE);
-  return normalizeVehiculoRow(data as VehiculoRow);
+  return vehiculo;
 }
 
 export async function removeVehiculoImagen(
   id: string,
   storagePath: string,
 ): Promise<VehiculoRow> {
-  const { supabase } = await requireFlotaManageAuth();
+  const { supabase } = await requireSuperFlotaAuth();
   const path = normalizeVehiculoStoragePath(storagePath);
   if (!path) {
     throw new Error("No se pudo identificar la fotografía.");
@@ -234,13 +257,13 @@ export async function removeVehiculoImagen(
 function mapDeleteVehiculoError(message: string, code?: string): string {
   const m = message.toLowerCase();
   if (code === "23503" || m.includes("foreign key")) {
-    if (m.includes("ter_bitacoras")) {
+    if (m.includes("ot_bitacoras")) {
       return "No se puede eliminar el vehículo porque tiene bitácoras de viaje registradas.";
     }
-    if (m.includes("ter_solicitudes")) {
+    if (m.includes("ot_solicitudes")) {
       return "No se puede eliminar el vehículo porque está asignado a una o más solicitudes.";
     }
-    if (m.includes("ter_fallas_mantenimiento") || m.includes("fallas")) {
+    if (m.includes("ot_fallas_mantenimiento") || m.includes("fallas")) {
       return "No se puede eliminar el vehículo porque tiene registros de mantenimiento asociados.";
     }
     return "No se puede eliminar el vehículo porque tiene registros relacionados en el sistema.";
@@ -251,15 +274,15 @@ function mapDeleteVehiculoError(message: string, code?: string): string {
 async function contarDependenciasVehiculo(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [bitacoras, solicitudes, fallas] = await Promise.all([
     supabase
-      .from("ter_bitacoras")
+      .from("ot_bitacoras")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
     supabase
-      .from("ter_solicitudes")
+      .from("ot_solicitudes")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
     supabase
-      .from("ter_fallas_mantenimiento")
+      .from("ot_fallas_mantenimiento")
       .select("id", { count: "exact", head: true })
       .eq("vehiculo_id", id),
   ]);
@@ -282,7 +305,7 @@ export async function deleteVehiculo(
   id: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const { supabase } = await requireFlotaManageAuth();
+    const { supabase } = await requireSuperFlotaAuth();
 
     const bloqueos = await contarDependenciasVehiculo(supabase, id);
     if (bloqueos.length > 0) {

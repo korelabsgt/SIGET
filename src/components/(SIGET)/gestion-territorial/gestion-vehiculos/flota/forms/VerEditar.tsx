@@ -10,9 +10,6 @@ import {
   GvModalFormBody,
   GvModalFooter,
   GvModalShell,
-  GV_MODAL_FORM_BODY_EXPANDED_CLASS,
-  GV_MODAL_FORM_CONTENT_CLASS,
-  GV_MODAL_FORM_EXPANDED_CLASS,
   ModalCancelButton,
   ModalSubmit,
 } from "../../lib/gv-modal-shell";
@@ -267,12 +264,10 @@ export function VerEditar({
       onClose={onClose}
       title={initialData ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}
       maxWidth="max-w-xl"
-      fullHeight={false}
-      contentClassName={GV_MODAL_FORM_CONTENT_CLASS}
     >
       {open ? (
-        <GvModalForm className={GV_MODAL_FORM_EXPANDED_CLASS} onSubmit={handleSubmit(onSubmit)}>
-          <GvModalFormBody className={GV_MODAL_FORM_BODY_EXPANDED_CLASS}>
+        <GvModalForm onSubmit={handleSubmit(onSubmit)}>
+          <GvModalFormBody>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="placa">Placa</Label>

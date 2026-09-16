@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+
+import { aplicarPaginaCartaSheetJS } from "../../lib/excel-carta";
 import { TITULO_INFORME_MEMORIA } from "./zod";
 import {
   formatPeriodo,
@@ -127,6 +129,7 @@ export function buildProyectoMemoriaExcelRows(
 
 function downloadRows(rows: unknown[][], filename: string) {
   const ws = XLSX.utils.aoa_to_sheet(rows);
+  aplicarPaginaCartaSheetJS(ws, { orientation: "portrait" });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Proyecto");
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });

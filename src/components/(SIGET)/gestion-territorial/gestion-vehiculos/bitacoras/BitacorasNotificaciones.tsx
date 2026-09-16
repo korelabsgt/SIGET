@@ -88,7 +88,7 @@ export function BitacorasNotificaciones({ bitacoras }: { bitacoras: BitacoraRow[
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[10px] font-black uppercase tracking-wider text-foreground">
-                    {alerta.bitacora.ter_vehiculos?.placa ?? "Vehículo"}
+                    {alerta.bitacora.ot_vehiculos?.placa ?? "Vehículo"}
                   </p>
                   <span
                     className={cn(
