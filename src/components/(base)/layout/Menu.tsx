@@ -11,6 +11,7 @@ import {
   CalendarCheck,
   Car,
   ChevronDown,
+  Droplets,
   FileText,
   Globe,
   Home,
@@ -51,6 +52,7 @@ import {
 
 const MENU_OPTION_ICONS: Record<string, LucideIcon> = {
   "movilidad-humana": Globe,
+  "paz-hidrica-ja": Droplets,
   "mi-perfil": User,
   "ingreso-seguro": KeyRound,
   "organizacion-administrativa": Building2,
@@ -64,6 +66,7 @@ const MENU_OPTION_ICONS: Record<string, LucideIcon> = {
 
 const MODULE_ICONS: Record<string, LucideIcon> = {
   observatorio: Globe,
+  "paz-hidrica-ja": Droplets,
   perfil: User,
   admin: Settings,
 };
@@ -497,14 +500,21 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
 
   const visibleModules = user ? getVisibleDashboardModules(effectiveRole) : [];
   const mainModules = visibleModules.filter(
-    (mod) => mod.id !== "admin" && mod.id !== "observatorio" && mod.id !== "perfil" && mod.id !== "gestion-territorial",
+    (mod) =>
+      mod.id !== "admin" &&
+      mod.id !== "observatorio" &&
+      mod.id !== "paz-hidrica-ja" &&
+      mod.id !== "perfil" &&
+      mod.id !== "gestion-territorial",
   );
   const adminModule = visibleModules.find((mod) => mod.id === "admin");
   const observatorioModule = visibleModules.find((mod) => mod.id === "observatorio");
   const gestionTerritorialModule = visibleModules.find((mod) => mod.id === "gestion-territorial");
   const perfilModule = visibleModules.find((mod) => mod.id === "perfil");
   const isAdminRoute = pathname.startsWith("/siget/admin");
-  const isObservatorioRoute = pathname.startsWith("/siget/observatorio");
+  const isObservatorioRoute =
+    pathname.startsWith("/siget/observatorio") ||
+    pathname.startsWith("/siget/paz-hidrica-ja");
   const isGestionTerritorialRoute = pathname.startsWith("/siget/gestion-territorial");
   const passkeysEnabled = appSettings?.enable_passkeys ?? false;
   const perfilMenuOptions = getPerfilMenuOptions(passkeysEnabled);

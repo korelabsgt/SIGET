@@ -180,7 +180,10 @@ export async function proxy(request: NextRequest) {
             url.pathname = "/sin-acceso";
             return NextResponse.redirect(url);
           }
-        } else if (pathname.startsWith("/siget/observatorio")) {
+        } else if (
+          pathname.startsWith("/siget/observatorio") ||
+          pathname.startsWith("/siget/paz-hidrica-ja")
+        ) {
           if (!canAccessObservatorio) {
             const url = request.nextUrl.clone();
             url.pathname = "/sin-acceso";

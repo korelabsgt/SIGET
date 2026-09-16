@@ -31,8 +31,13 @@ const sigetCrumbActive =
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const BREADCRUMB_LABELS: Record<string, string> = {
+  "paz-hidrica-ja": "Paz Hídrica Ja'",
+};
+
 function formatBreadcrumbLabel(segment: string): string {
   if (UUID_SEGMENT.test(segment)) return "detalles";
+  if (BREADCRUMB_LABELS[segment]) return BREADCRUMB_LABELS[segment];
   return segment.replace(/-/g, " ");
 }
 

@@ -81,10 +81,42 @@ function formatAmPmGt(dayPeriod: string): string {
   return letter === "P" ? "P.M." : "A.M.";
 }
 
+const MES_CORTO_GT = [
+  "ENE",
+  "FEB",
+  "MAR",
+  "ABR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AGO",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DIC",
+] as const;
+
 function formatDiaSemanaCortoGt(weekday: string): string {
   const limpio = weekday.replace(/\./g, "").trim();
   if (!limpio) return "";
   return limpio.charAt(0).toUpperCase() + limpio.slice(1, 3).toLowerCase();
+}
+
+export function formatFechaCompactaGt(value: string | null | undefined): string {
+  const fecha = normalizarFechaCalendario(value);
+  if (!fecha) return "\u2014";
+
+  const [y, m, d] = fecha.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const weekday = new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    weekday: "short",
+  }).format(date);
+  const dd = String(d).padStart(2, "0");
+  const mes = MES_CORTO_GT[m - 1];
+  const yy = String(y).slice(-2);
+
+  return `${formatDiaSemanaCortoGt(weekday)} ${dd}${mes}${yy}`;
 }
 
 function partesFechaHoraTablaGt(value: string | null | undefined): {

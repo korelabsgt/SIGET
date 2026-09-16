@@ -20,6 +20,7 @@ export const sigetAccent = {
   quitar: "#CC5C5C",
   crear: "#2E9BD0",
   excel: "#2E9E77",
+  neutro: "#71717a",
 } as const;
 
 export function SigetActionIcon({

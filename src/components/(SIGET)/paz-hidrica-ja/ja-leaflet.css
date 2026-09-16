@@ -1,0 +1,110 @@
+.ja-leaflet-map {
+  isolation: isolate;
+  z-index: 0;
+  height: calc(100dvh - 7rem);
+  min-height: 36rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .ja-leaflet-map {
+    height: calc(100dvh - 6rem);
+    min-height: 42rem;
+  }
+}
+
+.ja-leaflet-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+  background: #dbe7f2;
+}
+
+.dark .ja-leaflet-map .leaflet-container {
+  background: #18181b;
+}
+
+.ja-leaflet-map .leaflet-control-zoom a {
+  width: 2rem;
+  height: 2rem;
+  line-height: 2rem;
+  color: #003882;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  opacity: 1;
+}
+
+.dark .ja-leaflet-map .leaflet-control-zoom a {
+  color: #6f9fd4;
+  background: #18181b;
+  border-color: #3f3f46;
+}
+
+.ja-leaflet-map .leaflet-control-attribution {
+  background: rgb(255 255 255 / 0.92);
+  color: #71717a;
+  font-size: 10px;
+}
+
+.dark .ja-leaflet-map .leaflet-control-attribution {
+  background: rgb(24 24 27 / 0.92);
+  color: #a1a1aa;
+}
+
+.ja-leaflet-map .leaflet-popup-content-wrapper,
+.ja-leaflet-map .leaflet-popup-tip {
+  background: #ffffff;
+  color: #18181b;
+  border-radius: 0.75rem;
+  box-shadow: none;
+  border: 1px solid #e4e4e7;
+  opacity: 1;
+}
+
+.dark .ja-leaflet-map .leaflet-popup-content-wrapper,
+.dark .ja-leaflet-map .leaflet-popup-tip {
+  background: #18181b;
+  color: #fafafa;
+  border-color: #3f3f46;
+}
+
+.ja-leaflet-map .leaflet-popup-content {
+  margin: 0.75rem 0.9rem;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ja-leaflet-map .ja-map-icon {
+  background: transparent;
+  border: 0;
+}
+
+.ja-leaflet-map .leaflet-tooltip {
+  background: #ffffff;
+  color: #18181b;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  box-shadow: none;
+  font-weight: 700;
+  font-size: 11px;
+  opacity: 1;
+}
+
+.dark .ja-leaflet-map .leaflet-tooltip {
+  background: #18181b;
+  color: #fafafa;
+  border-color: #3f3f46;
+}
+
+.ja-leaflet-map .leaflet-control-container {
+  z-index: 900;
+}
+
+.ja-leaflet-map.ja-leaflet-map-publico {
+  height: calc(100dvh - 5rem);
+  min-height: calc(100dvh - 5rem);
+  width: 100%;
+  border-radius: 1.25rem;
+}

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export default function ConditionalFooter() {
   const pathname = usePathname();
   if (pathname === "/") return null;
+  if (pathname === "/paz-hidrica-ja") return null;
 
   const isDashboard = pathname === "/siget";
 

@@ -339,6 +339,35 @@ export default function ObservatorioWeb() {
                 </div>
               )}
             </div>
+
+            <div
+              id="card-paz-hidrica-ja"
+              className="group relative mx-auto mt-8 flex max-w-6xl cursor-pointer overflow-hidden rounded-3xl border border-[#003882]/25 bg-card ring-1 ring-[#C59B27]/30 transition-all duration-300 hover:-translate-y-1"
+              onClick={() => router.push("/siget/paz-hidrica-ja")}
+            >
+              <div className="flex w-full flex-col md:flex-row">
+                <div className="flex items-center justify-center bg-[#003882] px-8 py-6 text-white md:w-56">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C59B27]">
+                      Submódulo transversal
+                    </p>
+                    <p className="mt-2 text-2xl font-black leading-none">Ja&apos;</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-widest">
+                      Paz Hídrica
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-1 flex-col justify-center p-6 md:p-8">
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                    Observatorio de Paz Hídrica Ja&apos;
+                  </h3>
+                  <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Gestión de los Recursos Hídricos en la Cuenca del Río Grande.
+                    Alertas, mesas de concertación, redes inclusivas y tablero PBF.
+                  </p>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>

@@ -24,12 +24,10 @@ import {
 } from "lucide-react";
 import { ArrowRight, MoveRight } from "lucide";
 import {
-  DASHBOARD_MODULES,
   getVisibleDashboardModules,
+  type DashboardModule,
 } from "@/components/(base)/dashboard/modules";
 import { cn } from "@/lib/utils";
-
-const MODULES = DASHBOARD_MODULES;
 
 const DASHBOARD_ICON_PLATE_CLASS =
   "flex items-center justify-center dark:rounded-2xl dark:bg-white";
@@ -37,60 +35,43 @@ const DASHBOARD_ICON_PLATE_CLASS =
 const DASHBOARD_DOTTED_BG_CLASS =
   "pointer-events-none [background-size:12px_12px] bg-[radial-gradient(#71717a_1px,transparent_1px)] opacity-50 dark:bg-[radial-gradient(oklch(72%_0_0)_1px,transparent_1px)] dark:opacity-40 [mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)] [-webkit-mask-image:radial-gradient(ellipse_55%_70%_at_50%_50%,white,transparent)]";
 
+const CARD_FILL_TRANSITION =
+  "transition-[clip-path] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]";
 
-export function Dashboard() {
-  const { user, effectiveRole } = useUserContext();
-  const { data: appSettings } = useAppSettings();
-  const passkeysEnabled = appSettings?.enable_passkeys ?? false;
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [expandedPerfil, setExpandedPerfil] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isPasskeysOpen, setIsPasskeysOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const router = useRouter();
-
-  const { scrollY } = useScroll();
-  const logoY = useTransform(scrollY, [0, 600], [24, -276]);
-  const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const bgScaleRaw = useTransform(scrollY, [0, 800], [1, 1.05]);
-  const bgScale = useSpring(bgScaleRaw, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001,
-  });
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  const visibleModules = getVisibleDashboardModules(effectiveRole).filter(
-    (mod) => mod.id !== "admin" && mod.id !== "perfil"
-  );
-
-  const handleCardClick = (id: string, href: string) => {
-    if (isMobile) {
-      if (activeId === id) {
-        router.push(href);
-      } else {
-        setActiveId(id);
-      }
-    } else {
-      router.push(href);
-    }
-  };
-
-  const CardsGrid = () => (
+function DashboardCardsGrid({
+  visibleModules,
+  isMobile,
+  activeId,
+  hoveredCard,
+  onHoverCard,
+  onCardClick,
+  expandedPerfil,
+  setExpandedPerfil,
+  passkeysEnabled,
+  setIsProfileOpen,
+  setIsPasskeysOpen,
+}: {
+  visibleModules: DashboardModule[];
+  isMobile: boolean;
+  activeId: string | null;
+  hoveredCard: string | null;
+  onHoverCard: (id: string | null) => void;
+  onCardClick: (id: string, href: string) => void;
+  expandedPerfil: boolean;
+  setExpandedPerfil: (value: boolean) => void;
+  passkeysEnabled: boolean;
+  setIsProfileOpen: (value: boolean) => void;
+  setIsPasskeysOpen: (value: boolean) => void;
+}) {
+  return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full lg:flex lg:flex-nowrap lg:justify-center lg:items-stretch">
       {visibleModules.map((mod, index) => {
         const isActive = isMobile && activeId === mod.id;
         const isFirstMobile = isMobile && index === 0;
+        const isCardHovered = hoveredCard === mod.id || isActive;
 
         return (
-          <motion.div
+          <div
             key={mod.id}
             className={[
               "cursor-pointer w-full h-auto min-h-[400px] lg:h-[380px] lg:w-[280px] xl:w-[300px] lg:flex-none relative",
@@ -99,10 +80,6 @@ export function Dashboard() {
               .join(" ")
               .trim()}
             id={`${mod.id}-card`}
-            initial="idle"
-            whileHover="hover"
-            animate={isActive ? "active" : "idle"}
-            transition={{ duration: 0.4, ease: "easeOut" }}
           >
             {mod.id === "perfil" ? (
               <div className="group flex flex-col border border-border dark:border-white/10 overflow-hidden h-full w-full rounded-2xl bg-card transition-all duration-500 hover:border-azul-trifinio hover:-translate-y-2">
@@ -218,9 +195,9 @@ export function Dashboard() {
               </div>
             ) : (
               <div
-                onClick={() => handleCardClick(mod.id, mod.href)}
-                onMouseEnter={() => setHoveredCard(mod.id)}
-                onMouseLeave={() => setHoveredCard(null)}
+                onClick={() => onCardClick(mod.id, mod.href)}
+                onMouseEnter={() => onHoverCard(mod.id)}
+                onMouseLeave={() => onHoverCard(null)}
                 className={cn(
                   "group flex flex-col border border-border dark:border-white/10 overflow-hidden h-full w-full rounded-2xl transition-[border-color] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] cursor-pointer bg-card group-hover:border-[var(--card-hover-border)]",
                   isActive && "border-[var(--card-hover-border)]",
@@ -233,14 +210,18 @@ export function Dashboard() {
                 }
               >
                 <div className="w-full h-full min-h-[300px] flex flex-col justify-center items-center p-6 outline-none relative z-10 rounded-[inherit] overflow-hidden">
-                  <motion.div
-                    className="absolute top-0 left-0 w-full h-[calc(100%-70px)] origin-bottom pointer-events-none z-0 rounded-t-[inherit]"
+                  <div
+                    className={cn(
+                      "absolute top-0 left-0 w-full h-[calc(100%-70px)] pointer-events-none z-0 rounded-t-[inherit] [clip-path:inset(100%_0%_0%_0%)] group-hover:[clip-path:inset(0%_0%_0%_0%)]",
+                      CARD_FILL_TRANSITION,
+                      isActive && "[clip-path:inset(0%_0%_0%_0%)]",
+                    )}
                     style={{
                       backgroundImage: `linear-gradient(to top, ${mod.hoverGradientFrom ?? "#2c5f9b"}, ${mod.hoverGradientTo ?? "#1a95d3"})`,
+                      ...(isActive
+                        ? { clipPath: "inset(0% 0% 0% 0%)" }
+                        : {}),
                     }}
-                    initial={false}
-                    animate={{ scaleY: (hoveredCard === mod.id || isActive) ? 1 : 0 }}
-                    transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
                   />
                   <div className="absolute inset-0 rounded-[inherit] border border-border dark:border-white/10 pointer-events-none z-20" />
                   <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-30 pointer-events-none">
@@ -251,7 +232,7 @@ export function Dashboard() {
                       <MorphHoverIcon
                         from={ArrowRight}
                         to={MoveRight}
-                        hovered={hoveredCard === mod.id || isActive}
+                        hovered={isCardHovered}
                         size={14}
                         color="currentColor"
                         strokeWidth={2.5}
@@ -259,19 +240,7 @@ export function Dashboard() {
                       />
                     </span>
                   </div>
-                  <motion.div
-                    className="w-full h-full flex flex-col justify-center items-center relative z-10 pb-[40px]"
-                    variants={{
-                      idle: { opacity: 1 },
-                      hover: { opacity: 1 },
-                      active: { opacity: [1, 0.4, 1] },
-                    }}
-                    transition={{
-                      duration: 1.4,
-                      repeat: isActive ? Infinity : 0,
-                      ease: "easeInOut",
-                    }}
-                  >
+                  <div className="w-full h-full flex flex-col justify-center items-center relative z-10 pb-[40px]">
                     <div className="relative z-10 w-full flex justify-center mb-4 -translate-y-3">
                       {mod.morphIconCycle ? (
                         <div
@@ -283,7 +252,7 @@ export function Dashboard() {
                         >
                           <MorphCycleIcon
                             icons={mod.morphIconCycle}
-                            hovered={hoveredCard === mod.id || isActive}
+                            hovered={isCardHovered}
                             size={48}
                             color={mod.morphIconColor ?? "#1a95d3"}
                             spring="snappy"
@@ -300,21 +269,16 @@ export function Dashboard() {
                           <MorphHoverIcon
                             from={mod.morphIconFrom}
                             to={mod.morphIconTo}
-                            hovered={hoveredCard === mod.id || isActive}
+                            hovered={isCardHovered}
                             size={48}
                             color={mod.morphIconColor ?? "#1a95d3"}
                             spring="snappy"
                           />
                         </div>
                       ) : (
-                        <motion.div
-                          variants={{
-                            idle: { y: 0 },
-                            hover: { y: -16 },
-                            active: { y: -16 },
-                          }}
+                        <div
                           className={cn(
-                            "size-[90px] flex items-center justify-center transition-transform duration-700",
+                            "size-[90px] flex items-center justify-center transition-transform duration-700 group-hover:-translate-y-4",
                             DASHBOARD_ICON_PLATE_CLASS,
                           )}
                         >
@@ -324,7 +288,7 @@ export function Dashboard() {
                             size={90}
                             speed={1.5}
                           />
-                        </motion.div>
+                        </div>
                       )}
                     </div>
                     <div className="relative z-10 w-full flex flex-col items-start text-left space-y-4 transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-2">
@@ -352,14 +316,77 @@ export function Dashboard() {
                         {mod.desc}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         );
       })}
     </div>
+  );
+}
+
+export function Dashboard() {
+  const { user, effectiveRole } = useUserContext();
+  const { data: appSettings } = useAppSettings();
+  const passkeysEnabled = appSettings?.enable_passkeys ?? false;
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [expandedPerfil, setExpandedPerfil] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isPasskeysOpen, setIsPasskeysOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const router = useRouter();
+
+  const { scrollY } = useScroll();
+  const logoY = useTransform(scrollY, [0, 600], [24, -276]);
+  const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const bgScaleRaw = useTransform(scrollY, [0, 800], [1, 1.05]);
+  const bgScale = useSpring(bgScaleRaw, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
+  const mobileHeroY = useTransform(scrollY, [0, 800], [0, 150]);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const visibleModules = getVisibleDashboardModules(effectiveRole).filter(
+    (mod) => mod.id !== "admin" && mod.id !== "perfil"
+  );
+
+  const handleCardClick = (id: string, href: string) => {
+    if (isMobile) {
+      if (activeId === id) {
+        router.push(href);
+      } else {
+        setActiveId(id);
+      }
+    } else {
+      router.push(href);
+    }
+  };
+
+  const cardsGrid = (
+    <DashboardCardsGrid
+      visibleModules={visibleModules}
+      isMobile={isMobile}
+      activeId={activeId}
+      hoveredCard={hoveredCard}
+      onHoverCard={setHoveredCard}
+      onCardClick={handleCardClick}
+      expandedPerfil={expandedPerfil}
+      setExpandedPerfil={setExpandedPerfil}
+      passkeysEnabled={passkeysEnabled}
+      setIsProfileOpen={setIsProfileOpen}
+      setIsPasskeysOpen={setIsPasskeysOpen}
+    />
   );
 
   return (
@@ -385,7 +412,7 @@ export function Dashboard() {
             src="/trifinio/hero-background2.jpg"
             alt="Plan Trifinio"
             style={{
-              y: useTransform(scrollY, [0, 800], [0, 150]),
+              y: mobileHeroY,
               scale: bgScale,
             }}
             className="w-full h-auto object-contain block origin-center"
@@ -394,9 +421,7 @@ export function Dashboard() {
 
         <div className="relative w-full px-4 pt-8 pb-20">
           <div className={cn("absolute inset-0", DASHBOARD_DOTTED_BG_CLASS)} />
-          <div className="relative z-10">
-            <CardsGrid />
-          </div>
+          <div className="relative z-10">{cardsGrid}</div>
         </div>
       </div>
 
@@ -429,7 +454,19 @@ export function Dashboard() {
           />
           <div className="relative z-20 w-full px-8 lg:px-12 pt-10 pb-6">
             <div className="w-full max-w-[min(100%,1600px)] mx-auto -mt-[80px]">
-              <CardsGrid />
+              <DashboardCardsGrid
+                visibleModules={visibleModules}
+                isMobile={isMobile}
+                activeId={activeId}
+                hoveredCard={hoveredCard}
+                onHoverCard={setHoveredCard}
+                onCardClick={handleCardClick}
+                expandedPerfil={expandedPerfil}
+                setExpandedPerfil={setExpandedPerfil}
+                passkeysEnabled={passkeysEnabled}
+                setIsProfileOpen={setIsProfileOpen}
+                setIsPasskeysOpen={setIsPasskeysOpen}
+              />
             </div>
           </div>
         </div>

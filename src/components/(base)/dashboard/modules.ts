@@ -4,10 +4,14 @@ import {
   Briefcase,
   Car,
   ClipboardList,
+  Droplets,
   Globe2,
   LayoutDashboard,
+  MapPinned,
   PieChart,
+  Shield,
   Telescope,
+  Users,
 } from "lucide";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
 import { canAccessGestionTerritorial } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
@@ -47,6 +51,22 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     hoverGradientTo: "#818cf8",
     hoverBorderColor: "#6366f1",
     href: "/siget/observatorio",
+    allowedRoles: ["super", "admin", "observatorio"],
+  },
+  {
+    id: "paz-hidrica-ja",
+    title: "Observatorio",
+    subtitle: "Paz Hídrica Ja'",
+    desc: "Gestión de los Recursos Hídricos en la Cuenca del Río Grande.",
+    animatedIcon: "qqvpjphn",
+    morphIconCycle: [Droplets, Shield, Users, MapPinned],
+    morphIconColor: "#003882",
+    morphIconBg: "bg-sky-100 dark:bg-sky-950/50",
+    accentColor: "#003882",
+    hoverGradientFrom: "#003882",
+    hoverGradientTo: "#1B5E20",
+    hoverBorderColor: "#C59B27",
+    href: "/siget/paz-hidrica-ja",
     allowedRoles: ["super", "admin", "observatorio"],
   },
 
@@ -92,6 +112,13 @@ export const OBSERVATORIO_MENU_OPTIONS = [
     title: "Movilidad Humana",
     desc: "Visualización de datos y estadísticas regionales del SIGET.",
     href: "/siget/observatorio",
+    animatedIcon: "qqvpjphn",
+  },
+  {
+    id: "paz-hidrica-ja",
+    title: "Paz Hídrica Ja'",
+    desc: "Gestión de los Recursos Hídricos en la Cuenca del Río Grande.",
+    href: "/siget/paz-hidrica-ja",
     animatedIcon: "qqvpjphn",
   },
 ] as const;

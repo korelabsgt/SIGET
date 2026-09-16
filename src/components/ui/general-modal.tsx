@@ -392,7 +392,7 @@ export function ModalShell({
                 )}
               >
                 {title || subtitle ? (
-                  <div className="min-w-0 shrink">
+                  <div className="min-w-0 flex-1">
                     {title ? (
                       <h3
                         className={cn(
@@ -431,10 +431,7 @@ export function ModalShell({
                   <button
                     type="button"
                     onClick={onClose}
-                    className={cn(
-                      "-mr-1 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10",
-                      headerActionsAlign === "start" && "ml-auto",
-                    )}
+                    className="-mr-1 ml-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-celeste-trifinio transition-colors hover:bg-celeste-trifinio/10"
                     aria-label="Cerrar"
                   >
                     <XIcon size={22} strokeWidth={2.25} />
