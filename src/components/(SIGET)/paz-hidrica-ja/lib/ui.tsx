@@ -383,29 +383,31 @@ export function JaDonut({
 }
 
 function EjeCategoria({
-  x = 0,
-  y = 0,
+  x,
+  y,
   payload,
 }: {
-  x?: number;
-  y?: number;
+  x?: string | number;
+  y?: string | number;
   payload?: { value?: string | number };
 }) {
+  const nx = typeof x === "number" ? x : Number(x ?? 0);
+  const ny = typeof y === "number" ? y : Number(y ?? 0);
   const texto = String(payload?.value ?? "");
   const partes = texto.split(" ");
   return (
-    <text x={x} y={y} textAnchor="middle" fill="#71717a" fontSize={11} fontWeight={700}>
+    <text x={nx} y={ny} textAnchor="middle" fill="#71717a" fontSize={11} fontWeight={700}>
       {partes.length > 1 ? (
         <>
-          <tspan x={x} dy="0.9em">
+          <tspan x={nx} dy="0.9em">
             {partes[0]}
           </tspan>
-          <tspan x={x} dy="1.15em">
+          <tspan x={nx} dy="1.15em">
             {partes.slice(1).join(" ")}
           </tspan>
         </>
       ) : (
-        <tspan x={x} dy="0.9em">
+        <tspan x={nx} dy="0.9em">
           {texto}
         </tspan>
       )}
