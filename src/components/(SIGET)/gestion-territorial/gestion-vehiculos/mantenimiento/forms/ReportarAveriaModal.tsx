@@ -38,6 +38,7 @@ import {
 } from "../../lib/gv-modal-shell";
 import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
 import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
+import { comprimirImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
 
 export type VehiculoAveriaFijo = {
   id: string;
@@ -118,10 +119,6 @@ export function ReportarAveriaModal({
     const selectedFile = e.target.files?.[0];
     e.target.value = "";
     if (selectedFile) {
-      if (selectedFile.size > 512000) {
-        toast.error("La imagen no debe superar los 500 KB");
-        return;
-      }
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setUploadedEvidenciaPath(null);
       setFile(selectedFile);
@@ -147,13 +144,16 @@ export function ReportarAveriaModal({
 
       if (file && !uploadedEvidenciaPath) {
         const supabase = createClient();
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.${fileExt}`;
+        const compressed = await comprimirImagenVehiculo(file);
+        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.jpg`;
         const filePath = `fallas/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("vehiculos")
-          .upload(filePath, file, { upsert: false });
+          .upload(filePath, compressed, {
+            upsert: false,
+            contentType: "image/jpeg",
+          });
 
         if (uploadError) {
           throw new Error("Error subiendo la imagen: " + uploadError.message);
@@ -331,7 +331,9 @@ export function ReportarAveriaModal({
                       <UploadCloud className="size-5" />
                     </div>
                     <p className="text-sm font-medium">Haz clic o arrastra una imagen aquí</p>
-                    <p className="mt-1 text-xs text-muted-foreground">PNG, JPG o WEBP (Máx. 500 KB)</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      PNG, JPG o WEBP (se optimiza a máx. 200 KB)
+                    </p>
                   </div>
                 )}
               </div>

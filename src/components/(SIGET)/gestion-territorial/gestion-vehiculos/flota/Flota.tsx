@@ -31,7 +31,7 @@ import {
   canExportFlotaReporte,
   canDeleteVehiculo,
   canManageFlota,
-  canViewAlertasFlota,
+  canViewGvCampanaNotificaciones,
 } from "../lib/permissions";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
@@ -62,7 +62,7 @@ export function Flota() {
   const canManage = canManageFlota(gvRole);
   const canDelete = canDeleteVehiculo(gvRole);
   const puedeExportar = canExportFlotaReporte(gvRole);
-  const puedeVerAlertas = canViewAlertasFlota(gvRole);
+  const puedeVerAlertas = canViewGvCampanaNotificaciones(gvRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
   const eliminar = useEliminarVehiculo();
 
@@ -186,7 +186,15 @@ export function Flota() {
   return (
     <>
       <GvHeaderExtras panelId="flota">
-        {!loading && puedeVerAlertas ? <FlotaNotificaciones vehiculos={vehiculos} /> : null}
+        {!loading && puedeVerAlertas ? (
+          <FlotaNotificaciones
+            vehiculos={vehiculos}
+            onAbrirVehiculo={(vehiculoId) => {
+              const vehiculo = vehiculos.find((v) => v.id === vehiculoId);
+              if (vehiculo) handleEdit(vehiculo);
+            }}
+          />
+        ) : null}
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell

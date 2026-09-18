@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Bell, BellRing, CalendarClock, Clock } from "lucide";
 import { AlertTriangle } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
@@ -18,15 +18,10 @@ export function SolicitudesNotificaciones({ solicitudes }: { solicitudes: Solici
   const total = pendientes.length;
   const totalVencidas = vencidas.length;
   const hayVencidas = totalVencidas > 0;
-  const alertKey = useMemo(
-    () => pendientes.map((solicitud) => solicitud.id).sort().join("|"),
-    [pendientes],
-  );
-  const { showBadge, markSeen } = useGvNotificacionesVistas(alertKey, total);
+  const { showBadge } = useGvNotificacionesVistas("", total);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) markSeen();
   };
 
   return (

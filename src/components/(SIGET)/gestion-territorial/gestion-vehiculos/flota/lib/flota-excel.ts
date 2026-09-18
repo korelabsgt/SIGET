@@ -11,6 +11,7 @@ import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import {
   combinarFotosVehiculo,
   formatEstadoVehiculoLabel,
+  getKmReferenciaServicio,
   getMantenimientoAlertStatus,
   separarFotosVehiculo,
 } from "./helpers";
@@ -231,7 +232,10 @@ function pintarSubtitulo(
 }
 
 function filasDetalleVehiculo(vehiculo: VehiculoRow): [string, string][] {
-  const mantenimiento = getMantenimientoAlertStatus(vehiculo.kilometraje_actual);
+  const mantenimiento = getMantenimientoAlertStatus(
+    vehiculo.kilometraje_actual,
+    getKmReferenciaServicio(vehiculo),
+  );
 
   return [
     ["Placa", vehiculo.placa],

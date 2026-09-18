@@ -36,6 +36,11 @@ export const vehiculoSchema = z.object({
     .int("Debe ser un número entero")
     .min(0, "El kilometraje no puede ser negativo")
     .default(0),
+  km_referencia_servicio: z.coerce
+    .number()
+    .int("Debe ser un número entero")
+    .min(0, "La referencia de servicio no puede ser negativa")
+    .optional(),
   estado: z.enum(ESTADOS_VEHICULO).default("LIBRE"),
   vencimiento_seguro: fechaManualOpcional,
   vencimiento_circulacion: fechaManualOpcional,

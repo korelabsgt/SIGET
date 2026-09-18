@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -57,26 +59,39 @@ export function GvTabFilter<T extends string>({
     selectClassName,
   );
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <>
       <div className={cn(compact ? "min-w-0 flex-1 basis-0 lg:hidden" : "w-full lg:hidden", className)}>
-        <Select value={value} onValueChange={(next) => onChange(next as T)}>
-          <SelectTrigger className={triggerClass}>
-            <SelectValue>{active?.label}</SelectValue>
-          </SelectTrigger>
-          <SelectContent position="popper" className={selectContentClass}>
-            {options.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-                textValue={option.label}
-                className={selectItemClass}
-              >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {mounted ? (
+          <Select value={value} onValueChange={(next) => onChange(next as T)}>
+            <SelectTrigger className={triggerClass}>
+              <SelectValue>{active?.label}</SelectValue>
+            </SelectTrigger>
+            <SelectContent position="popper" className={selectContentClass}>
+              {options.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  textValue={option.label}
+                  className={selectItemClass}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className={cn(triggerClass, "flex items-center justify-between gap-2")} aria-hidden>
+            <span className="truncate">{active?.label}</span>
+            <ChevronDown className="size-4 shrink-0 opacity-50" />
+          </div>
+        )}
       </div>
 
       <div className={cn("hidden lg:block lg:w-auto", className)}>

@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BitacorasPanel } from "./BitacorasPanel";
-import { BitacorasNotificaciones } from "./BitacorasNotificaciones";
 import { BitacoraStatsCards } from "./BitacoraStatsCards";
 import { Crear } from "./forms/Crear";
 import { useBitacoras } from "./lib/hooks";
@@ -22,7 +21,7 @@ import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
 import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
-import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import {
@@ -158,11 +157,6 @@ export function Bitacoras() {
 
   const tableVisibleRows = gvTableShellVisibleRows(pageSize);
 
-  const bitacorasParaAlertas = useMemo(
-    () => bitacoras.filter((bitacora) => bitacoraEnPeriodoCalendario(bitacora.fecha, periodoFilter)),
-    [bitacoras, periodoFilter],
-  );
-
   useGvPanelChrome("bitacoras");
 
   return (
@@ -172,9 +166,6 @@ export function Bitacoras() {
         onOpenChange={setCreateOpen}
         onSaved={() => setCreateOpen(false)}
       />
-      <GvHeaderExtras panelId="bitacoras">
-        {!loading ? <BitacorasNotificaciones bitacoras={bitacorasParaAlertas} /> : null}
-      </GvHeaderExtras>
       <GvTableSectionMotion panelId="bitacoras">
       <GestionVehiculosTableShell
         visibleRows={tableVisibleRows}

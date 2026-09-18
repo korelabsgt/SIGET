@@ -7,6 +7,11 @@ import {
   type VehiculoRow,
 } from "./zod";
 import { normalizeVehiculoStoragePath } from "../../lib/storage";
+import { fechaCalendarioGt } from "@/lib/fechas-gt";
+import {
+  vehiculoReservadoEnDiaCalendario,
+  type SolicitudCalendarioRef,
+} from "../../solicitudes/lib/calendario-reservas";
 
 
 
@@ -60,6 +65,53 @@ export function getVencimientoDocumentoStatus(fecha: string | null | undefined):
   return { estado: "VERDE", etiqueta: "Al día", diasRestantes };
 }
 
+export function detalleAlertaDocumentosVehiculo(
+  vencimientoSeguro: string | null | undefined,
+  vencimientoCirculacion: string | null | undefined,
+  nivel: "critico" | "proximo",
+): string {
+  const seguro = getVencimientoDocumentoStatus(vencimientoSeguro);
+  const circulacion = getVencimientoDocumentoStatus(vencimientoCirculacion);
+  const partes: string[] = [];
+
+  if (nivel === "critico") {
+    if (seguro.etiqueta === "Sin registrar") {
+      partes.push("Seguro sin registrar");
+    } else if (seguro.etiqueta === "Vencido") {
+      partes.push("Seguro vencido");
+    }
+
+    if (circulacion.etiqueta === "Sin registrar") {
+      partes.push("Tarjeta de circulación sin registrar");
+    } else if (circulacion.etiqueta === "Vencido") {
+      partes.push("Tarjeta de circulación vencida");
+    }
+  } else {
+    if (seguro.etiqueta === "Próximo") {
+      partes.push(
+        seguro.diasRestantes != null
+          ? `Seguro vence en ${seguro.diasRestantes} día${seguro.diasRestantes === 1 ? "" : "s"}`
+          : "Seguro por vencer",
+      );
+    }
+    if (circulacion.etiqueta === "Próximo") {
+      partes.push(
+        circulacion.diasRestantes != null
+          ? `Tarjeta de circulación vence en ${circulacion.diasRestantes} día${circulacion.diasRestantes === 1 ? "" : "s"}`
+          : "Tarjeta de circulación por vencer",
+      );
+    }
+  }
+
+  if (partes.length === 0) {
+    return nivel === "critico"
+      ? "Revise seguro y tarjeta de circulación"
+      : "Documentos por vencer en los próximos 30 días";
+  }
+
+  return partes.join(" · ");
+}
+
 export function getAlertStatusClasses(estado: AlertStatus) {
   switch (estado) {
     case "VERDE":
@@ -75,29 +127,29 @@ export const KM_INTERVALO_SERVICIO = 5000;
 export const KM_MARGEN_MANTENIMIENTO_FORZADO = 500;
 export const PREFIJO_FALLA_SERVICIO_KM = "[SERVICIO-KM:";
 
-export function getUmbralMantenimientoForzadoKm(kmActual: number): number | null {
-  const minimo = KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
-  if (kmActual < minimo) return null;
-  return (
-    Math.floor((kmActual - KM_MARGEN_MANTENIMIENTO_FORZADO) / KM_INTERVALO_SERVICIO)
-      * KM_INTERVALO_SERVICIO
-    + KM_MARGEN_MANTENIMIENTO_FORZADO
-  );
-}
-
-export function getUmbralesMantenimientoForzadoAlcanzados(kmActual: number): number[] {
-  const ultimo = getUmbralMantenimientoForzadoKm(kmActual);
-  if (ultimo === null) return [];
-  const primero = KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
-  const umbrales: number[] = [];
-  for (let umbral = primero; umbral <= ultimo; umbral += KM_INTERVALO_SERVICIO) {
-    umbrales.push(umbral);
+export function getKmReferenciaServicio(vehiculo: Pick<VehiculoRow, "kilometraje_actual" | "km_referencia_servicio">): number {
+  const referencia = vehiculo.km_referencia_servicio;
+  if (referencia == null || Number.isNaN(referencia)) {
+    return vehiculo.kilometraje_actual;
   }
-  return umbrales;
+  return Math.max(0, referencia);
 }
 
-export function buildDescripcionFallaServicioKm(umbral: number): string {
-  return `${PREFIJO_FALLA_SERVICIO_KM}${umbral}] Servicio programado: el vehículo alcanzó ${umbral.toLocaleString("es-GT")} km.`;
+export function getOdometroProximoServicioForzado(kmReferenciaServicio: number): number {
+  return kmReferenciaServicio + KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
+}
+
+export function getUmbralesMantenimientoForzadoAlcanzados(
+  kmActual: number,
+  kmReferenciaServicio: number,
+): number[] {
+  const umbral = getOdometroProximoServicioForzado(kmReferenciaServicio);
+  if (kmActual < umbral) return [];
+  return [umbral];
+}
+
+export function buildDescripcionFallaServicioKm(umbralOdometro: number): string {
+  return `${PREFIJO_FALLA_SERVICIO_KM}${umbralOdometro}] Servicio programado: odómetro en ${umbralOdometro.toLocaleString("es-GT")} km (${(KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO).toLocaleString("es-GT")} km desde el último servicio).`;
 }
 
 export function parseUmbralServicioKm(descripcion: string): number | null {
@@ -151,10 +203,11 @@ export function getFleetServicioKmForzadoAlerts(
   return alerts;
 }
 
-export function getMantenimientoAlertStatus(kmActual: number): { estado: AlertStatus; kmFaltantes: number; siguienteServicio: number } {
-
-  const siguienteServicio = Math.ceil((kmActual + 1) / KM_INTERVALO_SERVICIO) * KM_INTERVALO_SERVICIO;
-
+export function getMantenimientoAlertStatus(
+  kmActual: number,
+  kmReferenciaServicio: number,
+): { estado: AlertStatus; kmFaltantes: number; siguienteServicio: number } {
+  const siguienteServicio = getOdometroProximoServicioForzado(kmReferenciaServicio);
   const kmFaltantes = siguienteServicio - kmActual;
 
 
@@ -248,18 +301,35 @@ export function getFleetAlertNotifications(
     );
 
     if (docStatus === "ROJO") {
-
-      docsError.push(formatPlacaLine(vehiculo.placa, "vencidos o faltantes"));
-
+      docsError.push(
+        formatPlacaLine(
+          vehiculo.placa,
+          detalleAlertaDocumentosVehiculo(
+            vehiculo.vencimiento_seguro,
+            vehiculo.vencimiento_circulacion,
+            "critico",
+          ),
+        ),
+      );
     } else if (docStatus === "AMARILLO") {
-
-      docsWarn.push(formatPlacaLine(vehiculo.placa, "próximos a vencer"));
-
+      docsWarn.push(
+        formatPlacaLine(
+          vehiculo.placa,
+          detalleAlertaDocumentosVehiculo(
+            vehiculo.vencimiento_seguro,
+            vehiculo.vencimiento_circulacion,
+            "proximo",
+          ),
+        ),
+      );
     }
 
 
 
-    const mantenimiento = getMantenimientoAlertStatus(vehiculo.kilometraje_actual);
+    const mantenimiento = getMantenimientoAlertStatus(
+      vehiculo.kilometraje_actual,
+      getKmReferenciaServicio(vehiculo),
+    );
 
     if (mantenimiento.estado === "ROJO") {
 
@@ -395,26 +465,39 @@ export function getFleetAllAlerts(
     );
 
     if (docStatus === "ROJO") {
+      const detalle = detalleAlertaDocumentosVehiculo(
+        vehiculo.vencimiento_seguro,
+        vehiculo.vencimiento_circulacion,
+        "critico",
+      );
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-docs-crit`,
         vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Documentos críticos",
-        detalle: "Seguro o circulación vencidos o sin registrar",
+        detalle,
         severidad: "error",
       });
     } else if (docStatus === "AMARILLO") {
+      const detalle = detalleAlertaDocumentosVehiculo(
+        vehiculo.vencimiento_seguro,
+        vehiculo.vencimiento_circulacion,
+        "proximo",
+      );
       alerts.push({
         id: `${vehiculo.id ?? vehiculo.placa}-docs-warn`,
         vehiculo_id: vehiculo.id ?? vehiculo.placa,
         placa: vehiculo.placa,
         titulo: "Documentos por vencer",
-        detalle: "Seguro o circulación vence en los próximos 30 días",
+        detalle,
         severidad: "warn",
       });
     }
 
-    const mantenimiento = getMantenimientoAlertStatus(vehiculo.kilometraje_actual);
+    const mantenimiento = getMantenimientoAlertStatus(
+      vehiculo.kilometraje_actual,
+      getKmReferenciaServicio(vehiculo),
+    );
 
     if (mantenimiento.estado === "ROJO") {
       alerts.push({
@@ -462,6 +545,35 @@ export function esVehiculoDisponible(
 ): boolean {
   const estado = estadoVehiculoNormalizado(vehiculo.estado);
   return estado === "LIBRE" || estado === "DISPONIBLE";
+}
+
+export function esVehiculoSeleccionableParaSolicitud(
+  vehiculo: Pick<VehiculoRow, "estado">,
+): boolean {
+  const estado = estadoVehiculoNormalizado(vehiculo.estado);
+  return estado !== "EN_MANTENIMIENTO";
+}
+
+export function aplicarEstadoFlotaOperativoHoy(
+  vehiculo: VehiculoRow,
+  solicitudes: SolicitudCalendarioRef[],
+): VehiculoRow {
+  if (estadoVehiculoNormalizado(vehiculo.estado) === "EN_MANTENIMIENTO") {
+    return vehiculo;
+  }
+  if (!vehiculo.id) return vehiculo;
+
+  const hoy = fechaCalendarioGt();
+  const reservadoHoy = vehiculoReservadoEnDiaCalendario(
+    vehiculo.id,
+    hoy,
+    solicitudes,
+  );
+  const estado = estadoVehiculoConReservaFija(
+    vehiculo.placa,
+    reservadoHoy ? "RESERVADO" : "LIBRE",
+  );
+  return { ...vehiculo, estado };
 }
 
 export const PLACAS_SIEMPRE_RESERVADAS: readonly string[] = [];
@@ -550,8 +662,13 @@ export function imagenUrlParaDb(fotos: string[]): string[] {
 
 export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
   const fotos = fotosVehiculo(row);
+  const kmActual = row.kilometraje_actual ?? 0;
+  const kmReferencia =
+    row.km_referencia_servicio == null ? kmActual : row.km_referencia_servicio;
   return {
     ...row,
+    kilometraje_actual: kmActual,
+    km_referencia_servicio: Math.min(kmReferencia, kmActual),
     imagen_url: fotos,
   };
 }

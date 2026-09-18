@@ -12,20 +12,15 @@ import {
   type TipoFotoVehiculo,
 } from "../lib/helpers";
 import { canManageFlota } from "../../lib/permissions";
+import { esTipoImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
 
-const MAX_BYTES = 2_000_000;
-const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const ACCEPT_ATTR = ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
 
 function filtrarArchivosValidos(seleccionados: File[]): File[] {
   const validos: File[] = [];
   for (const archivo of seleccionados) {
-    if (!ACCEPTED_TYPES.includes(archivo.type)) {
+    if (!esTipoImagenVehiculo(archivo.type)) {
       toast.error("Formato no válido. Use JPG, PNG o WEBP.");
-      continue;
-    }
-    if (archivo.size > MAX_BYTES) {
-      toast.error("Cada imagen no debe superar los 2 MB");
       continue;
     }
     validos.push(archivo);
@@ -145,7 +140,8 @@ export function ImagenVehiculoDropzone({
           </div>
           <p className="text-sm font-medium">Haz clic o arrastra imágenes aquí</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            JPG, PNG o WEBP (máx. 2 MB). Mínimo {MIN_FOTOS_VEHICULO}, máximo {max}.
+            JPG, PNG o WEBP (se optimizan a máx. 200 KB). Mínimo {MIN_FOTOS_VEHICULO}, máximo{" "}
+            {max}.
           </p>
         </div>
       )}
@@ -258,7 +254,9 @@ export function TarjetaCirculacionCampo({
               <UploadCloud className="size-4" />
             </div>
             <p className="text-sm font-medium">Subir tarjeta de circulación</p>
-            <p className="mt-1 text-xs text-muted-foreground">JPG, PNG o WEBP (máx. 2 MB).</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              JPG, PNG o WEBP (se optimiza a máx. 200 KB).
+            </p>
           </motion.label>
         )}
       </AnimatePresence>
@@ -287,6 +285,9 @@ export async function uploadImagenVehiculo(
   placa: string,
   tipo: TipoFotoVehiculo = "unidad",
 ): Promise<string> {
+  const { comprimirImagenVehiculo } = await import("../../lib/imagen-vehiculo-compress");
+  const compressed = await comprimirImagenVehiculo(file);
+
   const { createClient } = await import("@/utils/supabase/client");
   const supabase = createClient();
 
@@ -303,9 +304,6 @@ export async function uploadImagenVehiculo(
     throw new Error("No tienes permisos para subir fotografías de la flota.");
   }
 
-  const extensionFromName = file.name.split(".").pop()?.toLowerCase();
-  const extensionFromType = file.type.split("/")[1]?.replace("jpeg", "jpg");
-  const extension = (extensionFromName || extensionFromType || "jpg").replace(/[^a-z0-9]/g, "");
   const placaSegment =
     placa
       .trim()
@@ -313,13 +311,15 @@ export async function uploadImagenVehiculo(
       .replace(/[^A-Z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "vehiculo";
   const separador = tipo === "circulacion" ? CIRCULACION_PATH_MARKER : "_";
-  const filePath = `flota/${placaSegment}${separador}${crypto.randomUUID()}.${extension || "jpg"}`;
+  const filePath = `flota/${placaSegment}${separador}${crypto.randomUUID()}.jpg`;
 
-  const { error: uploadError } = await supabase.storage.from("vehiculos").upload(filePath, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type || "image/jpeg",
-  });
+  const { error: uploadError } = await supabase.storage
+    .from("vehiculos")
+    .upload(filePath, compressed, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: "image/jpeg",
+    });
 
   if (uploadError) {
     throw new Error("No se pudo guardar la imagen en Storage: " + uploadError.message);

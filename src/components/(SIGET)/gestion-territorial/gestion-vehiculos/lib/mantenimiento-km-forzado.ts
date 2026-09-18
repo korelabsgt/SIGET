@@ -9,11 +9,28 @@ import { sincronizarEstadoFlotaVehiculo } from "./sincronizar-estado-vehiculo";
 const FALLAS_TABLE = "ot_fallas_mantenimiento";
 const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
 
+const VEHICULOS_TABLE = "ot_vehiculos";
+
 export async function aplicarMantenimientoForzadoPorKm(
   supabase: SupabaseClient,
   params: { vehiculoId: string; kmActual: number; reportadoPor: string },
 ): Promise<{ aplicado: boolean; umbral: number | null }> {
-  const umbrales = getUmbralesMantenimientoForzadoAlcanzados(params.kmActual);
+  const { data: vehiculo, error: vehiculoError } = await supabase
+    .from(VEHICULOS_TABLE)
+    .select("kilometraje_actual, km_referencia_servicio")
+    .eq("id", params.vehiculoId)
+    .maybeSingle();
+
+  if (vehiculoError) {
+    console.error("Error leyendo referencia de servicio:", vehiculoError);
+    return { aplicado: false, umbral: null };
+  }
+
+  const kmActual = params.kmActual;
+  const kmReferencia =
+    vehiculo?.km_referencia_servicio ?? vehiculo?.kilometraje_actual ?? kmActual;
+
+  const umbrales = getUmbralesMantenimientoForzadoAlcanzados(kmActual, kmReferencia);
   if (umbrales.length === 0) {
     return { aplicado: false, umbral: null };
   }

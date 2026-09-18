@@ -10,7 +10,13 @@ import { getFleetAllAlerts } from "./lib/helpers";
 import { type VehiculoRow } from "./lib/zod";
 import { cn } from "@/lib/utils";
 
-export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] }) {
+export function FlotaNotificaciones({
+  vehiculos,
+  onAbrirVehiculo,
+}: {
+  vehiculos: VehiculoRow[];
+  onAbrirVehiculo?: (vehiculoId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const { data: fallas = [] } = useFallasMantenimiento();
   const fallasServicioKm = useMemo(
@@ -31,6 +37,12 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) markSeen();
+  };
+
+  const abrirVehiculoDesdeAlerta = (vehiculoId: string) => {
+    if (!onAbrirVehiculo) return;
+    onAbrirVehiculo(vehiculoId);
+    setOpen(false);
   };
 
   return (
@@ -65,6 +77,16 @@ export function FlotaNotificaciones({ vehiculos }: { vehiculos: VehiculoRow[] })
             <GvNotificacionItem
               key={alerta.id}
               tone={alerta.severidad === "error" ? "critical" : "warn"}
+              onClick={
+                onAbrirVehiculo
+                  ? () => abrirVehiculoDesdeAlerta(alerta.vehiculo_id)
+                  : undefined
+              }
+              ariaLabel={
+                onAbrirVehiculo
+                  ? `Editar vehículo ${alerta.placa}: ${alerta.titulo}`
+                  : undefined
+              }
             >
               <div
                 className={cn(

@@ -11,7 +11,13 @@ import { cn } from "@/lib/utils";
 import { formatEstadoFallaLabel, getMantenimientoAlerts } from "./lib/helpers";
 import { type FallaRow } from "./lib/zod";
 
-export function MantenimientoNotificaciones({ fallas }: { fallas: FallaRow[] }) {
+export function MantenimientoNotificaciones({
+  fallas,
+  onAbrirFalla,
+}: {
+  fallas: FallaRow[];
+  onAbrirFalla?: (falla: FallaRow) => void;
+}) {
   const [open, setOpen] = useState(false);
   const alertas = getMantenimientoAlerts(fallas);
   const total = alertas.length;
@@ -22,6 +28,12 @@ export function MantenimientoNotificaciones({ fallas }: { fallas: FallaRow[] }) 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) markSeen();
+  };
+
+  const abrirFallaDesdeAlerta = (falla: FallaRow) => {
+    if (!onAbrirFalla) return;
+    onAbrirFalla(falla);
+    setOpen(false);
   };
 
   return (
@@ -66,6 +78,14 @@ export function MantenimientoNotificaciones({ fallas }: { fallas: FallaRow[] }) 
             <GvNotificacionItem
               key={alerta.id}
               tone={alerta.severidad === "error" ? "critical" : "warn"}
+              onClick={
+                onAbrirFalla ? () => abrirFallaDesdeAlerta(alerta.falla) : undefined
+              }
+              ariaLabel={
+                onAbrirFalla
+                  ? `Atender avería ${alerta.falla.vehiculo?.placa ?? ""}: ${alerta.titulo}`
+                  : undefined
+              }
             >
               <div
                 className={cn(

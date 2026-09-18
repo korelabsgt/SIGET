@@ -11,10 +11,13 @@ import type { SolicitudCombustibleRow } from "./lib/zod";
 import {
   estadoBadgeClassCombustible,
   formatCuponesAsignados,
+  formatDenominacionCuponSolicitud,
   formatEstadoSolicitudCombustible,
   formatFechaSolicitudCombustible,
   formatMisionVinculadaCombustible,
+  formatMontoEntregaCombustible,
   formatSolicitanteNombre,
+  cantidadCuponesSolicitud,
 } from "./lib/helpers";
 
 function DetalleFila({ label, value }: { label: string; value: string }) {
@@ -79,7 +82,17 @@ export function SolicitudCombustibleDetalleModal({
           <DetalleFila label="Placa" value={vehiculoPlaca} />
           <DetalleFila label="Misión vinculada" value={formatMisionVinculadaCombustible(solicitud)} />
           <DetalleFila label="Solicitante" value={formatSolicitanteNombre(solicitud)} />
-          <DetalleFila label="Cupones" value={formatCuponesAsignados(solicitud)} />
+          <DetalleFila label="Cupones (del – al)" value={formatCuponesAsignados(solicitud)} />
+          <DetalleFila
+            label="Cantidad de cupones"
+            value={
+              cantidadCuponesSolicitud(solicitud) > 0
+                ? String(cantidadCuponesSolicitud(solicitud))
+                : "—"
+            }
+          />
+          <DetalleFila label="Denominación" value={formatDenominacionCuponSolicitud(solicitud)} />
+          <DetalleFila label="Monto entregado" value={formatMontoEntregaCombustible(solicitud)} />
           {solicitud.comentarios?.trim() ? (
             <DetalleFila label="Comentarios" value={solicitud.comentarios.trim()} />
           ) : null}

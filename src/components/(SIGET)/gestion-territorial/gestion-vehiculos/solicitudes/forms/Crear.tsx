@@ -48,7 +48,7 @@ export function Crear({
   onSaved: () => void;
 }) {
   const crear = useCrearSolicitud();
-  const { data: vehiculosLibres = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
+  const { data: vehiculosBase = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
 
   const {
     register,
@@ -177,7 +177,7 @@ export function Crear({
                     <SelectItem value="none" className={selectItemClass}>
                       Sin preferencia de vehículo
                     </SelectItem>
-                    {vehiculosLibres.filter((v) => v.id).map((v) => {
+                    {vehiculosBase.filter((v) => v.id).map((v) => {
                       const label = formatVehiculoOpcion(v);
                       return (
                         <SelectItem
@@ -194,9 +194,9 @@ export function Crear({
                 </Select>
               )}
             />
-            {!loadingVehiculos && vehiculosLibres.length === 0 ? (
+            {!loadingVehiculos && vehiculosBase.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                No hay vehículos libres. Puede enviar la solicitud sin preferencia.
+                No hay vehículos disponibles para preferencia en este momento.
               </p>
             ) : null}
             {errors.vehiculo_id ? (

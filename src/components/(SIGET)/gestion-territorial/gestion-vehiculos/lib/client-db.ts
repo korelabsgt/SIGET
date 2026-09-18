@@ -5,10 +5,12 @@ import { createClient } from "@/utils/supabase/client";
 import type { BitacoraRow } from "../bitacoras/lib/zod";
 import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
 import { loadMisionesVinculablesBitacora } from "../bitacoras/lib/misiones-vinculables";
-import { esVehiculoDisponible, normalizeVehiculoRow } from "../flota/lib/helpers";
+import { esVehiculoSeleccionableParaSolicitud, normalizeVehiculoRow } from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
-import { canViewAllFallasMantenimiento } from "./permissions";
+import { FALLAS_MANTENIMIENTO_SELECT } from "../mantenimiento/lib/fallas-query";
+import { normalizeFallaRow } from "../mantenimiento/lib/helpers";
+import { canViewAllFallasMantenimiento, roleFromAuthUser } from "./permissions";
 import type { SolicitudRow } from "../solicitudes/lib/zod";
 import { canViewAllBitacoras, canViewAllSolicitudes } from "./permissions";
 
@@ -37,7 +39,9 @@ export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
 
   return (data ?? [])
     .map((row) => normalizeVehiculoRow(row as VehiculoRow))
-    .filter((vehiculo) => Boolean(vehiculo.id) && esVehiculoDisponible(vehiculo));
+    .filter(
+      (vehiculo) => Boolean(vehiculo.id) && esVehiculoSeleccionableParaSolicitud(vehiculo),
+    );
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
@@ -110,19 +114,11 @@ export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
   } = await client.auth.getUser();
   if (!user) throw new Error("No autenticado");
 
-  const role =
-    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+  const role = roleFromAuthUser(user);
 
   let query = client
     .from("ot_fallas_mantenimiento")
-    .select(
-      `
-      *,
-      vehiculo:ot_vehiculos(placa, marca, modelo),
-      reportador:profiles!ot_fallas_mantenimiento_reportado_por_fkey(nombre),
-      mecanico:profiles!ot_fallas_mantenimiento_mecanico_id_fkey(nombre)
-    `,
-    )
+    .select(FALLAS_MANTENIMIENTO_SELECT)
     .order("created_at", { ascending: false });
 
   if (!canViewAllFallasMantenimiento(role)) {
@@ -132,7 +128,7 @@ export async function fetchFallasMantenimiento(): Promise<FallaRow[]> {
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as FallaRow[];
+  return (data ?? []).map((row) => normalizeFallaRow(row as FallaRow));
 }
 
 export async function fetchPerfilesNombre(): Promise<MecanicoOption[]> {

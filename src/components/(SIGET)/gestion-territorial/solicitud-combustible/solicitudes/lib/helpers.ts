@@ -1,4 +1,6 @@
+import { montoTotalCuponesEntregados } from "../../../gestion-vehiculos/bitacoras/lib/combustible-mision";
 import { formatFechaHoraGv } from "../../../gestion-vehiculos/lib/gv-fechas";
+import { formatDenominacion } from "../../vales/lib/helpers";
 import type { SolicitudRow } from "../../../gestion-vehiculos/solicitudes/lib/zod";
 import type { EstadoSolicitudCombustible, SolicitudCombustibleRow } from "./zod";
 
@@ -72,8 +74,12 @@ export function formatSolicitanteNombre(row: SolicitudCombustibleRow): string {
   return row.solicitante?.nombre?.trim() || row.solicitante?.email?.trim() || "—";
 }
 
-export function formatEntreganteNombre(row: SolicitudCombustibleRow): string {
-  return row.entregante?.nombre?.trim() || row.entregante?.email?.trim() || "—";
+export const REQUISICION_COMBUSTIBLE_ENTREGADO_POR = "María Fernanda Aguirre Azañón";
+
+export const REQUISICION_COMBUSTIBLE_ENTREGADO_POR_CARGO = "Asistente Financiera OT";
+
+export function formatEntreganteNombre(_row: SolicitudCombustibleRow): string {
+  return REQUISICION_COMBUSTIBLE_ENTREGADO_POR;
 }
 
 export function formatFechaAprobacionCombustible(value: string | null): string {
@@ -95,6 +101,33 @@ export function formatFechaSolicitudCombustible(value: string): string {
 export function cantidadCuponesSolicitud(row: SolicitudCombustibleRow): number {
   if (row.cupon_del == null || row.cupon_al == null) return 0;
   return row.cupon_al - row.cupon_del + 1;
+}
+
+export function denominacionCuponSolicitud(row: SolicitudCombustibleRow): number | null {
+  if (row.denominacion_cupon == null) return null;
+  const value = Number(row.denominacion_cupon);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+export function montoTotalEntregaCombustible(row: SolicitudCombustibleRow): number | null {
+  const denominacion = denominacionCuponSolicitud(row);
+  if (denominacion == null || row.cupon_del == null || row.cupon_al == null) return null;
+  const cantidad = cantidadCuponesSolicitud(row);
+  if (cantidad <= 0) return null;
+  return montoTotalCuponesEntregados(row.cupon_del, row.cupon_al, denominacion);
+}
+
+export function formatDenominacionCuponSolicitud(row: SolicitudCombustibleRow): string {
+  const denominacion = denominacionCuponSolicitud(row);
+  if (denominacion == null) return "—";
+  return formatDenominacion(denominacion);
+}
+
+export function formatMontoEntregaCombustible(row: SolicitudCombustibleRow): string {
+  const monto = montoTotalEntregaCombustible(row);
+  if (monto == null) return "—";
+  return formatDenominacion(monto);
 }
 
 export function estadoBadgeClassCombustible(estado: EstadoSolicitudCombustible): string {

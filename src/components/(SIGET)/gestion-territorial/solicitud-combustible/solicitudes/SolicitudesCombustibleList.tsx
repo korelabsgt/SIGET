@@ -18,9 +18,11 @@ import type { SolicitudCombustibleRow } from "./lib/zod";
 import {
   estadoBadgeClassCombustible,
   formatCuponesAsignados,
+  formatDenominacionCuponSolicitud,
   formatEstadoSolicitudCombustible,
   formatFechaSolicitudCombustible,
   formatMisionVinculadaCombustible,
+  formatMontoEntregaCombustible,
 } from "./lib/helpers";
 
 function SolicitudCombustibleRowItem({
@@ -83,6 +85,11 @@ function SolicitudCombustibleRowItem({
         <p className="text-sm font-semibold tabular-nums text-foreground">
           {formatCuponesAsignados(row)}
         </p>
+        {row.estado === "APROBADO" ? (
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {formatDenominacionCuponSolicitud(row)} · {formatMontoEntregaCombustible(row)}
+          </p>
+        ) : null}
       </td>
       <td className={gvTableActionTdClass}>
         <GestionVehiculosActionCell>

@@ -62,20 +62,30 @@ export function GvNotificacionesCampana({
 export function GvNotificacionItem({
   children,
   tone = "warn",
+  onClick,
+  ariaLabel,
 }: {
   children: ReactNode;
   tone?: "warn" | "critical";
+  onClick?: () => void;
+  ariaLabel?: string;
 }) {
+  const surfaceClass = cn(
+    "flex w-full items-start gap-3 px-4 py-3 text-left",
+    tone === "critical" ? "bg-red-50/30 dark:bg-red-950/10" : undefined,
+    onClick &&
+      "cursor-pointer transition-colors hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-celeste-trifinio/40 dark:hover:bg-zinc-800/80",
+  );
+
   return (
     <li className="border-b border-border last:border-0 dark:border-zinc-800">
-      <div
-        className={cn(
-          "flex w-full items-start gap-3 px-4 py-3 text-left",
-          tone === "critical" ? "bg-red-50/30 dark:bg-red-950/10" : undefined,
-        )}
-      >
-        {children}
-      </div>
+      {onClick ? (
+        <button type="button" className={surfaceClass} onClick={onClick} aria-label={ariaLabel}>
+          {children}
+        </button>
+      ) : (
+        <div className={surfaceClass}>{children}</div>
+      )}
     </li>
   );
 }

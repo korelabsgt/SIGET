@@ -4,6 +4,8 @@ import Link from "next/link";
 import {
   createContext,
   useContext,
+  useEffect,
+  useState,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -74,9 +76,14 @@ function switchLineBg(active: boolean, tone: GvSwitchTone) {
 function SwitchIndicator({ active, tone }: { active: boolean; tone: GvSwitchTone }) {
   const layoutId = useContext(GvSwitchLayoutContext);
   const prefersReducedMotion = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
   const lineBg = switchLineBg(active, tone);
 
-  if (layoutId && !prefersReducedMotion) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (mounted && layoutId && !prefersReducedMotion) {
     return (
       <span aria-hidden className="relative block h-0.5 w-full shrink-0">
         {active ? (

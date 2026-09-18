@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseFechaHoraManualToIso } from "../../lib/fechas-input";
+import { validarFechasMisionNoAnterioresAHoyGt } from "./calendario-reservas";
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",
@@ -43,8 +44,21 @@ export const solicitudInputSchema = z
     {
       message: "La fecha de fin estimada debe ser posterior a la fecha de inicio",
       path: ["fecha_fin_estimada"],
+    },
+  )
+  .superRefine((data, ctx) => {
+    const fechas = validarFechasMisionNoAnterioresAHoyGt(
+      data.fecha_inicio,
+      data.fecha_fin_estimada,
+    );
+    if (!fechas.ok) {
+      ctx.addIssue({
+        code: "custom",
+        message: fechas.message,
+        path: [fechas.path],
+      });
     }
-  );
+  });
 
 export type SolicitudInput = z.infer<typeof solicitudInputSchema>;
 
