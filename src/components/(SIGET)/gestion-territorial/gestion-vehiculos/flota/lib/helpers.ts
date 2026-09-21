@@ -2,6 +2,7 @@ import { differenceInDays } from "date-fns";
 
 import {
   ESTADOS_VEHICULO,
+  vehiculoInputSchema,
   type AlertStatus,
   type EstadoVehiculo,
   type VehiculoRow,
@@ -605,6 +606,35 @@ export function formatVehiculoOpcion(
   const base = `${v.placa} · ${v.marca} ${v.modelo}`;
   const color = v.color?.trim();
   return color ? `${base} · ${color}` : base;
+}
+
+const vehiculoCatalogoCamposSchema = vehiculoInputSchema.pick({
+  placa: true,
+  marca: true,
+  modelo: true,
+  color: true,
+});
+
+export function esVehiculoRegistroFlota(
+  vehiculo: Pick<VehiculoRow, "id" | "placa" | "marca" | "modelo" | "color">,
+): boolean {
+  if (!vehiculo.id?.trim()) return false;
+  return vehiculoCatalogoCamposSchema.safeParse(vehiculo).success;
+}
+
+export function listarVehiculosCatalogoFlota(vehiculos: VehiculoRow[]): VehiculoRow[] {
+  const vistos = new Set<string>();
+  const lista: VehiculoRow[] = [];
+
+  for (const vehiculo of vehiculos) {
+    if (!esVehiculoRegistroFlota(vehiculo)) continue;
+    const id = vehiculo.id as string;
+    if (vistos.has(id)) continue;
+    vistos.add(id);
+    lista.push(vehiculo);
+  }
+
+  return lista.sort((a, b) => a.placa.localeCompare(b.placa, "es"));
 }
 
 export const MAX_FOTOS_VEHICULO = 4;

@@ -193,67 +193,71 @@ export function Bitacoras() {
                 />
               </div>
 
-              <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-end gap-1 sm:w-auto">
-                <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-                  <SelectTrigger
-                    className={cn(
-                      filtroTriggerClass,
-                      "h-11 w-auto min-w-[11rem] max-w-[min(22rem,36vw)] shrink-0 px-2 text-xs data-[size=default]:h-11",
-                    )}
-                  >
-                    <SelectValue
-                      placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className={filtroContentClass}>
-                    <SelectItem
-                      value={TODOS_VEHICULOS}
-                      textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                      className={filtroItemClass}
+              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-1">
+                <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:contents">
+                  <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+                    <SelectTrigger
+                      className={cn(
+                        filtroTriggerClass,
+                        "h-11 min-w-0 w-full px-2 text-xs data-[size=default]:h-11 sm:w-auto sm:min-w-[11rem] sm:max-w-[min(22rem,36vw)] sm:shrink-0",
+                      )}
                     >
-                      {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                    </SelectItem>
-                    {vehiculosParaFiltro
-                      .filter((v) => v.id)
-                      .map((v) => {
-                        const label = formatVehiculoOpcion(v);
-                        return (
-                          <SelectItem
-                            key={v.id}
-                            value={v.id as string}
-                            textValue={label}
-                            className={filtroItemClass}
-                          >
-                            {label}
-                          </SelectItem>
-                        );
-                      })}
-                  </SelectContent>
-                </Select>
+                      <SelectValue
+                        placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className={filtroContentClass}>
+                      <SelectItem
+                        value={TODOS_VEHICULOS}
+                        textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                        className={filtroItemClass}
+                      >
+                        {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+                      </SelectItem>
+                      {vehiculosParaFiltro
+                        .filter((v) => v.id)
+                        .map((v) => {
+                          const label = formatVehiculoOpcion(v);
+                          return (
+                            <SelectItem
+                              key={v.id}
+                              value={v.id as string}
+                              textValue={label}
+                              className={filtroItemClass}
+                            >
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
 
-                <GvMonthPicker
-                  value={periodoFilter}
-                  onChange={setPeriodoFilter}
-                  className="!h-11 w-[10.5rem] shrink-0 text-xs"
-                />
-
-                {puedeExportar ? (
-                  <GvExportReporteButton
-                    onClick={handleExportReporte}
-                    disabled={loading}
-                    loading={isExporting}
+                  <GvMonthPicker
+                    value={periodoFilter}
+                    onChange={setPeriodoFilter}
+                    className="!h-11 min-w-0 !w-full shrink text-xs sm:!w-[10.5rem] sm:shrink-0"
                   />
-                ) : null}
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-auto shrink-0")}
-                >
-                  <Plus className="h-4 w-4 shrink-0" />
-                  <span className="sm:hidden">Viaje</span>
-                  <span className="hidden sm:inline">Registrar viaje</span>
-                </button>
+                <div className="flex flex-row flex-wrap items-center justify-end gap-1">
+                  {puedeExportar ? (
+                    <GvExportReporteButton
+                      onClick={handleExportReporte}
+                      disabled={loading}
+                      loading={isExporting}
+                    />
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => setCreateOpen(true)}
+                    className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-auto shrink-0")}
+                  >
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="sm:hidden">Viaje</span>
+                    <span className="hidden sm:inline">Registrar viaje</span>
+                  </button>
+                </div>
               </div>
             </div>
           }

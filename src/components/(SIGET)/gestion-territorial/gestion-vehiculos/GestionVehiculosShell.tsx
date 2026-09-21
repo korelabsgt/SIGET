@@ -20,6 +20,8 @@ import {
 import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
 import { useGvDetailScrollToTop } from "./lib/scroll-detail-to-top";
 import { cn } from "@/lib/utils";
+import { GvDemoCleanupPortal } from "./lib/gv-demo-cleanup-tools";
+
 function PanelFallback() {
   return (
     <div className="flex min-h-[40vh] flex-1 items-center justify-center">
@@ -111,6 +113,7 @@ function GestionVehiculosShellInner() {
   return (
     <GvSectionProvider section={section} selectSection={selectSection}>
       <GvPageChromeProvider>
+        <GvDemoCleanupPortal />
         <div data-gv-scroll-root className={GV_MODULO_SCROLL_OUTER_CLASS}>
           <div data-gv-scroll-root className={GV_MODULO_SCROLL_INNER_CLASS}>
             <div className={GV_TABLE_AREA_CLASS}>

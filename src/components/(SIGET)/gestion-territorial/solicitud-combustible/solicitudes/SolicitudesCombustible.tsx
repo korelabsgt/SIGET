@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Car, CarFront, CirclePlus, Loader2, Plus } from "lucide";
 import { toast } from "react-toastify";
 
@@ -30,7 +30,10 @@ import { GvExportReporteButton } from "../../gestion-vehiculos/lib/gv-export-ui"
 import { GvMonthPicker } from "../../gestion-vehiculos/lib/gv-month-picker";
 import { useGvTablePagination } from "../../gestion-vehiculos/lib/table-pagination";
 import { useVehiculos } from "../../gestion-vehiculos/flota/lib/hooks";
-import { formatVehiculoOpcion } from "../../gestion-vehiculos/flota/lib/helpers";
+import {
+  formatVehiculoOpcion,
+  listarVehiculosCatalogoFlota,
+} from "../../gestion-vehiculos/flota/lib/helpers";
 import { cn } from "@/lib/utils";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../../gestion-vehiculos/lib/gv-permissions-hook";
@@ -76,6 +79,10 @@ export function SolicitudesCombustible() {
   const canExport = canExportCombustibleExcel(gvRole);
   const { data: solicitudes = [], isLoading } = useSolicitudesCombustible();
   const { data: vehiculosFlota = [] } = useVehiculos();
+  const vehiculosCatalogoFlota = useMemo(
+    () => listarVehiculosCatalogoFlota(vehiculosFlota),
+    [vehiculosFlota],
+  );
 
   const [tabActiva, setTabActiva] = useState<TabSolicitudCombustible>("TODAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
@@ -86,6 +93,13 @@ export function SolicitudesCombustible() {
   const [accion, setAccion] = useState<"APROBAR" | "RECHAZAR" | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportingAll, setExportingAll] = useState(false);
+
+  useEffect(() => {
+    if (vehiculoFilter === TODOS_VEHICULOS_REQUISICION) return;
+    if (!vehiculosCatalogoFlota.some((v) => v.id === vehiculoFilter)) {
+      setVehiculoFilter(TODOS_VEHICULOS_REQUISICION);
+    }
+  }, [vehiculoFilter, vehiculosCatalogoFlota]);
 
   const requisicionesAprobadas = useMemo(
     () => filtrarRequisicionesCombustible(solicitudes, vehiculoFilter, periodoFilter),
@@ -165,7 +179,7 @@ export function SolicitudesCombustible() {
 
       const vehiculoSeleccionado =
         vehiculoFilter !== TODOS_VEHICULOS_REQUISICION
-          ? vehiculosFlota.find((v) => v.id === vehiculoFilter)
+          ? vehiculosCatalogoFlota.find((v) => v.id === vehiculoFilter)
           : undefined;
       const filenameSuffix = vehiculoSeleccionado?.placa?.trim() || undefined;
 
@@ -220,9 +234,7 @@ export function SolicitudesCombustible() {
         >
           Todos los vehículos
         </SelectItem>
-        {vehiculosFlota
-          .filter((v) => v.id)
-          .map((v) => {
+        {vehiculosCatalogoFlota.map((v) => {
             const label = formatVehiculoOpcion(v);
             return (
               <SelectItem

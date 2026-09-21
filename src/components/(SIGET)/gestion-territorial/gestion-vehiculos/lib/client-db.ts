@@ -5,7 +5,11 @@ import { createClient } from "@/utils/supabase/client";
 import type { BitacoraRow } from "../bitacoras/lib/zod";
 import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
 import { loadMisionesVinculablesBitacora } from "../bitacoras/lib/misiones-vinculables";
-import { esVehiculoSeleccionableParaSolicitud, normalizeVehiculoRow } from "../flota/lib/helpers";
+import {
+  esVehiculoSeleccionableParaSolicitud,
+  listarVehiculosCatalogoFlota,
+  normalizeVehiculoRow,
+} from "../flota/lib/helpers";
 import type { VehiculoRow } from "../flota/lib/zod";
 import type { FallaRow, MecanicoOption } from "../mantenimiento/lib/zod";
 import { FALLAS_MANTENIMIENTO_SELECT } from "../mantenimiento/lib/fallas-query";
@@ -25,7 +29,8 @@ export async function fetchVehiculos(): Promise<VehiculoRow[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  const rows = (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  return listarVehiculosCatalogoFlota(rows);
 }
 
 export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
@@ -37,11 +42,10 @@ export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
 
   if (error) throw new Error(error.message);
 
-  return (data ?? [])
-    .map((row) => normalizeVehiculoRow(row as VehiculoRow))
-    .filter(
-      (vehiculo) => Boolean(vehiculo.id) && esVehiculoSeleccionableParaSolicitud(vehiculo),
-    );
+  const rows = (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  return listarVehiculosCatalogoFlota(rows).filter((vehiculo) =>
+    esVehiculoSeleccionableParaSolicitud(vehiculo),
+  );
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {

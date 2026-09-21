@@ -11,6 +11,7 @@ import {
   fotosVehiculo,
   imagenUrlParaDb,
   MIN_FOTOS_VEHICULO,
+  listarVehiculosCatalogoFlota,
   normalizeVehiculoRow,
   separarFotosVehiculo,
 } from "./helpers";
@@ -67,7 +68,8 @@ export async function getVehiculos(): Promise<VehiculoRow[]> {
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  const rows = (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  return listarVehiculosCatalogoFlota(rows);
 }
 
 export async function getVehiculo(id: string): Promise<VehiculoRow | null> {

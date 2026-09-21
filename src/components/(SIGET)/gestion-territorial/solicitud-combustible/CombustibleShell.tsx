@@ -12,6 +12,10 @@ import {
 } from "../gestion-vehiculos/lib/page-shell";
 import { useGvPermissionRole } from "../gestion-vehiculos/lib/gv-permissions-hook";
 
+import {
+  GvDemoCleanupButton,
+  GvDemoCleanupForSuper,
+} from "../gestion-vehiculos/lib/gv-demo-cleanup-tools";
 import { canViewValesCombustible } from "./lib/permissions";
 import { SolicitudesCombustible } from "./solicitudes/SolicitudesCombustible";
 import { Vales } from "./vales/Vales";
@@ -58,8 +62,11 @@ export function CombustibleShell() {
           </div>
         </div>
 
-        {seccionOptions.length > 1 ? (
-          <div className="flex shrink-0 flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2">
+          <GvDemoCleanupForSuper>
+            <GvDemoCleanupButton />
+          </GvDemoCleanupForSuper>
+          {seccionOptions.length > 1 ? (
             <GvTabFilter
               value={seccion}
               onChange={setSeccion}
@@ -67,8 +74,8 @@ export function CombustibleShell() {
               layoutId="combustible-secciones"
               className="w-full lg:!w-auto"
             />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
