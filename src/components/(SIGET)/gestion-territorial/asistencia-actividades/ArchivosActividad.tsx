@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -47,6 +47,7 @@ import {
   esImagenMime,
   pesoArchivoLegible,
   tokenPublicoEsLegado,
+  tokenActividadEsLegado,
   type ArchivoArbol,
   type ArchivoNodo,
   type ArchivoVisibilidad,
@@ -367,6 +368,7 @@ export function ArchivosActividad({
   const [subirParentId, setSubirParentId] = useState<string | null>(null);
   const [subirOpen, setSubirOpen] = useState(false);
   const [qr, setQr] = useState<{ url: string; titulo: string } | null>(null);
+  const galeriaTokenListo = useRef(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [editarNodo, setEditarNodo] = useState<ArchivoNodo | null>(null);
 
@@ -397,9 +399,15 @@ export function ArchivosActividad({
   const urlGaleria = tokenGaleria ? urlOrigenArchivos(tokenGaleria) : "";
 
   useEffect(() => {
-    if (visibilidad !== "publico" || tokenActividad) return;
+    if (visibilidad !== "publico") return;
+    if (tokenActividad && !tokenActividadEsLegado(tokenActividad)) {
+      galeriaTokenListo.current = false;
+      return;
+    }
+    if (galeriaTokenListo.current || tokenTodos.isPending) return;
+    galeriaTokenListo.current = true;
     tokenTodos.mutate();
-  }, [visibilidad, tokenActividad, tokenTodos.mutate]);
+  }, [visibilidad, tokenActividad, tokenTodos]);
 
   const abrirCarpeta = (parentId: string | null) => {
     setCarpetaParentId(parentId);

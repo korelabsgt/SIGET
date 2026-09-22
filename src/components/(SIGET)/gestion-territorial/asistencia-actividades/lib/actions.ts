@@ -57,9 +57,9 @@ import {
   esPdfMime,
   idsSubarbol,
   nodosDeCarpeta,
-  nuevoTokenArchivo,
   tokenPublicoDesdeNombre,
   tokenPublicoEsLegado,
+  tokenActividadEsLegado,
   ACT_ARCHIVOS_MAX_POR_PESTANA,
   type ArchivoNodo,
   type ArchivosPorToken,
@@ -1618,7 +1618,10 @@ export async function asegurarTokenArchivosActividad(
   const actividad = await getActividad(actividadId);
   if (!actividad) return { success: false, error: "NOT_FOUND" };
 
-  if (actividad.token_archivos_publicos) {
+  if (
+    actividad.token_archivos_publicos &&
+    !tokenActividadEsLegado(actividad.token_archivos_publicos)
+  ) {
     return {
       success: true,
       error: null,
@@ -1626,14 +1629,20 @@ export async function asegurarTokenArchivosActividad(
     };
   }
 
-  const token = nuevoTokenArchivo("a");
-  const { error } = await auth.supabase
-    .from(ACT_TABLAS.actividades)
-    .update({ token_archivos_publicos: token, updated_by: auth.user.id })
-    .eq("id", actividad.id);
+  for (let intento = 0; intento < 6; intento += 1) {
+    const token = tokenPublicoDesdeNombre(actividad.nombre);
+    const { error } = await auth.supabase
+      .from(ACT_TABLAS.actividades)
+      .update({ token_archivos_publicos: token, updated_by: auth.user.id })
+      .eq("id", actividad.id);
 
-  if (error) return mapDbError(error);
-  return { success: true, error: null, token };
+    if (!error) {
+      return { success: true, error: null, token };
+    }
+    if (error.code !== "23505") return mapDbError(error);
+  }
+
+  return { success: false, error: "DUPLICATE_FILE" };
 }
 
 export async function asegurarTokenArchivoNodo(
@@ -1771,18 +1780,17 @@ export async function getArchivosPorToken(
     };
   };
 
-  if (/^a[0-9a-f]{32}$/i.test(limpio)) {
-    const { data: actividad } = await supabase
-      .from(ACT_TABLAS.actividades)
-      .select("*")
-      .eq("token_archivos_publicos", limpio)
-      .maybeSingle();
-    if (!actividad) return null;
+  const { data: actividadPorToken } = await supabase
+    .from(ACT_TABLAS.actividades)
+    .select("*")
+    .eq("token_archivos_publicos", limpio)
+    .maybeSingle();
 
+  if (actividadPorToken) {
     const { data } = await supabase
       .from(ACT_TABLAS.archivos)
       .select("*")
-      .eq("actividad_id", actividad.id)
+      .eq("actividad_id", actividadPorToken.id)
       .eq("visibilidad", "publico")
       .order("created_at", { ascending: true });
 
@@ -1791,7 +1799,7 @@ export async function getArchivosPorToken(
     );
     return armarVista(
       "actividad",
-      actividad as Record<string, unknown>,
+      actividadPorToken as Record<string, unknown>,
       null,
       nodos,
     );

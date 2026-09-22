@@ -9,10 +9,11 @@ function contentDisposition(filename: string, inline: boolean): string {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
+  const forzarDescarga = new URL(request.url).searchParams.has("dl");
   const archivo = await obtenerArchivoPublicoPorToken(token);
   if (!archivo) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
@@ -25,7 +26,10 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": archivo.mime,
-      "Content-Disposition": contentDisposition(archivo.filename, archivo.inline),
+      "Content-Disposition": contentDisposition(
+        archivo.filename,
+        archivo.inline && !forzarDescarga,
+      ),
       "Cache-Control": "private, max-age=300",
       "X-Content-Type-Options": "nosniff",
     },

@@ -4,6 +4,7 @@ export const ACT_ARCHIVOS_BUCKET = {
 } as const;
 
 export const ACT_ARCHIVOS_MAX_BYTES = 10 * 1024 * 1024;
+export const ACT_IMAGEN_MAX_BYTES = 400 * 1024;
 export const ACT_ARCHIVOS_MAX_POR_PESTANA = 5;
 
 export type ArchivoVisibilidad = "privado" | "publico";
@@ -112,6 +113,10 @@ export function slugNombreArchivoPublico(nombre: string): string {
 
 export function tokenPublicoEsLegado(token: string): boolean {
   return /^n[0-9a-f]{32}$/i.test(token.trim());
+}
+
+export function tokenActividadEsLegado(token: string): boolean {
+  return /^a[0-9a-f]{32}$/i.test(token.trim());
 }
 
 export function tokenPublicoDesdeNombre(

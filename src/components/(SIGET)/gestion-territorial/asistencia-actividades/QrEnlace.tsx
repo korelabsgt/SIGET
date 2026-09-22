@@ -18,22 +18,32 @@ import { cn } from "@/lib/utils";
 const LOGO_TRIFINIO = "/trifinio/logo-vertical.png";
 
 function usePantallaQrSize(open: boolean) {
-  const [size, setSize] = useState(300);
+  const [boxEl, setBoxEl] = useState<HTMLDivElement | null>(null);
+  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null);
+  const [size, setSize] = useState(280);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !boxEl) return;
 
     const update = () => {
-      const side = Math.min(window.innerWidth - 32, window.innerHeight - 168);
-      setSize(Math.max(200, Math.floor(side)));
+      const { width, height } = boxEl.getBoundingClientRect();
+      const tituloAlto = titleEl?.getBoundingClientRect().height ?? 0;
+      const lado = Math.min(width, Math.max(0, height - tituloAlto - 16));
+      setSize(Math.max(160, Math.floor(lado)));
     };
 
     update();
+    const observer = new ResizeObserver(update);
+    observer.observe(boxEl);
+    if (titleEl) observer.observe(titleEl);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [open]);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [open, boxEl, titleEl]);
 
-  return size;
+  return { boxRef: setBoxEl, titleRef: setTitleEl, size };
 }
 
 function useQrContainerSize(minSize = 140) {
@@ -150,8 +160,9 @@ export function QrPantallaCompleta({
   url: string;
   titulo: string;
 }) {
-  const qrSize = usePantallaQrSize(open);
+  const { boxRef, titleRef, size: qrSize } = usePantallaQrSize(open);
   const reduceMotion = useReducedMotion();
+  const tituloVisible = titulo.replace(/_/g, " ").trim();
 
   useEffect(() => {
     if (!open) return;
@@ -187,29 +198,25 @@ export function QrPantallaCompleta({
           onClick={onClose}
           role="presentation"
         >
-          <motion.header
-            initial={reduceMotion ? false : { opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={chromeTransition}
-            className="relative shrink-0 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] md:px-6"
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-[5%] top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex size-11 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-celeste-trifinio transition-colors hover:bg-zinc-200"
+            aria-label="Cerrar"
           >
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] flex size-14 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-celeste-trifinio transition-colors hover:bg-zinc-200 md:right-6"
-              aria-label="Cerrar"
-            >
-              <X size={40} strokeWidth={2.5} />
-            </button>
-            <div className="px-16 text-center">
-              <h2 className="text-xl font-bold leading-snug text-zinc-900 md:text-2xl">
-                {titulo}
-              </h2>
-            </div>
-          </motion.header>
+            <X size={28} strokeWidth={2.5} />
+          </button>
 
-          <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+          <div
+            ref={boxRef}
+            className="flex min-h-0 flex-1 flex-col items-center justify-center px-[5%] pt-14 pb-2"
+          >
+            <h2
+              ref={titleRef}
+              className="mb-4 w-[90%] shrink-0 text-center text-base font-bold leading-tight break-words text-azul-trifinio sm:text-lg md:text-xl"
+            >
+              {tituloVisible}
+            </h2>
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, scale: 0.88 }}
               animate={{ opacity: 1, scale: 1 }}

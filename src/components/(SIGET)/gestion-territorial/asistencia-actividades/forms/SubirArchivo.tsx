@@ -20,6 +20,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRegistrarArchivo } from "../lib/hooks";
 import {
   ACT_ARCHIVOS_MAX_BYTES,
+  ACT_IMAGEN_MAX_BYTES,
   bucketArchivos,
   rutaStorageArchivo,
 } from "../lib/archivos";
@@ -29,6 +30,34 @@ import { cn } from "@/lib/utils";
 
 function nombreSinExtension(nombre: string): string {
   return nombre.replace(/\.[^.]+$/, "") || nombre;
+}
+
+function esImagenComprimible(file: File): boolean {
+  return /image\/(jpeg|jpg|png|webp|heic|heif)/i.test(file.type);
+}
+
+async function comprimirImagenArchivo(file: File): Promise<File> {
+  const { default: imageCompression } = await import(
+    "browser-image-compression"
+  );
+  const maxMb = ACT_IMAGEN_MAX_BYTES / (1024 * 1024);
+
+  for (const maxDim of [1600, 1280, 1024, 800]) {
+    const comprimida = await imageCompression(file, {
+      maxSizeMB: maxMb,
+      maxWidthOrHeight: maxDim,
+      useWebWorker: true,
+      fileType: "image/jpeg",
+      initialQuality: 0.82,
+    });
+    if (comprimida.size <= ACT_IMAGEN_MAX_BYTES) {
+      return new File([comprimida], file.name.replace(/\.\w+$/, ".jpg"), {
+        type: "image/jpeg",
+      });
+    }
+  }
+
+  throw new Error("COMPRESS");
 }
 
 export function SubirArchivo({
@@ -74,7 +103,7 @@ export function SubirArchivo({
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
-    if (file.size > ACT_ARCHIVOS_MAX_BYTES) {
+    if (!esImagenComprimible(file) && file.size > ACT_ARCHIVOS_MAX_BYTES) {
       toast.warn("Máximo 10 MB. Si pesa más, pega un enlace de Drive.");
       setModo("enlace");
       return;
@@ -124,13 +153,31 @@ export function SubirArchivo({
       return;
     }
 
+    setSubiendo(true);
+    let fileSubir = archivo;
+    if (esImagenComprimible(archivo)) {
+      try {
+        fileSubir = await comprimirImagenArchivo(archivo);
+      } catch {
+        setSubiendo(false);
+        toast.warn(
+          "No se pudo optimizar la imagen. Prueba otra foto o un enlace.",
+        );
+        return;
+      }
+    } else if (fileSubir.size > ACT_ARCHIVOS_MAX_BYTES) {
+      setSubiendo(false);
+      toast.warn("Máximo 10 MB. Si pesa más, pega un enlace de Drive.");
+      return;
+    }
+
     const nodoId = crypto.randomUUID();
     const bucket = bucketArchivos(visibilidad);
     const path = rutaStorageArchivo({
       fecha: fechaRealizacion,
       actividadId,
       nodoId,
-      nombreArchivo: archivo.name,
+      nombreArchivo: fileSubir.name,
     });
 
     const parsed = registrarArchivoSchema.safeParse({
@@ -143,23 +190,23 @@ export function SubirArchivo({
       descripcion,
       bucket,
       path,
-      nombreArchivo: archivo.name,
-      mime: archivo.type || "",
-      tamano: archivo.size,
+      nombreArchivo: fileSubir.name,
+      mime: fileSubir.type || "",
+      tamano: fileSubir.size,
     });
     if (!parsed.success) {
+      setSubiendo(false);
       toast.warn("Revisa el nombre y el archivo.");
       return;
     }
 
-    setSubiendo(true);
     const supabase = createClient();
     const { error: errorUpload } = await supabase.storage
       .from(bucket)
-      .upload(path, archivo, {
+      .upload(path, fileSubir, {
         cacheControl: "3600",
         upsert: false,
-        contentType: archivo.type || undefined,
+        contentType: fileSubir.type || undefined,
       });
 
     if (errorUpload) {
@@ -243,7 +290,9 @@ export function SubirArchivo({
               modo !== "storage" && "pointer-events-none invisible",
             )}
           >
-            <ModalLabel htmlFor="arch-file">Archivo (máximo 10 MB)</ModalLabel>
+            <ModalLabel htmlFor="arch-file">
+              Archivo (imágenes ~400 KB, otros máx. 10 MB)
+            </ModalLabel>
             <input
               ref={inputRef}
               id="arch-file"
@@ -256,7 +305,7 @@ export function SubirArchivo({
             <p className="truncate text-xs text-muted-foreground">
               {archivo
                 ? archivo.name
-                : "Si pesa más de 10 MB, usa un enlace."}
+                : "Las fotos se comprimen al subir. PDF u otros: máx. 10 MB."}
             </p>
           </ModalField>
           <ModalField
