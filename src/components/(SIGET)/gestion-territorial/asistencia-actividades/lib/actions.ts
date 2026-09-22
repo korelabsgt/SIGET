@@ -10,15 +10,28 @@ import {
   ACT_TABLAS,
   type ActividadFormValues,
   type ActividadRecord,
+  type GpsActividadValues,
   type ParticipanteRecord,
   type RegistroAsistenciaRecord,
   type RegistroPublicoValues,
   type RegistroEditValues,
   type MinutaGuardarValues,
   type MinutaMencionValues,
+  carpetaArchivoSchema,
+  registrarArchivoSchema,
+  editarArchivoNodoSchema,
+  type CarpetaArchivoValues,
+  type RegistrarArchivoValues,
+  type EditarArchivoNodoValues,
   resolverInstitucion,
   esTrifinioDesdeTipo,
+  coordsGeocodeSchema,
+  gpsActividadSchema,
 } from "./zod";
+import {
+  armarUbicacionDesdeNominatim,
+  type NominatimAddress,
+} from "./guatemala-locations";
 import {
   crearActividadBloqueVacio,
   crearMinutaVacia,
@@ -32,10 +45,21 @@ import {
 } from "./minuta";
 import {
   canEliminarActividadAsistencia,
+  consultasGeocodificar,
   esUuidActividad,
   isPrivilegedAsistenciaRole,
   slugifyNombreActividad,
+  slugTieneSufijoFecha,
 } from "./helpers";
+import {
+  bucketArchivos,
+  idsSubarbol,
+  nodosDeCarpeta,
+  nuevoTokenArchivo,
+  ACT_ARCHIVOS_MAX_POR_PESTANA,
+  type ArchivoNodo,
+  type ArchivosPorToken,
+} from "./archivos";
 
 type ActionResult = {
   success: boolean;
@@ -214,6 +238,15 @@ async function requireAuth() {
   return { supabase, user, error: null };
 }
 
+function parseCoord(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 function normalizarActividad(
   row: Record<string, unknown>,
   creador?: CreadorActividad | null,
@@ -223,6 +256,9 @@ function normalizarActividad(
       ? row.created_by
       : null;
   const nombre = String(row.nombre ?? "");
+  const fecha_realizacion = String(
+    row.fecha_realizacion ?? row.created_at ?? "",
+  ).split("T")[0];
   const slugGuardado =
     typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
 
@@ -231,12 +267,17 @@ function normalizarActividad(
     slug: slugGuardado || slugifyNombreActividad(nombre) || "actividad",
     nombre,
     descripcion: (row.descripcion as string | null) ?? null,
-    fecha_realizacion: String(
-      row.fecha_realizacion ?? row.created_at ?? "",
-    ).split("T")[0],
+    fecha_realizacion,
     direccion: String(row.direccion ?? ""),
     departamento: String(row.departamento ?? ""),
     municipio: String(row.municipio ?? ""),
+    latitud: parseCoord(row.latitud),
+    longitud: parseCoord(row.longitud),
+    gps_precision_m: parseCoord(row.gps_precision_m),
+    gps_captured_at:
+      typeof row.gps_captured_at === "string" && row.gps_captured_at
+        ? row.gps_captured_at
+        : null,
     activo: row.activo !== false,
     created_by: createdBy,
     created_at: String(row.created_at ?? ""),
@@ -245,6 +286,11 @@ function normalizarActividad(
       typeof row.total_registros === "number" ? row.total_registros : undefined,
     creador_nombre: creador?.nombre?.trim() || null,
     creador_oficina: creador?.oficina?.trim() || null,
+    token_archivos_publicos:
+      typeof row.token_archivos_publicos === "string" &&
+      row.token_archivos_publicos.trim()
+        ? row.token_archivos_publicos.trim()
+        : null,
   };
 }
 
@@ -271,6 +317,26 @@ async function generarSlugUnico(
   }
 }
 
+function normalizarNombreActividad(nombre: string): string {
+  return nombre.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+async function nombreActividadExiste(
+  supabase: SupabaseServerClient,
+  nombre: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const buscado = normalizarNombreActividad(nombre);
+  if (!buscado) return false;
+
+  let query = supabase.from(ACT_TABLAS.actividades).select("id, nombre");
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query;
+  return (data ?? []).some(
+    (row) => normalizarNombreActividad(String(row.nombre ?? "")) === buscado,
+  );
+}
+
 async function persistirSlugSiFalta(
   supabase: SupabaseServerClient,
   row: Record<string, unknown>,
@@ -279,14 +345,16 @@ async function persistirSlugSiFalta(
   const nombre = String(row.nombre ?? "");
   const actual =
     typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
-  if (actual) return actual;
+  if (actual && !slugTieneSufijoFecha(actual, nombre)) return actual;
 
   const slug = await generarSlugUnico(supabase, nombre, id);
+  if (slug === actual) return actual;
+
   const { error } = await supabase
     .from(ACT_TABLAS.actividades)
     .update({ slug })
     .eq("id", id);
-  if (error?.message?.includes("slug")) return slug;
+  if (error?.message?.includes("slug")) return actual || slug;
   return slug;
 }
 
@@ -329,6 +397,8 @@ async function fetchActividadRowByRef(
     .from(ACT_TABLAS.actividades)
     .select("*")
     .eq("slug", ref)
+    .order("fecha_realizacion", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const filaSlug = await resolverFila(porSlug as Record<string, unknown> | null);
@@ -338,14 +408,19 @@ async function fetchActividadRowByRef(
   if (!privileged) query = query.eq("created_by", user.id);
   const { data: filas } = await query;
 
-  const coincidencia = (filas ?? []).find((row) => {
-    const nombre = String(row.nombre ?? "");
-    const slugRow =
-      typeof row.slug === "string" && row.slug.trim()
-        ? row.slug.trim()
-        : slugifyNombreActividad(nombre);
-    return slugRow === ref;
+  const coincidencias = (filas ?? []).filter((row) => {
+    const stored =
+      typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
+    const nombreSlug = slugifyNombreActividad(String(row.nombre ?? ""));
+    const refBase = ref.replace(/-\d{8}(-\d+)?$/, "");
+    return stored === ref || nombreSlug === ref || nombreSlug === refBase;
   });
+  coincidencias.sort((a, b) =>
+    String(b.fecha_realizacion ?? "").localeCompare(
+      String(a.fecha_realizacion ?? ""),
+    ),
+  );
+  const coincidencia = coincidencias[0];
 
   if (!coincidencia) return null;
   const slug = await persistirSlugSiFalta(
@@ -423,17 +498,25 @@ export async function getActividades(): Promise<ActividadRecord[]> {
     data.map((row) => row.created_by as string | null),
   );
 
-  return data.map((row) => {
+  const resultado: ActividadRecord[] = [];
+  for (const row of data) {
+    const slug = await persistirSlugSiFalta(
+      auth.supabase,
+      row as Record<string, unknown>,
+    );
     const count = Array.isArray(row.act_registros)
       ? (row.act_registros[0] as { count: number } | undefined)?.count ?? 0
       : 0;
     const createdBy =
       typeof row.created_by === "string" ? row.created_by : null;
-    return normalizarActividad(
-      { ...row, total_registros: count },
-      createdBy ? creadores.get(createdBy) : null,
+    resultado.push(
+      normalizarActividad(
+        { ...row, slug, total_registros: count },
+        createdBy ? creadores.get(createdBy) : null,
+      ),
     );
-  });
+  }
+  return resultado;
 }
 
 export async function getActividadPublica(
@@ -464,6 +547,8 @@ export async function getActividadPublica(
     .select("*")
     .eq("slug", ref)
     .eq("activo", true)
+    .order("fecha_realizacion", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const filaSlug = await resolverFila(porSlug as Record<string, unknown> | null);
@@ -474,14 +559,19 @@ export async function getActividadPublica(
     .select("*")
     .eq("activo", true);
 
-  const coincidencia = (filas ?? []).find((row) => {
-    const nombre = String(row.nombre ?? "");
-    const slugRow =
-      typeof row.slug === "string" && row.slug.trim()
-        ? row.slug.trim()
-        : slugifyNombreActividad(nombre);
-    return slugRow === ref;
+  const coincidencias = (filas ?? []).filter((row) => {
+    const stored =
+      typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : "";
+    const nombreSlug = slugifyNombreActividad(String(row.nombre ?? ""));
+    const refBase = ref.replace(/-\d{8}(-\d+)?$/, "");
+    return stored === ref || nombreSlug === ref || nombreSlug === refBase;
   });
+  coincidencias.sort((a, b) =>
+    String(b.fecha_realizacion ?? "").localeCompare(
+      String(a.fecha_realizacion ?? ""),
+    ),
+  );
+  const coincidencia = coincidencias[0];
 
   if (!coincidencia) return null;
   return resolverFila(coincidencia as Record<string, unknown>);
@@ -585,6 +675,10 @@ export async function createActividad(
   const parsed = actividadFormSchema.safeParse(values);
   if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
 
+  if (await nombreActividadExiste(auth.supabase, parsed.data.nombre)) {
+    return { success: false, error: "DUPLICATE_NAME" };
+  }
+
   const slug = await generarSlugUnico(auth.supabase, parsed.data.nombre);
 
   const basePayload = {
@@ -665,11 +759,30 @@ export async function updateActividad(
   );
   if (denied) return denied;
 
-  const slug = await generarSlugUnico(
-    auth.supabase,
-    parsed.data.nombre,
-    id,
+  const { data: actual } = await auth.supabase
+    .from(ACT_TABLAS.actividades)
+    .select("slug, nombre, fecha_realizacion")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (await nombreActividadExiste(auth.supabase, parsed.data.nombre, id)) {
+    return { success: false, error: "DUPLICATE_NAME" };
+  }
+
+  const slugActual =
+    typeof actual?.slug === "string" && actual.slug.trim()
+      ? actual.slug.trim()
+      : "";
+  const nombreCambio = String(actual?.nombre ?? "") !== parsed.data.nombre;
+  const slugSucio = slugTieneSufijoFecha(
+    slugActual,
+    String(actual?.nombre ?? parsed.data.nombre),
   );
+
+  const slug =
+    slugActual && !nombreCambio && !slugSucio
+      ? slugActual
+      : await generarSlugUnico(auth.supabase, parsed.data.nombre, id);
 
   const { error } = await auth.supabase
     .from(ACT_TABLAS.actividades)
@@ -703,6 +816,68 @@ export async function updateActividad(
     if (retry.error) return mapDbError(retry.error);
     return { success: true, error: null };
   }
+
+  if (error) return mapDbError(error);
+  return { success: true, error: null };
+}
+
+export async function guardarGpsActividad(
+  id: string,
+  values: GpsActividadValues,
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const parsed = gpsActividadSchema.safeParse(values);
+  if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+
+  const denied = await assertPuedeMutarActividad(
+    auth.supabase,
+    auth.user,
+    id,
+  );
+  if (denied) return denied;
+
+  const { error } = await auth.supabase
+    .from(ACT_TABLAS.actividades)
+    .update({
+      latitud: parsed.data.lat,
+      longitud: parsed.data.lng,
+      gps_precision_m: parsed.data.precision_m ?? null,
+      gps_captured_at: new Date().toISOString(),
+      updated_by: auth.user.id,
+    })
+    .eq("id", id);
+
+  if (error) return mapDbError(error);
+  return { success: true, error: null };
+}
+
+export async function setActividadActiva(
+  id: string,
+  activo: boolean,
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const denied = await assertPuedeMutarActividad(
+    auth.supabase,
+    auth.user,
+    id,
+  );
+  if (denied) return denied;
+
+  const { error } = await auth.supabase
+    .from(ACT_TABLAS.actividades)
+    .update({
+      activo,
+      updated_by: auth.user.id,
+    })
+    .eq("id", id);
 
   if (error) return mapDbError(error);
   return { success: true, error: null };
@@ -1178,4 +1353,560 @@ export async function eliminarAnexosMinutaStorage(
     return { success: false, error: "STORAGE_ERROR", detail: error.message };
   }
   return { success: true, error: null };
+}
+
+function normalizarArchivoNodo(row: Record<string, unknown>): ArchivoNodo {
+  const tipo =
+    row.tipo === "carpeta"
+      ? "carpeta"
+      : row.tipo === "enlace"
+        ? "enlace"
+        : "archivo";
+  return {
+    id: String(row.id),
+    actividad_id: String(row.actividad_id),
+    parent_id:
+      typeof row.parent_id === "string" && row.parent_id ? row.parent_id : null,
+    visibilidad: row.visibilidad === "publico" ? "publico" : "privado",
+    tipo,
+    nombre: String(row.nombre ?? ""),
+    descripcion: (row.descripcion as string | null) ?? null,
+    bucket: (row.bucket as string | null) ?? null,
+    path: (row.path as string | null) ?? null,
+    url: (row.url as string | null) ?? null,
+    nombre_archivo: (row.nombre_archivo as string | null) ?? null,
+    mime: (row.mime as string | null) ?? null,
+    tamano: typeof row.tamano === "number" ? row.tamano : null,
+    token_publico:
+      typeof row.token_publico === "string" && row.token_publico
+        ? row.token_publico
+        : null,
+    created_at: String(row.created_at ?? ""),
+  };
+}
+
+function urlPublicaStorage(bucket: string, path: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+  return `${base}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+export async function getArchivosActividad(
+  actividadId: string,
+): Promise<ArchivoNodo[]> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) return [];
+  if (!esUuidActividad(actividadId)) return [];
+
+  const { data, error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("actividad_id", actividadId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) =>
+    normalizarArchivoNodo(row as Record<string, unknown>),
+  );
+}
+
+export async function crearCarpetaArchivo(
+  values: CarpetaArchivoValues,
+): Promise<ActionResultWithId> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const parsed = carpetaArchivoSchema.safeParse(values);
+  if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+
+  const actividad = await getActividad(parsed.data.actividadId);
+  if (!actividad) return { success: false, error: "NOT_FOUND" };
+
+  const { data, error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .insert({
+      actividad_id: parsed.data.actividadId,
+      parent_id: parsed.data.parentId,
+      visibilidad: parsed.data.visibilidad,
+      tipo: "carpeta",
+      nombre: parsed.data.nombre,
+      descripcion: parsed.data.descripcion || null,
+      created_by: auth.user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return { success: false, error: "DUPLICATE_FILE" };
+    return mapDbError(error);
+  }
+  if (!data) return { success: false, error: "DB_ERROR" };
+  return { success: true, error: null, id: String(data.id) };
+}
+
+export async function registrarArchivo(
+  values: RegistrarArchivoValues,
+): Promise<ActionResultWithId> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const parsed = registrarArchivoSchema.safeParse(values);
+  if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+
+  const actividad = await getActividad(parsed.data.actividadId);
+  if (!actividad) return { success: false, error: "NOT_FOUND" };
+
+  const { count, error: errorCount } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("id", { count: "exact", head: true })
+    .eq("actividad_id", parsed.data.actividadId)
+    .eq("visibilidad", parsed.data.visibilidad)
+    .in("tipo", ["archivo", "enlace"]);
+
+  if (errorCount) return mapDbError(errorCount);
+  if ((count ?? 0) >= ACT_ARCHIVOS_MAX_POR_PESTANA) {
+    return { success: false, error: "LIMIT_FILES" };
+  }
+
+  if (parsed.data.origen === "enlace") {
+    const { error } = await auth.supabase.from(ACT_TABLAS.archivos).insert({
+      id: parsed.data.id,
+      actividad_id: parsed.data.actividadId,
+      parent_id: parsed.data.parentId,
+      visibilidad: parsed.data.visibilidad,
+      tipo: "enlace",
+      nombre: parsed.data.nombre,
+      descripcion: parsed.data.descripcion || null,
+      url: parsed.data.url,
+      created_by: auth.user.id,
+    });
+    if (error) {
+      if (error.code === "23505") return { success: false, error: "DUPLICATE_FILE" };
+      return mapDbError(error);
+    }
+    return { success: true, error: null, id: parsed.data.id };
+  }
+
+  const bucketEsperado = bucketArchivos(parsed.data.visibilidad);
+  if (parsed.data.bucket !== bucketEsperado) {
+    return { success: false, error: "INVALID_INPUT" };
+  }
+
+  const prefijo = `${actividad.fecha_realizacion.slice(0, 10)}/${parsed.data.actividadId}/${parsed.data.id}/`;
+  if (!parsed.data.path.startsWith(prefijo)) {
+    return { success: false, error: "INVALID_INPUT" };
+  }
+
+  const { error } = await auth.supabase.from(ACT_TABLAS.archivos).insert({
+    id: parsed.data.id,
+    actividad_id: parsed.data.actividadId,
+    parent_id: parsed.data.parentId,
+    visibilidad: parsed.data.visibilidad,
+    tipo: "archivo",
+    nombre: parsed.data.nombre,
+    descripcion: parsed.data.descripcion || null,
+    bucket: parsed.data.bucket,
+    path: parsed.data.path,
+    nombre_archivo: parsed.data.nombreArchivo,
+    mime: parsed.data.mime || null,
+    tamano: parsed.data.tamano,
+    created_by: auth.user.id,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { success: false, error: "DUPLICATE_FILE" };
+    return mapDbError(error);
+  }
+  return { success: true, error: null, id: parsed.data.id };
+}
+
+export async function editarArchivoNodo(
+  values: EditarArchivoNodoValues,
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const parsed = editarArchivoNodoSchema.safeParse(values);
+  if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+
+  const { data: nodo, error: errorNodo } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("id")
+    .eq("id", parsed.data.id)
+    .maybeSingle();
+
+  if (errorNodo) return mapDbError(errorNodo);
+  if (!nodo) return { success: false, error: "NOT_FOUND" };
+
+  const { error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .update({
+      nombre: parsed.data.nombre,
+      descripcion: parsed.data.descripcion || null,
+    })
+    .eq("id", parsed.data.id);
+
+  if (error) {
+    if (error.code === "23505") return { success: false, error: "DUPLICATE_FILE" };
+    return mapDbError(error);
+  }
+  return { success: true, error: null };
+}
+
+export async function eliminarArchivoNodo(
+  id: string,
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+  if (!esUuidActividad(id)) return { success: false, error: "INVALID_INPUT" };
+
+  const { data: nodo, error: errorNodo } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (errorNodo) return mapDbError(errorNodo);
+  if (!nodo) return { success: false, error: "NOT_FOUND" };
+
+  const actividadId = String(nodo.actividad_id);
+  const nodos = await getArchivosActividad(actividadId);
+  const ids = idsSubarbol(nodos, id);
+  const archivos = nodos.filter(
+    (n) => ids.includes(n.id) && n.tipo === "archivo" && n.bucket && n.path,
+  );
+
+  const porBucket = new Map<string, string[]>();
+  for (const archivo of archivos) {
+    if (!archivo.bucket || !archivo.path) continue;
+    const lista = porBucket.get(archivo.bucket) ?? [];
+    lista.push(archivo.path);
+    porBucket.set(archivo.bucket, lista);
+  }
+
+  for (const [bucket, paths] of porBucket) {
+    const { error } = await auth.supabase.storage.from(bucket).remove(paths);
+    if (error) {
+      return { success: false, error: "STORAGE_ERROR", detail: error.message };
+    }
+  }
+
+  const { error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .delete()
+    .eq("id", id);
+
+  if (error) return mapDbError(error);
+  return { success: true, error: null };
+}
+
+export async function asegurarTokenArchivosActividad(
+  actividadId: string,
+): Promise<ActionResult & { token?: string }> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+
+  const actividad = await getActividad(actividadId);
+  if (!actividad) return { success: false, error: "NOT_FOUND" };
+
+  if (actividad.token_archivos_publicos) {
+    return {
+      success: true,
+      error: null,
+      token: actividad.token_archivos_publicos,
+    };
+  }
+
+  const token = nuevoTokenArchivo("a");
+  const { error } = await auth.supabase
+    .from(ACT_TABLAS.actividades)
+    .update({ token_archivos_publicos: token, updated_by: auth.user.id })
+    .eq("id", actividad.id);
+
+  if (error) return mapDbError(error);
+  return { success: true, error: null, token };
+}
+
+export async function asegurarTokenArchivoNodo(
+  id: string,
+): Promise<ActionResult & { token?: string }> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+  if (!esUuidActividad(id)) return { success: false, error: "INVALID_INPUT" };
+
+  const { data, error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) return mapDbError(error);
+  if (!data) return { success: false, error: "NOT_FOUND" };
+
+  const nodo = normalizarArchivoNodo(data as Record<string, unknown>);
+  if (nodo.visibilidad !== "publico") {
+    return { success: false, error: "FORBIDDEN" };
+  }
+  if (nodo.token_publico) {
+    return { success: true, error: null, token: nodo.token_publico };
+  }
+
+  const token = nuevoTokenArchivo("n");
+  const { error: errorToken } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .update({ token_publico: token })
+    .eq("id", id);
+
+  if (errorToken) return mapDbError(errorToken);
+  return { success: true, error: null, token };
+}
+
+export async function urlArchivoNodo(
+  id: string,
+): Promise<ActionResult & { url?: string }> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) {
+    return { success: false, error: auth.error };
+  }
+  if (!esUuidActividad(id)) return { success: false, error: "INVALID_INPUT" };
+
+  const { data, error } = await auth.supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) return mapDbError(error);
+  if (!data) return { success: false, error: "NOT_FOUND" };
+
+  const nodo = normalizarArchivoNodo(data as Record<string, unknown>);
+  if (nodo.tipo === "enlace") {
+    if (!nodo.url) return { success: false, error: "NOT_FOUND" };
+    return { success: true, error: null, url: nodo.url };
+  }
+  if (nodo.tipo !== "archivo" || !nodo.bucket || !nodo.path) {
+    return { success: false, error: "NOT_FOUND" };
+  }
+
+  if (nodo.visibilidad === "publico") {
+    return {
+      success: true,
+      error: null,
+      url: urlPublicaStorage(nodo.bucket, nodo.path),
+    };
+  }
+
+  const firmada = await auth.supabase.storage
+    .from(nodo.bucket)
+    .createSignedUrl(nodo.path, 3600);
+
+  if (firmada.error || !firmada.data?.signedUrl) {
+    return {
+      success: false,
+      error: "STORAGE_ERROR",
+      detail: firmada.error?.message ?? null,
+    };
+  }
+  return { success: true, error: null, url: firmada.data.signedUrl };
+}
+
+export async function getArchivosPorToken(
+  token: string,
+): Promise<ArchivosPorToken | null> {
+  const limpio = token.trim();
+  if (!limpio || limpio.length < 20) return null;
+
+  const supabase = createPublicClient();
+
+  const armarVista = async (
+    alcance: ArchivosPorToken["alcance"],
+    actividadRow: Record<string, unknown>,
+    nodo: ArchivoNodo | null,
+    nodos: ArchivoNodo[],
+  ): Promise<ArchivosPorToken> => {
+    const urls: Record<string, string> = {};
+    for (const n of nodos) {
+      if (n.tipo === "enlace" && n.url) {
+        urls[n.id] = n.url;
+        continue;
+      }
+      if (n.tipo !== "archivo" || !n.bucket || !n.path) continue;
+      urls[n.id] = urlPublicaStorage(n.bucket, n.path);
+    }
+    return {
+      alcance,
+      actividad: {
+        id: String(actividadRow.id),
+        nombre: String(actividadRow.nombre ?? ""),
+        fecha_realizacion: String(actividadRow.fecha_realizacion ?? "").split(
+          "T",
+        )[0],
+        direccion: String(actividadRow.direccion ?? ""),
+        departamento: String(actividadRow.departamento ?? ""),
+        municipio: String(actividadRow.municipio ?? ""),
+      },
+      nodo,
+      nodos,
+      urls,
+    };
+  };
+
+  if (limpio.startsWith("a")) {
+    const { data: actividad } = await supabase
+      .from(ACT_TABLAS.actividades)
+      .select("*")
+      .eq("token_archivos_publicos", limpio)
+      .maybeSingle();
+    if (!actividad) return null;
+
+    const { data } = await supabase
+      .from(ACT_TABLAS.archivos)
+      .select("*")
+      .eq("actividad_id", actividad.id)
+      .eq("visibilidad", "publico")
+      .order("created_at", { ascending: true });
+
+    const nodos = (data ?? []).map((row) =>
+      normalizarArchivoNodo(row as Record<string, unknown>),
+    );
+    return armarVista(
+      "actividad",
+      actividad as Record<string, unknown>,
+      null,
+      nodos,
+    );
+  }
+
+  const { data: fila } = await supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("token_publico", limpio)
+    .eq("visibilidad", "publico")
+    .maybeSingle();
+
+  if (!fila) return null;
+  const nodo = normalizarArchivoNodo(fila as Record<string, unknown>);
+
+  const { data: actividad } = await supabase
+    .from(ACT_TABLAS.actividades)
+    .select("*")
+    .eq("id", nodo.actividad_id)
+    .maybeSingle();
+  if (!actividad) return null;
+
+  if (nodo.tipo === "archivo" || nodo.tipo === "enlace") {
+    return armarVista(
+      "archivo",
+      actividad as Record<string, unknown>,
+      nodo,
+      [nodo],
+    );
+  }
+
+  const { data } = await supabase
+    .from(ACT_TABLAS.archivos)
+    .select("*")
+    .eq("actividad_id", nodo.actividad_id)
+    .eq("visibilidad", "publico")
+    .order("created_at", { ascending: true });
+
+  const todos = (data ?? []).map((row) =>
+    normalizarArchivoNodo(row as Record<string, unknown>),
+  );
+  return armarVista(
+    "carpeta",
+    actividad as Record<string, unknown>,
+    nodo,
+    nodosDeCarpeta(todos, nodo.id),
+  );
+}
+
+export async function geocodificarUbicacion(
+  ubicacion: {
+    direccion?: string;
+    municipio?: string;
+    departamento?: string;
+  },
+): Promise<{ lat: number; lng: number } | null> {
+  const consultas = consultasGeocodificar(ubicacion);
+  if (consultas.length === 0) return null;
+
+  try {
+    for (const q of consultas) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("countrycodes", "gt");
+      url.searchParams.set("q", q);
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          "User-Agent": "SIGET-Plan-Trifinio/1.0",
+          "Accept-Language": "es",
+        },
+        next: { revalidate: 3600 },
+      });
+      if (!res.ok) continue;
+
+      const data = (await res.json()) as Array<{ lat?: string; lon?: string }>;
+      const first = data[0];
+      if (!first?.lat || !first?.lon) continue;
+      const lat = Number(first.lat);
+      const lng = Number(first.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      return { lat, lng };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export async function reverseGeocodificarUbicacion(
+  coords: { lat: number; lng: number },
+): Promise<{
+  direccion: string;
+  municipio: string;
+  departamento: string;
+} | null> {
+  const parsed = coordsGeocodeSchema.safeParse(coords);
+  if (!parsed.success) return null;
+
+  try {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("zoom", "18");
+    url.searchParams.set("lat", String(parsed.data.lat));
+    url.searchParams.set("lon", String(parsed.data.lng));
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": "SIGET-Plan-Trifinio/1.0",
+        "Accept-Language": "es",
+      },
+    });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as {
+      address?: NominatimAddress & { country_code?: string };
+    };
+    if (data.address?.country_code && data.address.country_code !== "gt") {
+      return null;
+    }
+    return armarUbicacionDesdeNominatim(data.address ?? {});
+  } catch {
+    return null;
+  }
 }

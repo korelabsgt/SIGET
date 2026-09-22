@@ -330,16 +330,26 @@ values ('minutas-anexos', 'minutas-anexos', true)
 on conflict (id) do nothing;
 
 drop policy if exists minutas_anexos_lectura_publica on storage.objects;
-create policy minutas_anexos_lectura_publica
-  on storage.objects
-  for select
-  to anon, authenticated
-  using (bucket_id = 'minutas-anexos');
-
 drop policy if exists minutas_anexos_autenticado on storage.objects;
-create policy minutas_anexos_autenticado
+drop policy if exists minutas_anexos_insert on storage.objects;
+drop policy if exists minutas_anexos_update on storage.objects;
+drop policy if exists minutas_anexos_delete on storage.objects;
+
+create policy minutas_anexos_insert
   on storage.objects
-  for all
+  for insert
+  to authenticated
+  with check (bucket_id = 'minutas-anexos');
+
+create policy minutas_anexos_update
+  on storage.objects
+  for update
   to authenticated
   using (bucket_id = 'minutas-anexos')
   with check (bucket_id = 'minutas-anexos');
+
+create policy minutas_anexos_delete
+  on storage.objects
+  for delete
+  to authenticated
+  using (bucket_id = 'minutas-anexos');

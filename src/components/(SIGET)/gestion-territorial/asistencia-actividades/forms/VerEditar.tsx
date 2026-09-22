@@ -15,9 +15,13 @@ import {
   ModalFechaInput,
   modalActionMessage,
 } from "@/components/ui/general-modal";
-import { useEditarActividad } from "../lib/hooks";
+import { useEditarActividad, useActividades } from "../lib/hooks";
 import { actividadFormSchema, normalizarFechaInput, type ActividadRecord } from "../lib/zod";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
+
+function nombreActividadNormalizado(nombre: string): string {
+  return nombre.trim().replace(/\s+/g, " ").toLowerCase();
+}
 
 export function VerEditarActividad({
   open,
@@ -29,6 +33,7 @@ export function VerEditarActividad({
   onClose: () => void;
 }) {
   const editar = useEditarActividad();
+  const { data: actividades = [] } = useActividades();
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fechaRealizacion, setFechaRealizacion] = useState("");
@@ -57,6 +62,18 @@ export function VerEditarActividad({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!actividad) return;
+    const nombreNorm = nombreActividadNormalizado(nombre);
+    if (
+      nombreNorm &&
+      actividades.some(
+        (act) =>
+          act.id !== actividad.id &&
+          nombreActividadNormalizado(act.nombre) === nombreNorm,
+      )
+    ) {
+      toast.error("Ya existe una actividad con ese nombre.");
+      return;
+    }
     const parsed = actividadFormSchema.safeParse({
       nombre,
       descripcion,

@@ -117,9 +117,19 @@ export function slugifyNombreActividad(nombre: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function slugActividadDesdeRecord(actividad: Pick<ActividadRecord, "slug" | "nombre">): string {
+export function slugTieneSufijoFecha(slug: string, nombre: string): boolean {
+  const base = slugifyNombreActividad(nombre) || "actividad";
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}-\\d{8}(-\\d+)?$`).test(slug);
+}
+
+export function slugActividadDesdeRecord(
+  actividad: Pick<ActividadRecord, "slug" | "nombre">,
+): string {
   const guardado = actividad.slug?.trim();
-  if (guardado) return guardado;
+  if (guardado && !slugTieneSufijoFecha(guardado, actividad.nombre)) {
+    return guardado;
+  }
   return slugifyNombreActividad(actividad.nombre) || "actividad";
 }
 
@@ -133,4 +143,53 @@ export function rutaPublicaActividadAsistencia(
   actividad: Pick<ActividadRecord, "slug" | "nombre">,
 ): string {
   return `/actividades/${slugActividadDesdeRecord(actividad)}`;
+}
+
+export type TabDetalleActividad =
+  | "actividad"
+  | "minuta"
+  | "privados"
+  | "publicos";
+
+export function rutaPublicaArchivos(token: string): string {
+  return `/archivos/${token}`;
+}
+
+export type UbicacionGeocode = {
+  direccion?: string;
+  municipio?: string;
+  departamento?: string;
+};
+
+export function queryGeocodificarActividad(ubicacion: UbicacionGeocode): string {
+  return [
+    ubicacion.direccion,
+    ubicacion.municipio,
+    ubicacion.departamento,
+    "Guatemala",
+  ]
+    .map((parte) => parte?.trim() ?? "")
+    .filter(Boolean)
+    .join(", ");
+}
+
+export function consultasGeocodificar(ubicacion: UbicacionGeocode): string[] {
+  const direccion = ubicacion.direccion?.trim() ?? "";
+  const municipio = ubicacion.municipio?.trim() ?? "";
+  const departamento = ubicacion.departamento?.trim() ?? "";
+  const cola = [municipio, departamento, "Guatemala"].filter(Boolean).join(", ");
+  const segmentos = direccion
+    .split(/\s[-–—]\s/)
+    .map((parte) => parte.trim())
+    .filter(Boolean);
+
+  const consultas: string[] = [];
+  if (segmentos.length > 1 && cola) {
+    consultas.push(`${segmentos[segmentos.length - 1]}, ${cola}`);
+  }
+  if (direccion && cola) consultas.push(`${direccion}, ${cola}`);
+  if (cola) consultas.push(cola);
+  if (departamento) consultas.push(`${departamento}, Guatemala`);
+
+  return [...new Set(consultas.filter((q) => q.length >= 3))];
 }

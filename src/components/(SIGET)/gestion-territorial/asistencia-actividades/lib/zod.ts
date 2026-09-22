@@ -11,6 +11,7 @@ export const ACT_TABLAS = {
   registros: "act_registros",
   minutas: "act_minutas",
   responsables: "act_minuta_responsables",
+  archivos: "act_archivos",
 } as const;
 
 export const TIPOS_INSTITUCION = ["sin", "plan_trifinio", "otras"] as const;
@@ -60,6 +61,19 @@ export const actividadFormSchema = z.object({
 });
 
 export type ActividadFormValues = z.infer<typeof actividadFormSchema>;
+
+export const coordsGeocodeSchema = z.object({
+  lat: z.number().gte(-90).lte(90),
+  lng: z.number().gte(-180).lte(180),
+});
+
+export type CoordsGeocode = z.infer<typeof coordsGeocodeSchema>;
+
+export const gpsActividadSchema = coordsGeocodeSchema.extend({
+  precision_m: z.number().min(0).max(100000).nullable().optional(),
+});
+
+export type GpsActividadValues = z.infer<typeof gpsActividadSchema>;
 
 export const participanteCamposSchema = z.object({
   dpi: dpiSchema,
@@ -130,6 +144,10 @@ export type ActividadRecord = {
   direccion: string;
   departamento: string;
   municipio: string;
+  latitud: number | null;
+  longitud: number | null;
+  gps_precision_m: number | null;
+  gps_captured_at: string | null;
   activo: boolean;
   created_by: string | null;
   created_at: string;
@@ -137,6 +155,7 @@ export type ActividadRecord = {
   total_registros?: number;
   creador_nombre: string | null;
   creador_oficina: string | null;
+  token_archivos_publicos: string | null;
 };
 
 export type ParticipanteRecord = {
@@ -339,6 +358,52 @@ export const minutaGuardarSchema = z.object({
 export type MinutaMencionValues = z.infer<typeof minutaMencionSchema>;
 export type MinutaAnexoValues = z.infer<typeof minutaAnexoSchema>;
 export type MinutaGuardarValues = z.infer<typeof minutaGuardarSchema>;
+
+export const ARCHIVO_VISIBILIDADES = ["privado", "publico"] as const;
+export const ARCHIVO_TIPOS = ["carpeta", "archivo", "enlace"] as const;
+
+export const carpetaArchivoSchema = z.object({
+  actividadId: z.string().uuid("Actividad inválida"),
+  visibilidad: z.enum(ARCHIVO_VISIBILIDADES),
+  parentId: z.string().uuid().nullable(),
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200),
+  descripcion: z.string().trim().max(500).optional().default(""),
+});
+
+const archivoBaseSchema = carpetaArchivoSchema.extend({
+  id: z.string().uuid("Archivo inválido"),
+});
+
+export const registrarArchivoSchema = z.discriminatedUnion("origen", [
+  archivoBaseSchema.extend({
+    origen: z.literal("storage"),
+    bucket: z.enum(["act-archivos-privados", "act-archivos-publicos"]),
+    path: z.string().trim().min(1).max(800),
+    nombreArchivo: z.string().trim().min(1).max(200),
+    mime: z.string().trim().max(200).optional().default(""),
+    tamano: z.number().int().nonnegative().max(10 * 1024 * 1024),
+  }),
+  archivoBaseSchema.extend({
+    origen: z.literal("enlace"),
+    url: z
+      .string()
+      .trim()
+      .min(1, "El enlace es obligatorio")
+      .max(2000)
+      .url("Escribe un enlace válido"),
+  }),
+]);
+
+export type CarpetaArchivoValues = z.infer<typeof carpetaArchivoSchema>;
+export type RegistrarArchivoValues = z.infer<typeof registrarArchivoSchema>;
+
+export const editarArchivoNodoSchema = z.object({
+  id: z.string().uuid("Archivo inválido"),
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200),
+  descripcion: z.string().trim().max(500).optional().default(""),
+});
+
+export type EditarArchivoNodoValues = z.infer<typeof editarArchivoNodoSchema>;
 
 export function formatFechaActividad(fecha: string): string {
   try {
