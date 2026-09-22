@@ -46,6 +46,7 @@ import {
   ACT_ARCHIVOS_MAX_POR_PESTANA,
   esImagenMime,
   pesoArchivoLegible,
+  tokenPublicoEsLegado,
   type ArchivoArbol,
   type ArchivoNodo,
   type ArchivoVisibilidad,
@@ -434,7 +435,9 @@ export function ArchivosActividad({
   };
 
   const tokenDeNodo = async (nodo: ArchivoNodo) => {
-    if (nodo.token_publico) return nodo.token_publico;
+    if (nodo.token_publico && !tokenPublicoEsLegado(nodo.token_publico)) {
+      return nodo.token_publico;
+    }
     const res = await tokenNodo.mutateAsync(nodo.id);
     if (!res.success || !res.token) {
       toast.error(modalActionMessage(res.error ?? undefined, "No se pudo generar el enlace."));

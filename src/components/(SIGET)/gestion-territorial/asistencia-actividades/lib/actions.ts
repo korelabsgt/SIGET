@@ -53,6 +53,8 @@ import {
 } from "./helpers";
 import {
   bucketArchivos,
+  esImagenMime,
+  esPdfMime,
   idsSubarbol,
   nodosDeCarpeta,
   nuevoTokenArchivo,
@@ -1387,10 +1389,6 @@ function normalizarArchivoNodo(row: Record<string, unknown>): ArchivoNodo {
   };
 }
 
-function urlPublicaStorage(bucket: string, path: string): string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
-  return `${base}/storage/v1/object/public/${bucket}/${path}`;
-}
 
 export async function getArchivosActividad(
   actividadId: string,
@@ -1665,7 +1663,7 @@ export async function asegurarTokenArchivoNodo(
   }
 
   for (let intento = 0; intento < 6; intento += 1) {
-    const token = tokenPublicoDesdeNombre(nodo.nombre);
+    const token = tokenPublicoDesdeNombre(nodo.nombre, nodo.nombre_archivo);
     const { error: errorToken } = await auth.supabase
       .from(ACT_TABLAS.archivos)
       .update({ token_publico: token })
@@ -1708,10 +1706,13 @@ export async function urlArchivoNodo(
   }
 
   if (nodo.visibilidad === "publico") {
+    const asegurado = await asegurarTokenArchivoNodo(nodo.id);
+    const token = asegurado.token ?? nodo.token_publico;
+    if (!token) return { success: false, error: "NOT_FOUND" };
     return {
       success: true,
       error: null,
-      url: urlPublicaStorage(nodo.bucket, nodo.path),
+      url: `/archivos/${token}`,
     };
   }
 
@@ -1749,8 +1750,8 @@ export async function getArchivosPorToken(
         urls[n.id] = n.url;
         continue;
       }
-      if (n.tipo !== "archivo" || !n.bucket || !n.path) continue;
-      urls[n.id] = urlPublicaStorage(n.bucket, n.path);
+      if (n.tipo !== "archivo" || !n.token_publico) continue;
+      urls[n.id] = `/archivos/${n.token_publico}`;
     }
     return {
       alcance,
@@ -1838,6 +1839,42 @@ export async function getArchivosPorToken(
     nodo,
     nodosDeCarpeta(todos, nodo.id),
   );
+}
+
+export async function obtenerArchivoPublicoPorToken(token: string): Promise<
+  | {
+      kind: "archivo";
+      bytes: ArrayBuffer;
+      mime: string;
+      filename: string;
+      inline: boolean;
+    }
+  | { kind: "enlace"; url: string }
+  | null
+> {
+  const data = await getArchivosPorToken(token);
+  if (!data || data.alcance !== "archivo" || !data.nodo) return null;
+  const nodo = data.nodo;
+  if (nodo.tipo === "enlace") {
+    if (!nodo.url) return null;
+    return { kind: "enlace", url: nodo.url };
+  }
+  if (nodo.tipo !== "archivo" || !nodo.bucket || !nodo.path) return null;
+
+  const supabase = createPublicClient();
+  const descargado = await supabase.storage.from(nodo.bucket).download(nodo.path);
+  if (descargado.error || !descargado.data) return null;
+
+  const mime =
+    nodo.mime || descargado.data.type || "application/octet-stream";
+  const filename = nodo.nombre_archivo || nodo.nombre;
+  return {
+    kind: "archivo",
+    bytes: await descargado.data.arrayBuffer(),
+    mime,
+    filename,
+    inline: esPdfMime(mime) || esImagenMime(mime),
+  };
 }
 
 export async function geocodificarUbicacion(

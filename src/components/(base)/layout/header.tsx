@@ -90,6 +90,8 @@ export default function Header() {
     setRefreshRotation(hovered ? 90 : 0);
   };
 
+  if (pathname.startsWith("/archivos")) return null;
+
   return (
     <>
       <header className="relative z-[100] w-full shrink-0 border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800">

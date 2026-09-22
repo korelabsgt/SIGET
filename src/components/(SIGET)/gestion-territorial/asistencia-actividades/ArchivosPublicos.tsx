@@ -7,13 +7,13 @@ import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-but
 import {
   armarArbolArchivos,
   esImagenMime,
-  esPdfMime,
   pesoArchivoLegible,
   type ArchivoArbol,
   type ArchivoNodo,
   type ArchivosPorToken,
 } from "./lib/archivos";
 import { formatFechaActividad, formatUbicacionActividad } from "./lib/zod";
+import { ArchivoPublicoVisor } from "./ArchivoPublicoVisor";
 
 function iconoNodo(nodo: ArchivoNodo, abierto: boolean) {
   if (nodo.tipo === "carpeta") return abierto ? FolderOpen : Folder;
@@ -118,10 +118,11 @@ function NodoPublico({
 }
 
 export function ArchivosPublicos({ data }: { data: ArchivosPorToken }) {
+  const archivoUnico =
+    data.alcance === "archivo" && data.nodo ? data.nodo : null;
+  const urlUnico = archivoUnico ? data.urls[archivoUnico.id] : null;
+
   const arbol = useMemo(() => {
-    if (data.alcance === "archivo" && data.nodo) {
-      return armarArbolArchivos([data.nodo]);
-    }
     if (data.alcance === "carpeta" && data.nodo) {
       return armarArbolArchivos(data.nodos);
     }
@@ -141,9 +142,14 @@ export function ArchivosPublicos({ data }: { data: ArchivosPorToken }) {
     });
   };
 
-  const archivoUnico =
-    data.alcance === "archivo" && data.nodo ? data.nodo : null;
-  const urlUnico = archivoUnico ? data.urls[archivoUnico.id] : null;
+  if (archivoUnico && archivoUnico.token_publico) {
+    const src =
+      archivoUnico.tipo === "enlace" && urlUnico
+        ? urlUnico
+        : `/archivos/${archivoUnico.token_publico}/raw`;
+    return <ArchivoPublicoVisor nodo={archivoUnico} url={src} />;
+  }
+
   const ubicacion = formatUbicacionActividad(data.actividad);
   const titulo =
     data.alcance === "actividad"
@@ -181,29 +187,6 @@ export function ArchivosPublicos({ data }: { data: ArchivosPorToken }) {
           </div>
         </div>
       </div>
-
-      {archivoUnico && urlUnico && esImagenMime(archivoUnico.mime) ? (
-        <a
-          href={urlUnico}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-6 block overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700"
-        >
-          <img
-            src={urlUnico}
-            alt={archivoUnico.nombre}
-            className="mx-auto max-h-[70vh] w-auto max-w-full object-contain"
-          />
-        </a>
-      ) : null}
-
-      {archivoUnico && urlUnico && esPdfMime(archivoUnico.mime) ? (
-        <iframe
-          title={archivoUnico.nombre}
-          src={urlUnico}
-          className="mb-6 h-[70vh] w-full rounded-2xl border border-border bg-white dark:border-zinc-700"
-        />
-      ) : null}
 
       {arbol.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-16 text-center text-sm text-muted-foreground dark:border-zinc-700">

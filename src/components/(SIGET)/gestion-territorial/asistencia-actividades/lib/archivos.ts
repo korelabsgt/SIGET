@@ -111,12 +111,20 @@ export function slugNombreArchivoPublico(nombre: string): string {
 }
 
 export function tokenPublicoEsLegado(token: string): boolean {
-  return /^n[0-9a-f]{32}$/i.test(token);
+  return /^n[0-9a-f]{32}$/i.test(token.trim());
 }
 
-export function tokenPublicoDesdeNombre(nombre: string): string {
+export function tokenPublicoDesdeNombre(
+  nombre: string,
+  nombreArchivo?: string | null,
+): string {
   const codigo = crypto.randomUUID().replace(/-/g, "").slice(0, 6);
-  return `${slugNombreArchivoPublico(nombre)}-${codigo}`;
+  return `${slugNombreArchivoPublico(nombreArchivo || nombre)}-${codigo}`;
+}
+
+export function rutaPublicaArchivo(token: string, raw = false): string {
+  const t = encodeURIComponent(token.trim());
+  return raw ? `/archivos/${t}/raw` : `/archivos/${t}`;
 }
 
 export function armarArbolArchivos(nodos: ArchivoNodo[]): ArchivoArbol[] {
