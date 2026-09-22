@@ -98,6 +98,27 @@ export function nuevoTokenArchivo(prefix: "a" | "n"): string {
   return `${prefix}${crypto.randomUUID().replace(/-/g, "")}`;
 }
 
+export function slugNombreArchivoPublico(nombre: string): string {
+  const sinExt = nombre.replace(/\.[^.]+$/, "") || nombre;
+  const slug = sinExt
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || "archivo";
+}
+
+export function tokenPublicoEsLegado(token: string): boolean {
+  return /^n[0-9a-f]{32}$/i.test(token);
+}
+
+export function tokenPublicoDesdeNombre(nombre: string): string {
+  const codigo = crypto.randomUUID().replace(/-/g, "").slice(0, 6);
+  return `${slugNombreArchivoPublico(nombre)}-${codigo}`;
+}
+
 export function armarArbolArchivos(nodos: ArchivoNodo[]): ArchivoArbol[] {
   const map = new Map<string, ArchivoArbol>();
   for (const n of nodos) {

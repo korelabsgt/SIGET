@@ -130,11 +130,11 @@ export function UbicacionActividad({
           />
         </div>
       </div>
-      <div className={cn("relative min-h-0", fill ? "flex-1" : "px-4 pb-4")}>
+      <div className={cn("relative min-h-0", fill ? "min-h-64 flex-1" : "px-4 pb-4")}>
         <MapaUbicacion
           lat={lat}
           lng={lng}
-          className={fill ? "h-full min-h-0" : undefined}
+          className={fill ? "h-64 min-h-64 md:h-full md:min-h-0" : undefined}
         />
         {!tieneGps ? (
           <button

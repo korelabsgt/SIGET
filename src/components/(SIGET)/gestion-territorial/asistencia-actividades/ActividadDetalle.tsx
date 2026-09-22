@@ -9,7 +9,6 @@ import { useActividad, useMinutaBorrador, useRegistrosActividad, useSetActividad
 import {
   rutaDetalleActividadAsistencia,
   slugActividadDesdeRecord,
-  type TabDetalleActividad,
 } from "./lib/helpers";
 import {
   formatFechaActividad,
@@ -21,6 +20,8 @@ import {
   statsPorInstitucion,
 } from "./lib/stats";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
+import { Switch } from "@/components/ui/switch";
+import { modalAccentClass } from "@/components/ui/general-modal";
 import { cn } from "@/lib/utils";
 import { QrActividad } from "./QrActividad";
 import { GraficasAsistencia } from "./GraficasAsistencia";
@@ -53,7 +54,12 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
   } | null>(null);
   const [activoObjetivo, setActivoObjetivo] = useState<boolean | null>(null);
   const [guardandoActivo, setGuardandoActivo] = useState(false);
-  const [tabActiva, setTabActiva] = useState<TabDetalleActividad>("actividad");
+  const [tabPrincipal, setTabPrincipal] = useState<
+    "actividad" | "minuta" | "archivos"
+  >("actividad");
+  const [archivosVis, setArchivosVis] = useState<"privado" | "publico">(
+    "privado",
+  );
 
   useEffect(() => {
     if (actividad?.slug && actividad.slug !== actividadRef) {
@@ -140,12 +146,12 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
       <div className="mb-6 overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900">
         <div className="bg-celeste-trifinio pt-1">
           <div className="overflow-hidden rounded-t-2xl bg-card dark:bg-zinc-900">
-            <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 flex-1">
+            <div className="relative flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1 pr-11 sm:pr-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                   Detalle de actividad
                 </p>
-                <h1 className="truncate text-lg font-black leading-tight text-foreground sm:text-xl">
+                <h1 className="line-clamp-2 wrap-break-word text-sm font-black leading-snug text-foreground sm:text-lg md:text-xl">
                   {actividad.nombre}
                 </h1>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -178,49 +184,143 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
                 morphTo={SquarePen}
                 onClick={() => setEditarOpen(true)}
                 ariaLabel="Editar actividad"
-                className="w-auto shrink-0 self-start"
+                iconOnly
+                className="absolute top-3 right-3 sm:hidden"
+              />
+              <SigetActionButton
+                label="Editar"
+                accentColor={sigetAccent.editar}
+                morphFrom={Pencil}
+                morphTo={SquarePen}
+                onClick={() => setEditarOpen(true)}
+                ariaLabel="Editar actividad"
+                className="hidden w-auto shrink-0 self-start sm:inline-flex"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mb-5 flex flex-wrap items-center gap-1 border-b border-border dark:border-zinc-700">
-        {(
-          [
-            { id: "actividad" as const, label: "Actividad" },
-            { id: "minuta" as const, label: "Minuta" },
-            { id: "privados" as const, label: "Archivos privados" },
-            { id: "publicos" as const, label: "Archivos públicos" },
-          ] as const
-        ).map((tab) => {
-          const active = tabActiva === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setTabActiva(tab.id)}
+      <div className="mb-5 flex flex-col border-b border-border dark:border-zinc-700 md:flex-row md:flex-wrap md:items-center">
+        <div className="flex w-full items-center justify-center md:w-auto md:justify-start md:gap-1">
+          {(
+            [
+              { id: "actividad" as const, label: "Actividad" },
+              { id: "minuta" as const, label: "Minuta" },
+            ] as const
+          ).map((tab) => {
+            const active = tabPrincipal === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setTabPrincipal(tab.id)}
+                className={cn(
+                  "relative inline-flex h-9 cursor-pointer items-center justify-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors max-md:flex-1",
+                  active
+                    ? "text-celeste-trifinio"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab.label}
+                <span
+                  className={cn(
+                    "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
+                    active ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setTabPrincipal("archivos")}
+            className={cn(
+              "relative hidden h-9 cursor-pointer items-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors md:inline-flex",
+              tabPrincipal === "archivos"
+                ? "text-celeste-trifinio"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Archivos
+            <span
               className={cn(
-                "relative inline-flex h-9 cursor-pointer items-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors",
-                active
-                  ? "text-celeste-trifinio"
-                  : "text-muted-foreground hover:text-foreground",
+                "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
+                tabPrincipal === "archivos" ? "opacity-100" : "opacity-0",
+              )}
+            />
+          </button>
+        </div>
+
+        <div className="flex h-9 w-full items-center justify-center gap-3 md:ml-auto md:w-auto md:justify-end">
+          <button
+            type="button"
+            onClick={() => setTabPrincipal("archivos")}
+            className={cn(
+              "relative inline-flex h-9 cursor-pointer items-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors md:hidden",
+              tabPrincipal === "archivos"
+                ? "text-celeste-trifinio"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Archivos
+            <span
+              className={cn(
+                "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
+                tabPrincipal === "archivos" ? "opacity-100" : "opacity-0",
+              )}
+            />
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setArchivosVis("privado");
+                setTabPrincipal("archivos");
+              }}
+              className={cn(
+                "cursor-pointer text-[10px] uppercase tracking-wider",
+                archivosVis === "privado" && tabPrincipal === "archivos"
+                  ? modalAccentClass
+                  : "font-semibold text-muted-foreground",
               )}
             >
-              {tab.label}
-              <span
-                className={cn(
-                  "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
-                  active ? "opacity-100" : "opacity-0",
-                )}
-              />
+              Privados
             </button>
-          );
-        })}
+            <Switch
+              checked={archivosVis === "publico"}
+              onCheckedChange={(checked) => {
+                setArchivosVis(checked ? "publico" : "privado");
+                setTabPrincipal("archivos");
+              }}
+              aria-label={
+                archivosVis === "publico"
+                  ? "Archivos públicos. Cambiar a privados"
+                  : "Archivos privados. Cambiar a públicos"
+              }
+              className="data-[state=checked]:bg-[#2c5f9b] dark:data-[state=checked]:bg-[#6f9fd4]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setArchivosVis("publico");
+                setTabPrincipal("archivos");
+              }}
+              className={cn(
+                "cursor-pointer text-[10px] uppercase tracking-wider",
+                archivosVis === "publico" && tabPrincipal === "archivos"
+                  ? modalAccentClass
+                  : "font-semibold text-muted-foreground",
+              )}
+            >
+              Públicos
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="mb-8 flex w-full flex-col gap-6">
-        {tabActiva === "actividad" ? (
+        {tabPrincipal === "actividad" ? (
           <>
             <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-stretch">
               <div className="flex min-h-[420px] w-full min-w-0 flex-col rounded-3xl border border-slate-200/70 bg-white p-6 dark:border-zinc-800 dark:bg-card lg:basis-[34%] lg:shrink-0">
@@ -258,7 +358,7 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
               isLoading={loadingReg}
             />
           </>
-        ) : tabActiva === "minuta" ? (
+        ) : tabPrincipal === "minuta" ? (
           <MinutaEditor
             minuta={minuta}
             setMinuta={setMinuta}
@@ -271,7 +371,7 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
             actividadId={actividad.id}
             fechaRealizacion={actividad.fecha_realizacion}
             nombreActividad={actividad.nombre}
-            visibilidad={tabActiva === "publicos" ? "publico" : "privado"}
+            visibilidad={archivosVis}
             tokenActividad={actividad.token_archivos_publicos}
           />
         )}

@@ -56,6 +56,8 @@ import {
   idsSubarbol,
   nodosDeCarpeta,
   nuevoTokenArchivo,
+  tokenPublicoDesdeNombre,
+  tokenPublicoEsLegado,
   ACT_ARCHIVOS_MAX_POR_PESTANA,
   type ArchivoNodo,
   type ArchivosPorToken,
@@ -1658,18 +1660,24 @@ export async function asegurarTokenArchivoNodo(
   if (nodo.visibilidad !== "publico") {
     return { success: false, error: "FORBIDDEN" };
   }
-  if (nodo.token_publico) {
+  if (nodo.token_publico && !tokenPublicoEsLegado(nodo.token_publico)) {
     return { success: true, error: null, token: nodo.token_publico };
   }
 
-  const token = nuevoTokenArchivo("n");
-  const { error: errorToken } = await auth.supabase
-    .from(ACT_TABLAS.archivos)
-    .update({ token_publico: token })
-    .eq("id", id);
+  for (let intento = 0; intento < 6; intento += 1) {
+    const token = tokenPublicoDesdeNombre(nodo.nombre);
+    const { error: errorToken } = await auth.supabase
+      .from(ACT_TABLAS.archivos)
+      .update({ token_publico: token })
+      .eq("id", id);
 
-  if (errorToken) return mapDbError(errorToken);
-  return { success: true, error: null, token };
+    if (!errorToken) {
+      return { success: true, error: null, token };
+    }
+    if (errorToken.code !== "23505") return mapDbError(errorToken);
+  }
+
+  return { success: false, error: "DUPLICATE_FILE" };
 }
 
 export async function urlArchivoNodo(
@@ -1725,7 +1733,7 @@ export async function getArchivosPorToken(
   token: string,
 ): Promise<ArchivosPorToken | null> {
   const limpio = token.trim();
-  if (!limpio || limpio.length < 20) return null;
+  if (!limpio || limpio.length < 8) return null;
 
   const supabase = createPublicClient();
 
@@ -1762,7 +1770,7 @@ export async function getArchivosPorToken(
     };
   };
 
-  if (limpio.startsWith("a")) {
+  if (/^a[0-9a-f]{32}$/i.test(limpio)) {
     const { data: actividad } = await supabase
       .from(ACT_TABLAS.actividades)
       .select("*")

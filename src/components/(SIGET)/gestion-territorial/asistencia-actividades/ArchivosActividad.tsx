@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUpRight,
   Check,
+  Ellipsis,
+  EllipsisVertical,
   ExternalLink,
   FolderPlus,
   Link2,
@@ -31,6 +33,11 @@ import {
   SigetActionButton,
   sigetAccent,
 } from "@/components/ui/siget-action-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { modalActionMessage } from "@/components/ui/modal-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -74,6 +81,99 @@ function iconoArchivo(nodo: ArchivoNodo) {
 function urlOrigenArchivos(token: string) {
   if (typeof window === "undefined") return rutaPublicaArchivos(token);
   return `${window.location.origin}${rutaPublicaArchivos(token)}`;
+}
+
+function AccionesNodo({
+  nodo,
+  esCarpeta,
+  publico,
+  ocupado,
+  onCrear,
+  onSubir,
+  onAbrir,
+  onEnlace,
+  onEditar,
+  onQuitar,
+  className,
+}: {
+  nodo: ArchivoNodo;
+  esCarpeta: boolean;
+  publico: boolean;
+  ocupado: boolean;
+  onCrear: (parentId: string) => void;
+  onSubir: (parentId: string) => void;
+  onAbrir: (nodo: ArchivoNodo) => void;
+  onEnlace: (nodo: ArchivoNodo) => void;
+  onEditar: (nodo: ArchivoNodo) => void;
+  onQuitar: (nodo: ArchivoNodo) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {esCarpeta ? (
+        <>
+          <SigetActionButton
+            label="Crear"
+            accentColor={sigetAccent.crear}
+            morphFrom={FolderPlus}
+            morphTo={Plus}
+            onClick={() => onCrear(nodo.id)}
+            ariaLabel="Crear carpeta dentro"
+            className="w-auto shrink-0"
+          />
+          <SigetActionButton
+            label="Subir"
+            accentColor={sigetAccent.crear}
+            morphFrom={Upload}
+            morphTo={Plus}
+            onClick={() => onSubir(nodo.id)}
+            ariaLabel="Subir archivo a esta carpeta"
+            className="w-auto shrink-0"
+          />
+        </>
+      ) : (
+        <SigetActionButton
+          label="Abrir"
+          accentColor={sigetAccent.abrir}
+          morphFrom={ExternalLink}
+          morphTo={ArrowUpRight}
+          onClick={() => onAbrir(nodo)}
+          ariaLabel="Abrir archivo"
+          className="w-auto shrink-0"
+        />
+      )}
+      {publico ? (
+        <SigetActionButton
+          label="Enlace"
+          accentColor={sigetAccent.enlace}
+          morphFrom={Link2}
+          morphTo={Check}
+          onClick={() => onEnlace(nodo)}
+          ariaLabel="Copiar enlace público"
+          className="w-auto shrink-0"
+        />
+      ) : null}
+      <SigetActionButton
+        label="Editar"
+        accentColor={sigetAccent.editar}
+        morphFrom={Pencil}
+        morphTo={SquarePen}
+        onClick={() => onEditar(nodo)}
+        ariaLabel="Editar nombre y descripción"
+        className="w-auto shrink-0"
+      />
+      <SigetActionButton
+        label="Quitar"
+        accentColor={sigetAccent.quitar}
+        morphFrom={Trash2}
+        morphTo={Trash}
+        onClick={() => onQuitar(nodo)}
+        disabled={ocupado}
+        ariaLabel={esCarpeta ? "Eliminar carpeta" : "Eliminar archivo"}
+        className="w-auto shrink-0"
+      />
+    </div>
+  );
 }
 
 function NodoFila({
@@ -165,69 +265,40 @@ function NodoFila({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {esCarpeta ? (
-            <>
-              <SigetActionButton
-                label="Crear"
-                accentColor={sigetAccent.crear}
-                morphFrom={FolderPlus}
-                morphTo={Plus}
-                onClick={() => onCrear(nodo.id)}
-                ariaLabel="Crear carpeta dentro"
-                className="w-auto shrink-0"
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <span className="inline-flex">
+                <SigetActionButton
+                  label="Opciones"
+                  accentColor={sigetAccent.editar}
+                  morphFrom={EllipsisVertical}
+                  morphTo={Ellipsis}
+                  ariaLabel="Ver opciones"
+                  className="w-auto shrink-0"
+                />
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="left"
+              align="end"
+              className="z-[200] min-w-[8.5rem] border border-border bg-white p-2 opacity-100 dark:bg-zinc-900"
+            >
+              <AccionesNodo
+                nodo={nodo}
+                esCarpeta={esCarpeta}
+                publico={publico}
+                ocupado={ocupado}
+                onCrear={onCrear}
+                onSubir={onSubir}
+                onAbrir={onAbrir}
+                onEnlace={onEnlace}
+                onEditar={onEditar}
+                onQuitar={onQuitar}
+                className="flex-col items-stretch [&_button]:w-full"
               />
-              <SigetActionButton
-                label="Subir"
-                accentColor={sigetAccent.crear}
-                morphFrom={Upload}
-                morphTo={Plus}
-                onClick={() => onSubir(nodo.id)}
-                ariaLabel="Subir archivo a esta carpeta"
-                className="w-auto shrink-0"
-              />
-            </>
-          ) : (
-            <SigetActionButton
-              label="Abrir"
-              accentColor={sigetAccent.abrir}
-              morphFrom={ExternalLink}
-              morphTo={ArrowUpRight}
-              onClick={() => onAbrir(nodo)}
-              ariaLabel="Abrir archivo"
-              className="w-auto shrink-0"
-            />
-          )}
-          {publico ? (
-            <SigetActionButton
-              label="Enlace"
-              accentColor={sigetAccent.enlace}
-              morphFrom={Link2}
-              morphTo={Check}
-              onClick={() => onEnlace(nodo)}
-              ariaLabel="Copiar enlace público"
-              className="w-auto shrink-0"
-            />
-          ) : null}
-          <SigetActionButton
-            label="Editar"
-            accentColor={sigetAccent.editar}
-            morphFrom={Pencil}
-            morphTo={SquarePen}
-            onClick={() => onEditar(nodo)}
-            ariaLabel="Editar nombre y descripción"
-            className="w-auto shrink-0"
-          />
-          <SigetActionButton
-            label="Quitar"
-            accentColor={sigetAccent.quitar}
-            morphFrom={Trash2}
-            morphTo={Trash}
-            onClick={() => onQuitar(nodo)}
-            disabled={ocupado}
-            ariaLabel={esCarpeta ? "Eliminar carpeta" : "Eliminar archivo"}
-            className="w-auto shrink-0"
-          />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         </div>
       </div>

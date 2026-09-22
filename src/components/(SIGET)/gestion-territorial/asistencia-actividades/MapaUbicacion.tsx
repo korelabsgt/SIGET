@@ -22,8 +22,15 @@ function Recentrar({
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
-    const t = window.setTimeout(() => map.invalidateSize(), 80);
-    return () => window.clearTimeout(t);
+    const node = map.getContainer();
+    const invalidate = () => map.invalidateSize();
+    const t = window.setTimeout(invalidate, 80);
+    const observer = new ResizeObserver(invalidate);
+    observer.observe(node);
+    return () => {
+      window.clearTimeout(t);
+      observer.disconnect();
+    };
   }, [center, zoom, map]);
   return null;
 }
@@ -52,7 +59,7 @@ export function MapaUbicacion({
         center={center}
         zoom={zoom}
         scrollWheelZoom={false}
-        className="h-full w-full"
+        className="h-full w-full min-h-64"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
