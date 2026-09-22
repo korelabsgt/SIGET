@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import ManualPdfMobileViewer from "@/components/(base)/layout/modals/ManualPdfMobileViewer";
 import {
   esImagenMime,
   esPdfMime,
@@ -71,11 +72,9 @@ export function ArchivoPublicoVisor({
 
   if (esPdf) {
     return (
-      <iframe
-        title={nodo.nombre}
-        src={url}
-        className="fixed inset-0 z-[300] h-[100dvh] w-full border-0 bg-white"
-      />
+      <div className="fixed inset-0 z-[300] bg-zinc-200 dark:bg-zinc-950">
+        <ManualPdfMobileViewer url={url} />
+      </div>
     );
   }
 
