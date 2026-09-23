@@ -97,7 +97,7 @@ function QrCodigoRender({
     const qr = new QRCodeStyling({
       width: size,
       height: size,
-      type: "canvas",
+      type: "svg",
       data: url,
       margin,
       qrOptions: {
@@ -144,8 +144,8 @@ function QrCodigoRender({
     <div
       ref={containerRef}
       className={cn(
-        "size-full overflow-hidden [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full",
-        rounded && "rounded-2xl",
+        "size-full [&_svg]:block [&_svg]:size-full",
+        rounded && "overflow-hidden rounded-2xl",
       )}
     />
   );

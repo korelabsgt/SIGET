@@ -39,6 +39,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { modalActionMessage } from "@/components/ui/modal-toast";
+import { modalAccentClass } from "@/components/ui/general-modal";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   armarArbolArchivos,
@@ -346,13 +348,11 @@ export function ArchivosActividad({
   actividadId,
   fechaRealizacion,
   nombreActividad,
-  visibilidad,
   tokenActividad,
 }: {
   actividadId: string;
   fechaRealizacion: string;
   nombreActividad: string;
-  visibilidad: ArchivoVisibilidad;
   tokenActividad: string | null;
 }) {
   const { data, isLoading, isError } = useArchivosActividad(actividadId);
@@ -361,6 +361,8 @@ export function ArchivosActividad({
   const tokenNodo = useAsegurarTokenArchivoNodo(actividadId);
   const tokenTodos = useAsegurarTokenArchivosActividad(actividadId);
   const urlArchivo = useUrlArchivoNodo();
+
+  const [visibilidad, setVisibilidad] = useState<ArchivoVisibilidad>("publico");
 
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [carpetaParentId, setCarpetaParentId] = useState<string | null>(null);
@@ -528,7 +530,45 @@ export function ArchivosActividad({
               {usados}/{ACT_ARCHIVOS_MAX_POR_PESTANA} archivos
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibilidad("publico")}
+                className={cn(
+                  "cursor-pointer text-[10px] uppercase tracking-wider",
+                  visibilidad === "publico"
+                    ? modalAccentClass
+                    : "font-semibold text-muted-foreground",
+                )}
+              >
+                Públicos
+              </button>
+              <Switch
+                checked={visibilidad === "privado"}
+                onCheckedChange={(checked) =>
+                  setVisibilidad(checked ? "privado" : "publico")
+                }
+                aria-label={
+                  visibilidad === "privado"
+                    ? "Archivos privados. Cambiar a públicos"
+                    : "Archivos públicos. Cambiar a privados"
+                }
+                className="data-[state=checked]:bg-[#2c5f9b] dark:data-[state=checked]:bg-[#6f9fd4]"
+              />
+              <button
+                type="button"
+                onClick={() => setVisibilidad("privado")}
+                className={cn(
+                  "cursor-pointer text-[10px] uppercase tracking-wider",
+                  visibilidad === "privado"
+                    ? modalAccentClass
+                    : "font-semibold text-muted-foreground",
+                )}
+              >
+                Privados
+              </button>
+            </div>
             <SigetActionButton
               label="Crear"
               accentColor={sigetAccent.crear}

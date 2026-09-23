@@ -124,8 +124,17 @@ function useArchivoParaMostrar(url: string) {
           }
         }
 
-        const mime = res.headers.get("content-type") || undefined;
-        const blob = new Blob(chunks, mime ? { type: mime } : undefined);
+        const mime = res.headers.get("content-type") || "";
+        const unido = new Uint8Array(recibidos);
+        let offset = 0;
+        for (const chunk of chunks) {
+          unido.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        const blob = new Blob(
+          [unido.buffer.slice(unido.byteOffset, unido.byteOffset + unido.byteLength)],
+          mime ? { type: mime } : undefined,
+        );
         const creado = URL.createObjectURL(blob);
         objectUrlRef.current = creado;
         if (cancelado) {

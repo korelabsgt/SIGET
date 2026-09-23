@@ -20,8 +20,6 @@ import {
   statsPorInstitucion,
 } from "./lib/stats";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
-import { Switch } from "@/components/ui/switch";
-import { modalAccentClass } from "@/components/ui/general-modal";
 import { cn } from "@/lib/utils";
 import { QrActividad } from "./QrActividad";
 import { GraficasAsistencia } from "./GraficasAsistencia";
@@ -57,9 +55,6 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
   const [tabPrincipal, setTabPrincipal] = useState<
     "actividad" | "minuta" | "archivos"
   >("actividad");
-  const [archivosVis, setArchivosVis] = useState<"privado" | "publico">(
-    "publico",
-  );
 
   useEffect(() => {
     if (actividad?.slug && actividad.slug !== actividadRef) {
@@ -207,6 +202,7 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
             [
               { id: "actividad" as const, label: "Actividad" },
               { id: "minuta" as const, label: "Minuta" },
+              { id: "archivos" as const, label: "Archivos" },
             ] as const
           ).map((tab) => {
             const active = tabPrincipal === tab.id;
@@ -232,90 +228,6 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
               </button>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setTabPrincipal("archivos")}
-            className={cn(
-              "relative hidden h-9 cursor-pointer items-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors md:inline-flex",
-              tabPrincipal === "archivos"
-                ? "text-celeste-trifinio"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Archivos
-            <span
-              className={cn(
-                "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
-                tabPrincipal === "archivos" ? "opacity-100" : "opacity-0",
-              )}
-            />
-          </button>
-        </div>
-
-        <div className="flex h-9 w-full items-center justify-center gap-3 md:ml-auto md:w-auto md:justify-end">
-          <button
-            type="button"
-            onClick={() => setTabPrincipal("archivos")}
-            className={cn(
-              "relative inline-flex h-9 cursor-pointer items-center border-0 bg-transparent px-3 text-[10px] font-bold uppercase tracking-wider transition-colors md:hidden",
-              tabPrincipal === "archivos"
-                ? "text-celeste-trifinio"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            Archivos
-            <span
-              className={cn(
-                "absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-celeste-trifinio transition-opacity",
-                tabPrincipal === "archivos" ? "opacity-100" : "opacity-0",
-              )}
-            />
-          </button>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setArchivosVis("publico");
-                setTabPrincipal("archivos");
-              }}
-              className={cn(
-                "cursor-pointer text-[10px] uppercase tracking-wider",
-                archivosVis === "publico" && tabPrincipal === "archivos"
-                  ? modalAccentClass
-                  : "font-semibold text-muted-foreground",
-              )}
-            >
-              Públicos
-            </button>
-            <Switch
-              checked={archivosVis === "privado"}
-              onCheckedChange={(checked) => {
-                setArchivosVis(checked ? "privado" : "publico");
-                setTabPrincipal("archivos");
-              }}
-              aria-label={
-                archivosVis === "privado"
-                  ? "Archivos privados. Cambiar a públicos"
-                  : "Archivos públicos. Cambiar a privados"
-              }
-              className="data-[state=checked]:bg-[#2c5f9b] dark:data-[state=checked]:bg-[#6f9fd4]"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setArchivosVis("privado");
-                setTabPrincipal("archivos");
-              }}
-              className={cn(
-                "cursor-pointer text-[10px] uppercase tracking-wider",
-                archivosVis === "privado" && tabPrincipal === "archivos"
-                  ? modalAccentClass
-                  : "font-semibold text-muted-foreground",
-              )}
-            >
-              Privados
-            </button>
-          </div>
         </div>
       </div>
 
@@ -371,7 +283,6 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
             actividadId={actividad.id}
             fechaRealizacion={actividad.fecha_realizacion}
             nombreActividad={actividad.nombre}
-            visibilidad={archivosVis}
             tokenActividad={actividad.token_archivos_publicos}
           />
         )}
