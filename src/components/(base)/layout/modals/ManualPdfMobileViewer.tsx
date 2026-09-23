@@ -17,6 +17,71 @@ interface ManualPdfMobileViewerProps {
   pagesPerView?: 1 | 2;
 }
 
+function PaginaPdfPerezoza({
+  pageNumber,
+  eager,
+  root,
+  fitHeight,
+  pageH,
+  baseWidth,
+  onRendered,
+}: {
+  pageNumber: number;
+  eager: boolean;
+  root: HTMLDivElement | null;
+  fitHeight: boolean;
+  pageH: number;
+  baseWidth: number;
+  onRendered: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [activo, setActivo] = useState(eager);
+
+  useEffect(() => {
+    if (activo) return;
+    const el = wrapRef.current;
+    if (!el || !root) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setActivo(true);
+      },
+      { root, rootMargin: "800px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [activo, root]);
+
+  const placeholder = fitHeight
+    ? { height: pageH, width: pageH / 1.414 }
+    : { width: baseWidth, height: baseWidth * 1.414 };
+
+  return (
+    <div ref={wrapRef} className="relative" style={activo ? undefined : placeholder}>
+      {activo ? (
+        <Page
+          pageNumber={pageNumber}
+          width={fitHeight ? undefined : baseWidth}
+          height={fitHeight ? pageH : undefined}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          className="bg-white shadow-md"
+          onRenderSuccess={onRendered}
+          loading={
+            <div
+              className="flex items-center justify-center bg-white dark:bg-zinc-800"
+              style={placeholder}
+            >
+              <Loader2 className="size-6 animate-spin text-celeste-trifinio" />
+            </div>
+          }
+        />
+      ) : (
+        <div className="bg-white dark:bg-zinc-800" style={placeholder} />
+      )}
+    </div>
+  );
+}
+
 function getTouchDistance(touches: TouchList) {
   if (touches.length < 2) return 0;
   return Math.hypot(
@@ -38,7 +103,12 @@ export default function ManualPdfMobileViewer({
   desktopFitHeight = false,
   pagesPerView = 1,
 }: ManualPdfMobileViewerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
+
+  const setScrollNode = useCallback((node: HTMLDivElement | null) => {
+    scrollRef.current = node;
+    setScrollRoot(node);
+  }, []);
   const sizerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -210,7 +280,7 @@ export default function ManualPdfMobileViewer({
 
   return (
     <div
-      ref={scrollRef}
+      ref={setScrollNode}
       className="h-full w-full overflow-auto overscroll-contain"
       style={{ touchAction: scale > MIN_SCALE ? "pan-x pan-y" : "pan-y" }}
     >
@@ -259,28 +329,15 @@ export default function ManualPdfMobileViewer({
                         if (node) pageRefs.current.set(pageNumber, node);
                         else pageRefs.current.delete(pageNumber);
                       }}
-                      className="relative"
                     >
-                      <Page
+                      <PaginaPdfPerezoza
                         pageNumber={pageNumber}
-                        width={fitHeight ? undefined : baseWidth}
-                        height={fitHeight ? pageH : undefined}
-                        renderTextLayer={false}
-                        renderAnnotationLayer
-                        className="bg-white shadow-md"
-                        onRenderSuccess={() => syncSizer(scaleRef.current)}
-                        loading={
-                          <div
-                            className="flex items-center justify-center bg-white dark:bg-zinc-800"
-                            style={
-                              fitHeight
-                                ? { height: pageH, width: pageH / 1.414 }
-                                : { width: baseWidth, height: baseWidth * 1.414 }
-                            }
-                          >
-                            <Loader2 className="size-6 animate-spin text-celeste-trifinio" />
-                          </div>
-                        }
+                        eager={pageNumber <= 2}
+                        root={scrollRoot}
+                        fitHeight={fitHeight}
+                        pageH={pageH}
+                        baseWidth={baseWidth}
+                        onRendered={() => syncSizer(scaleRef.current)}
                       />
                     </div>
                   ))}

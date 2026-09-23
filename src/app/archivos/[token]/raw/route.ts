@@ -22,11 +22,11 @@ export async function GET(
     return NextResponse.redirect(archivo.url, 302);
   }
 
-  return new NextResponse(archivo.bytes, {
+  return new NextResponse(archivo.body, {
     status: 200,
     headers: {
       "Content-Type": archivo.mime,
-      "Content-Length": String(archivo.bytes.byteLength),
+      "Content-Length": String(archivo.body.size),
       "Content-Disposition": contentDisposition(
         archivo.filename,
         archivo.inline && !forzarDescarga,

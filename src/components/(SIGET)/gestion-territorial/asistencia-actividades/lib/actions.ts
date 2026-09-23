@@ -1931,7 +1931,7 @@ export async function getArchivosPorToken(
 export async function obtenerArchivoPublicoPorToken(token: string): Promise<
   | {
       kind: "archivo";
-      bytes: ArrayBuffer;
+      body: Blob;
       mime: string;
       filename: string;
       inline: boolean;
@@ -1957,7 +1957,7 @@ export async function obtenerArchivoPublicoPorToken(token: string): Promise<
   const filename = nodo.nombre_archivo || nodo.nombre;
   return {
     kind: "archivo",
-    bytes: await descargado.data.arrayBuffer(),
+    body: descargado.data,
     mime,
     filename,
     inline: esPdfMime(mime) || esImagenMime(mime),
