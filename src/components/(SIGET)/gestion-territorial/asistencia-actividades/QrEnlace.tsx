@@ -26,13 +26,14 @@ function usePantallaQrSize(open: boolean) {
 
     const update = () => {
       const { width, height } = boxEl.getBoundingClientRect();
-      const reservaTituloYCerrar = 168;
+      const reservaTituloYCerrar = 176;
+      const grande = window.innerWidth >= 768;
       const tope = Math.min(
         width,
         Math.max(0, height - reservaTituloYCerrar),
-        window.innerWidth * 0.62,
-        window.innerHeight * 0.52,
-        440,
+        grande ? window.innerWidth * 0.5 : window.innerWidth * 0.86,
+        grande ? window.innerHeight * 0.7 : window.innerHeight * 0.52,
+        grande ? 720 : 360,
       );
       setSize(Math.max(200, Math.floor(tope / 4) * 4));
     };

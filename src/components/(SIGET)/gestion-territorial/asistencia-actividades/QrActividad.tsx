@@ -31,10 +31,11 @@ function usePantallaQrSize(open: boolean) {
     if (!open) return;
 
     const update = () => {
+      const grande = window.innerWidth >= 768;
       const side = Math.min(
-        window.innerWidth * 0.62,
-        window.innerHeight * 0.52,
-        440,
+        grande ? window.innerWidth * 0.5 : window.innerWidth * 0.86,
+        grande ? window.innerHeight * 0.7 : window.innerHeight * 0.52,
+        grande ? 720 : 360,
       );
       setSize(Math.max(200, Math.floor(side / 4) * 4));
     };
