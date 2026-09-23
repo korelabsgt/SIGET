@@ -119,11 +119,11 @@ export function ArchivoPublicoVisor({
 
   if (esImagen) {
     return (
-      <div className="fixed inset-0 z-[300] overflow-auto bg-black touch-pan-x touch-pan-y">
+      <div className="fixed inset-0 z-[300] overflow-auto bg-black touch-pan-x touch-pan-y md:flex md:items-center md:justify-center">
         <img
           src={url}
           alt={nodo.nombre}
-          className="block h-auto w-full max-w-none select-none"
+          className="block h-auto w-full max-w-none select-none md:h-auto md:max-h-full md:w-auto md:max-w-full md:object-contain"
         />
         <BarraDescargar url={url} filename={filename} />
       </div>
@@ -133,7 +133,7 @@ export function ArchivoPublicoVisor({
   if (esPdf) {
     return (
       <div className="fixed inset-0 z-[300] bg-zinc-200 dark:bg-zinc-950">
-        <ManualPdfMobileViewer url={url} />
+        <ManualPdfMobileViewer url={url} desktopFitHeight />
         <BarraDescargar url={url} filename={filename} />
       </div>
     );

@@ -13,6 +13,7 @@ const MAX_SCALE = 4;
 interface ManualPdfMobileViewerProps {
   url: string;
   onLoadError?: (message: string) => void;
+  desktopFitHeight?: boolean;
 }
 
 function getTouchDistance(touches: TouchList) {
@@ -33,6 +34,7 @@ function getTouchCenter(touches: TouchList) {
 export default function ManualPdfMobileViewer({
   url,
   onLoadError,
+  desktopFitHeight = false,
 }: ManualPdfMobileViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLDivElement>(null);
@@ -46,9 +48,12 @@ export default function ManualPdfMobileViewer({
 
   const [numPages, setNumPages] = useState(0);
   const [pageWidth, setPageWidth] = useState(0);
+  const [pageHeight, setPageHeight] = useState(0);
   const [scale, setScale] = useState(1);
+  const [fitHeight, setFitHeight] = useState(false);
 
   const baseWidth = pageWidth > 0 ? pageWidth - 16 : 0;
+  const baseHeight = pageHeight > 0 ? pageHeight - 96 : 0;
 
   const syncSizer = useCallback((nextScale: number) => {
     const w = baseWidthRef.current;
@@ -95,20 +100,28 @@ export default function ManualPdfMobileViewer({
     if (!el) return;
 
     const update = () => {
+      const desktop =
+        desktopFitHeight && window.matchMedia("(min-width: 768px)").matches;
+      setFitHeight(desktop);
       const w = el.clientWidth;
+      const h = el.clientHeight;
       if (w > 0) setPageWidth(w);
+      if (h > 0) setPageHeight(h);
     };
 
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     window.addEventListener("resize", update);
+    const mq = window.matchMedia("(min-width: 768px)");
+    mq.addEventListener("change", update);
 
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", update);
+      mq.removeEventListener("change", update);
     };
-  }, []);
+  }, [desktopFitHeight]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -219,7 +232,7 @@ export default function ManualPdfMobileViewer({
             }
             className="flex flex-col items-center gap-3"
           >
-            {baseWidth > 0 &&
+            {((fitHeight && baseHeight > 0) || (!fitHeight && baseWidth > 0)) &&
               Array.from({ length: numPages }, (_, index) => {
                 const pageNumber = index + 1;
                 return (
@@ -233,7 +246,8 @@ export default function ManualPdfMobileViewer({
                   >
                     <Page
                       pageNumber={pageNumber}
-                      width={baseWidth}
+                      width={fitHeight ? undefined : baseWidth}
+                      height={fitHeight ? baseHeight : undefined}
                       renderTextLayer={false}
                       renderAnnotationLayer
                       className="bg-white shadow-md"
@@ -241,7 +255,11 @@ export default function ManualPdfMobileViewer({
                       loading={
                         <div
                           className="flex items-center justify-center bg-white dark:bg-zinc-800"
-                          style={{ width: baseWidth, height: baseWidth * 1.414 }}
+                          style={
+                            fitHeight
+                              ? { height: baseHeight, width: baseHeight / 1.414 }
+                              : { width: baseWidth, height: baseWidth * 1.414 }
+                          }
                         >
                           <Loader2 className="size-6 animate-spin text-celeste-trifinio" />
                         </div>
