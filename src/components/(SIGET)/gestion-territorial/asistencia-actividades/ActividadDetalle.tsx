@@ -58,7 +58,7 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
     "actividad" | "minuta" | "archivos"
   >("actividad");
   const [archivosVis, setArchivosVis] = useState<"privado" | "publico">(
-    "privado",
+    "publico",
   );
 
   useEffect(() => {
@@ -275,34 +275,6 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
             <button
               type="button"
               onClick={() => {
-                setArchivosVis("privado");
-                setTabPrincipal("archivos");
-              }}
-              className={cn(
-                "cursor-pointer text-[10px] uppercase tracking-wider",
-                archivosVis === "privado" && tabPrincipal === "archivos"
-                  ? modalAccentClass
-                  : "font-semibold text-muted-foreground",
-              )}
-            >
-              Privados
-            </button>
-            <Switch
-              checked={archivosVis === "publico"}
-              onCheckedChange={(checked) => {
-                setArchivosVis(checked ? "publico" : "privado");
-                setTabPrincipal("archivos");
-              }}
-              aria-label={
-                archivosVis === "publico"
-                  ? "Archivos públicos. Cambiar a privados"
-                  : "Archivos privados. Cambiar a públicos"
-              }
-              className="data-[state=checked]:bg-[#2c5f9b] dark:data-[state=checked]:bg-[#6f9fd4]"
-            />
-            <button
-              type="button"
-              onClick={() => {
                 setArchivosVis("publico");
                 setTabPrincipal("archivos");
               }}
@@ -314,6 +286,34 @@ export function ActividadDetalle({ actividadRef }: { actividadRef: string }) {
               )}
             >
               Públicos
+            </button>
+            <Switch
+              checked={archivosVis === "privado"}
+              onCheckedChange={(checked) => {
+                setArchivosVis(checked ? "privado" : "publico");
+                setTabPrincipal("archivos");
+              }}
+              aria-label={
+                archivosVis === "privado"
+                  ? "Archivos privados. Cambiar a públicos"
+                  : "Archivos públicos. Cambiar a privados"
+              }
+              className="data-[state=checked]:bg-[#2c5f9b] dark:data-[state=checked]:bg-[#6f9fd4]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setArchivosVis("privado");
+                setTabPrincipal("archivos");
+              }}
+              className={cn(
+                "cursor-pointer text-[10px] uppercase tracking-wider",
+                archivosVis === "privado" && tabPrincipal === "archivos"
+                  ? modalAccentClass
+                  : "font-semibold text-muted-foreground",
+              )}
+            >
+              Privados
             </button>
           </div>
         </div>

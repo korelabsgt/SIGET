@@ -26,6 +26,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": archivo.mime,
+      "Content-Length": String(archivo.bytes.byteLength),
       "Content-Disposition": contentDisposition(
         archivo.filename,
         archivo.inline && !forzarDescarga,

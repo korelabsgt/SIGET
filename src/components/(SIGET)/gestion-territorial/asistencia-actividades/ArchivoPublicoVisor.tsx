@@ -43,6 +43,113 @@ async function descargarArchivo(url: string, filename: string) {
   iniciarDescarga(url, filename);
 }
 
+function CargandoConPorcentaje({ pct }: { pct: number }) {
+  const mostrado = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-4 px-6">
+      <div
+        className="relative size-24"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={mostrado}
+        aria-label="Cargando archivo"
+      >
+        <svg viewBox="0 0 96 96" className="size-24 -rotate-90">
+          <circle
+            cx="48"
+            cy="48"
+            r="40"
+            fill="none"
+            className="stroke-zinc-200 dark:stroke-zinc-700"
+            strokeWidth="8"
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r="40"
+            fill="none"
+            stroke="#1a95d3"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={2 * Math.PI * 40}
+            strokeDashoffset={2 * Math.PI * 40 * (1 - mostrado / 100)}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-sm font-black tabular-nums text-[#1a4d7a] dark:text-[#6f9fd4]">
+          {mostrado}%
+        </span>
+      </div>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        Cargando
+      </p>
+    </div>
+  );
+}
+
+function useArchivoParaMostrar(url: string) {
+  const [pct, setPct] = useState(0);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    const objectUrlRef: { current: string | null } = { current: null };
+
+    const cargar = async () => {
+      setPct(0);
+      setBlobUrl(null);
+      setError(false);
+      try {
+        const res = await fetch(url, { credentials: "same-origin" });
+        if (!res.ok || !res.body) throw new Error("fetch");
+        const total = Number(res.headers.get("content-length") ?? 0);
+        const reader = res.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let recibidos = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (cancelado) {
+            await reader.cancel();
+            return;
+          }
+          chunks.push(value);
+          recibidos += value.byteLength;
+          if (total > 0) {
+            setPct(Math.min(99, Math.round((recibidos / total) * 100)));
+          } else {
+            setPct((prev) => Math.min(90, prev + 3));
+          }
+        }
+
+        const mime = res.headers.get("content-type") || undefined;
+        const blob = new Blob(chunks, mime ? { type: mime } : undefined);
+        const creado = URL.createObjectURL(blob);
+        objectUrlRef.current = creado;
+        if (cancelado) {
+          URL.revokeObjectURL(creado);
+          return;
+        }
+        setPct(100);
+        setBlobUrl(creado);
+      } catch {
+        if (!cancelado) setError(true);
+      }
+    };
+
+    void cargar();
+
+    return () => {
+      cancelado = true;
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, [url]);
+
+  return { pct, blobUrl, error };
+}
+
 function BarraDescargar({
   url,
   filename,
@@ -67,6 +174,45 @@ function BarraDescargar({
   );
 }
 
+function ImagenVisorPantalla({
+  url,
+  alt,
+  filename,
+}: {
+  url: string;
+  alt: string;
+  filename: string;
+}) {
+  const { pct, blobUrl, error } = useArchivoParaMostrar(url);
+
+  if (error) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-black px-4 text-sm text-zinc-300">
+        No se pudo cargar la imagen.
+      </div>
+    );
+  }
+
+  if (!blobUrl) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-black">
+        <CargandoConPorcentaje pct={pct} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] overflow-auto bg-black touch-pan-x touch-pan-y md:flex md:items-center md:justify-center">
+      <img
+        src={blobUrl}
+        alt={alt}
+        className="block h-auto w-full max-w-none select-none md:h-auto md:max-h-full md:w-auto md:max-w-full md:object-contain"
+      />
+      <BarraDescargar url={url} filename={filename} />
+    </div>
+  );
+}
+
 function PdfVisorPantalla({
   url,
   filename,
@@ -75,6 +221,23 @@ function PdfVisorPantalla({
   filename: string;
 }) {
   const [doble, setDoble] = useState(false);
+  const { pct, blobUrl, error } = useArchivoParaMostrar(url);
+
+  if (error) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center px-4 text-sm text-muted-foreground">
+        No se pudo cargar el archivo.
+      </div>
+    );
+  }
+
+  if (!blobUrl) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-zinc-200 dark:bg-zinc-950">
+        <CargandoConPorcentaje pct={pct} />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[300] bg-zinc-200 dark:bg-zinc-950">
@@ -92,7 +255,7 @@ function PdfVisorPantalla({
         </label>
       </div>
       <ManualPdfMobileViewer
-        url={url}
+        url={blobUrl}
         desktopFitHeight
         pagesPerView={doble ? 2 : 1}
       />
@@ -138,14 +301,11 @@ export function ArchivoPublicoVisor({
 
   if (esImagen) {
     return (
-      <div className="fixed inset-0 z-[300] overflow-auto bg-black touch-pan-x touch-pan-y md:flex md:items-center md:justify-center">
-        <img
-          src={url}
-          alt={nodo.nombre}
-          className="block h-auto w-full max-w-none select-none md:h-auto md:max-h-full md:w-auto md:max-w-full md:object-contain"
-        />
-        <BarraDescargar url={url} filename={filename} />
-      </div>
+      <ImagenVisorPantalla
+        url={url}
+        alt={nodo.nombre}
+        filename={filename}
+      />
     );
   }
 
