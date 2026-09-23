@@ -85,13 +85,6 @@ export function canGestionarMisionSolicitud(
   return Boolean(userId && solicitudSolicitanteId === userId);
 }
 
-export function canAccessGestionTerritorial(role: string | null | undefined): boolean {
-  if (!role) return false;
-  if (isSuperRole(role)) return true;
-  const slug = normalizeRoleSlug(role);
-  return slug === "admin" || isAdministradorOtRole(role);
-}
-
 export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;
@@ -102,6 +95,10 @@ export function canSeeFlotaYCombustible(role: string | null | undefined): boolea
   if (slug === "taller" || slug === "mecanico") return true;
 
   return false;
+}
+
+export function canAccessGestionTerritorial(role: string | null | undefined): boolean {
+  return canSeeFlotaYCombustible(role);
 }
 
 export function canViewAllSolicitudes(role: string | null | undefined): boolean {
