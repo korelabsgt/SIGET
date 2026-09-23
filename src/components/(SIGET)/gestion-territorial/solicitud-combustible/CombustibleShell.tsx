@@ -14,7 +14,7 @@ import { GvTabFilter } from "../gestion-vehiculos/lib/gv-tab-filter";
 
 import { GV_MODULO_PAGE_CLASS, GV_TABLE_AREA_CLASS } from "../gestion-vehiculos/lib/page-shell";
 
-import { useGvPermissionRole } from "../gestion-vehiculos/lib/gv-permissions-hook";
+import { useGvPermissionRole, useRequireFlotaYCombustible } from "../gestion-vehiculos/lib/gv-permissions-hook";
 
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ const SECCION_LABELS: Record<SeccionCombustible, string> = {
 
 
 export function CombustibleShell() {
-
+  const allowed = useRequireFlotaYCombustible();
   const gvRole = useGvPermissionRole();
 
   const puedeVerVales = canViewValesCombustible(gvRole);
@@ -80,7 +80,7 @@ export function CombustibleShell() {
 
   }, [puedeVerVales, seccion]);
 
-
+  if (!allowed) return null;
 
   return (
 

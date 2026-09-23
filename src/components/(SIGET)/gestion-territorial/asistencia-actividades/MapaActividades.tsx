@@ -34,8 +34,8 @@ const SAT_LABELS_URL =
   "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 const GT_CENTER: [number, number] = [15.5, -90.25];
 const TRIFINIO_BOUNDS: [[number, number], [number, number]] = [
-  [13.55, -90.15],
-  [15.45, -88.25],
+  [14.18, -89.78],
+  [14.78, -88.98],
 ];
 
 function radioMarcador(zoom: number, seleccionada: boolean): number {
@@ -121,8 +121,8 @@ function VistaGeneralControl({
     if (!activo) return;
     vuelo.current = true;
     map.flyToBounds(TRIFINIO_BOUNDS, {
-      padding: [32, 32],
-      maxZoom: 9,
+      padding: [24, 24],
+      maxZoom: 10,
       duration: 0.65,
     });
     const fin = () => {
@@ -142,10 +142,8 @@ function VistaGeneralControl({
       onDesactivar();
     };
     map.on("dragend", salir);
-    map.on("zoomend", salir);
     return () => {
       map.off("dragend", salir);
-      map.off("zoomend", salir);
     };
   }, [map, activo, onDesactivar]);
 

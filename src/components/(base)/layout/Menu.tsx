@@ -34,7 +34,7 @@ import { PushNotificationToggle } from "@/components/ui/PushNotificationToggle";
 import {
   ADMIN_MENU_OPTIONS,
   OBSERVATORIO_MENU_OPTIONS,
-  GESTION_TERRITORIAL_MENU_OPTIONS,
+  getVisibleGestionTerritorialMenuOptions,
   getPerfilMenuOptions,
   getVisibleAdminOptions,
   getVisibleDashboardModules,
@@ -699,7 +699,7 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
                           title={gestionTerritorialModule.title}
                           subtitle={gestionTerritorialModule.subtitle}
                           desc={gestionTerritorialModule.desc}
-                          options={GESTION_TERRITORIAL_MENU_OPTIONS}
+                          options={getVisibleGestionTerritorialMenuOptions(effectiveRole)}
                           pathname={pathname}
                           open={openAccordionId === "gestion-territorial"}
                           onToggle={() => toggleAccordion("gestion-territorial")}

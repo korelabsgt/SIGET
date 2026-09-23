@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import type { IconNode } from "lucide";
@@ -30,10 +30,11 @@ import {
 } from "lucide";
 import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser } from "@/components/(base)/providers/UserProvider";
+import { useUser, useUserContext } from "@/components/(base)/providers/UserProvider";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { createClient } from "@/utils/supabase/client";
 import { pickSaludoMotivacional } from "@/components/(SIGET)/gestion-territorial/lib/saludos";
+import { canSeeFlotaYCombustible } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
 
 type GtCardFeature = {
   label: string;
@@ -42,43 +43,6 @@ type GtCardFeature = {
 };
 
 const GT_CARDS = [
-  {
-    id: "card-memoria-labores",
-    href: "/siget/gestion-territorial/memoria-labores",
-    badge: "Gestión Documental",
-    title: "Memoria de Labores",
-    description:
-      "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    cta: "Acceder a Formularios",
-    iconFrom: FileText,
-    iconTo: ClipboardList,
-    iconColor: "#fb923c",
-    accent: {
-      border: "border-orange-300/40 dark:border-orange-400/20",
-      ring: "ring-orange-300/20",
-      badge: "bg-orange-400/90",
-      button: "bg-orange-400 hover:bg-orange-500",
-      check: "text-orange-400",
-      iconBg: "bg-orange-50 dark:bg-orange-400/10",
-    },
-    features: [
-      {
-        label: "Creación de registros semestrales",
-        iconFrom: FilePlus,
-        iconTo: CalendarCheck,
-      },
-      {
-        label: "Visualización de proyectos",
-        iconFrom: FolderKanban,
-        iconTo: Eye,
-      },
-      {
-        label: "Reporte de actividades institucionales",
-        iconFrom: ClipboardList,
-        iconTo: FileBarChart,
-      },
-    ] satisfies GtCardFeature[],
-  },
   {
     id: "card-asistencia",
     href: "/siget/gestion-territorial/asistencia-actividades",
@@ -90,6 +54,7 @@ const GT_CARDS = [
     iconFrom: ClipboardPen,
     iconTo: UserCheck,
     iconColor: "#a78bfa",
+    restricted: false,
     accent: {
       border: "border-violet-300/40 dark:border-violet-400/20",
       ring: "ring-violet-300/20",
@@ -117,6 +82,44 @@ const GT_CARDS = [
     ] satisfies GtCardFeature[],
   },
   {
+    id: "card-memoria-labores",
+    href: "/siget/gestion-territorial/memoria-labores",
+    badge: "Gestión Documental",
+    title: "Memoria de Labores",
+    description:
+      "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    cta: "Acceder a Formularios",
+    iconFrom: FileText,
+    iconTo: ClipboardList,
+    iconColor: "#fb923c",
+    restricted: false,
+    accent: {
+      border: "border-orange-300/40 dark:border-orange-400/20",
+      ring: "ring-orange-300/20",
+      badge: "bg-orange-400/90",
+      button: "bg-orange-400 hover:bg-orange-500",
+      check: "text-orange-400",
+      iconBg: "bg-orange-50 dark:bg-orange-400/10",
+    },
+    features: [
+      {
+        label: "Creación de registros semestrales",
+        iconFrom: FilePlus,
+        iconTo: CalendarCheck,
+      },
+      {
+        label: "Visualización de proyectos",
+        iconFrom: FolderKanban,
+        iconTo: Eye,
+      },
+      {
+        label: "Reporte de actividades institucionales",
+        iconFrom: ClipboardList,
+        iconTo: FileBarChart,
+      },
+    ] satisfies GtCardFeature[],
+  },
+  {
     id: "card-vehiculos",
     href: "/siget/gestion-territorial/gestion-vehiculos",
     badge: "Gestión de Flota",
@@ -126,6 +129,7 @@ const GT_CARDS = [
     iconFrom: Car,
     iconTo: Truck,
     iconColor: "#60a5fa",
+    restricted: true,
     accent: {
       border: "border-blue-300/40 dark:border-blue-400/20",
       ring: "ring-blue-300/20",
@@ -151,7 +155,6 @@ const GT_CARDS = [
         iconTo: Route,
       },
     ] satisfies GtCardFeature[],
-    colSpan: "md:col-span-2 lg:col-span-1",
   },
   {
     id: "card-solicitud-combustible",
@@ -164,6 +167,7 @@ const GT_CARDS = [
     iconFrom: Fuel,
     iconTo: Receipt,
     iconColor: "#34d399",
+    restricted: true,
     accent: {
       border: "border-emerald-300/40 dark:border-emerald-400/20",
       ring: "ring-emerald-300/20",
@@ -195,6 +199,7 @@ const GT_CARDS = [
 export default function GestionTerritorialPage() {
   const router = useRouter();
   const user = useUser();
+  const { effectiveRole } = useUserContext();
   const metadata = user?.user_metadata || {};
 
   const [loading, setLoading] = useState(true);
@@ -203,6 +208,11 @@ export default function GestionTerritorialPage() {
   const [typedText, setTypedText] = useState("");
   const [headerHovered, setHeaderHovered] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+
+  const visibleCards = useMemo(() => {
+    const puedeFlota = canSeeFlotaYCombustible(effectiveRole);
+    return GT_CARDS.filter((card) => !card.restricted || puedeFlota);
+  }, [effectiveRole]);
 
   useEffect(() => {
     if (!user) {
@@ -244,7 +254,7 @@ export default function GestionTerritorialPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 w-full px-6 lg:px-12 space-y-10 max-w-550 mx-auto pb-10 pt-20">
+      <div className="flex-1 w-full px-6 lg:px-12 space-y-10 max-w-[1600px] mx-auto pb-10 pt-20">
         <Skeleton className="h-[400px] w-full rounded-[2.5rem]" />
       </div>
     );
@@ -260,7 +270,7 @@ export default function GestionTerritorialPage() {
   return (
     <>
       <div className="fixed inset-0 pointer-events-none z-[-1] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[24px_24px] dark:bg-[radial-gradient(oklch(36%_0_0)_1px,transparent_1px)] opacity-60" />
-      <div className="flex-1 w-full px-2 md:px-6 lg:px-12 max-w-[1600px] mx-auto pt-5 md:pt-8">
+      <div className="flex-1 w-full px-2 md:px-6 lg:px-12 max-w-[1600px] mx-auto pt-5 md:pt-8 pb-10">
         <AnimatePresence mode="wait">
           <motion.div
             key="menu"
@@ -308,12 +318,12 @@ export default function GestionTerritorialPage() {
               </p>
             </div>
 
-            <div className="relative z-10 mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {GT_CARDS.map((card) => (
+            <div className="relative z-10 mx-auto mt-12 grid w-full grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
+              {visibleCards.map((card) => (
                 <div
                   key={card.id}
                   id={card.id}
-                  className={`group flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border bg-card p-0 shadow-lg ring-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${card.accent.border} ${card.accent.ring} ${"colSpan" in card ? card.colSpan : ""}`}
+                  className={`group flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border bg-card p-0 shadow-lg ring-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${card.accent.border} ${card.accent.ring}`}
                   onMouseEnter={() => setHoveredCard(card.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   onClick={() => router.push(card.href)}
@@ -323,27 +333,27 @@ export default function GestionTerritorialPage() {
                   >
                     {card.badge}
                   </div>
-                  <div className="flex h-full flex-col p-8">
-                    <div className="mb-8 flex items-start gap-5">
-                      <div
-                        className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 ${card.accent.iconBg}`}
-                      >
-                        <MorphHoverIcon
-                          from={card.iconFrom}
-                          to={card.iconTo}
-                          hovered={hoveredCard === card.id}
-                          size={40}
-                          color={card.iconColor}
-                        />
-                      </div>
-                      <div className="flex flex-col pt-1">
-                        <h3 className="mb-2 text-3xl font-black leading-none text-slate-900 dark:text-white">
+                  <div className="flex h-full flex-col px-5 py-8">
+                    <div className="mb-8 flex flex-col gap-3">
+                      <div className="flex items-center gap-5">
+                        <div
+                          className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 ${card.accent.iconBg}`}
+                        >
+                          <MorphHoverIcon
+                            from={card.iconFrom}
+                            to={card.iconTo}
+                            hovered={hoveredCard === card.id}
+                            size={40}
+                            color={card.iconColor}
+                          />
+                        </div>
+                        <h3 className="min-w-0 text-2xl font-black leading-none text-slate-900 dark:text-white">
                           {card.title}
                         </h3>
-                        <p className="text-sm font-medium leading-snug text-slate-500 dark:text-slate-400">
-                          {card.description}
-                        </p>
                       </div>
+                      <p className="text-sm font-medium leading-snug text-slate-500 dark:text-slate-400">
+                        {card.description}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -351,7 +361,7 @@ export default function GestionTerritorialPage() {
                     >
                       {card.cta}
                     </button>
-                    <ul className="mt-auto space-y-4">
+                    <ul className="mt-auto w-full space-y-4">
                       {card.features.map((feature) => (
                         <li
                           key={feature.label}

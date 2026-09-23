@@ -48,6 +48,7 @@ export function Dashboard() {
   const [isPasskeysOpen, setIsPasskeysOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
   const router = useRouter();
 
   const { scrollY } = useScroll();
@@ -72,13 +73,16 @@ export function Dashboard() {
   );
 
   const handleCardClick = (id: string, href: string) => {
+    if (navigatingId) return;
     if (isMobile) {
       if (activeId === id) {
+        setNavigatingId(id);
         router.push(href);
       } else {
         setActiveId(id);
       }
     } else {
+      setNavigatingId(id);
       router.push(href);
     }
   };
@@ -87,6 +91,8 @@ export function Dashboard() {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full lg:flex lg:flex-nowrap lg:justify-center lg:items-stretch">
       {visibleModules.map((mod, index) => {
         const isActive = isMobile && activeId === mod.id;
+        const isNavigating = navigatingId === mod.id;
+        const isLit = hoveredCard === mod.id || isActive || isNavigating;
         const isFirstMobile = isMobile && index === 0;
 
         return (
@@ -100,8 +106,8 @@ export function Dashboard() {
               .trim()}
             id={`${mod.id}-card`}
             initial="idle"
-            whileHover="hover"
-            animate={isActive ? "active" : "idle"}
+            whileHover={isNavigating ? undefined : "hover"}
+            animate={isNavigating || isActive ? "active" : "idle"}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
             {mod.id === "perfil" ? (
@@ -223,7 +229,7 @@ export function Dashboard() {
                 onMouseLeave={() => setHoveredCard(null)}
                 className={cn(
                   "group flex flex-col border border-border dark:border-white/10 overflow-hidden h-full w-full rounded-2xl transition-[border-color] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] cursor-pointer bg-card group-hover:border-[var(--card-hover-border)]",
-                  isActive && "border-[var(--card-hover-border)]",
+                  (isActive || isNavigating) && "border-[var(--card-hover-border)]",
                 )}
                 style={
                   {
@@ -239,36 +245,50 @@ export function Dashboard() {
                       backgroundImage: `linear-gradient(to top, ${mod.hoverGradientFrom ?? "#2c5f9b"}, ${mod.hoverGradientTo ?? "#1a95d3"})`,
                     }}
                     initial={false}
-                    animate={{ scaleY: (hoveredCard === mod.id || isActive) ? 1 : 0 }}
+                    animate={{ scaleY: isLit ? 1 : 0 }}
                     transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
                   />
                   <div className="absolute inset-0 rounded-[inherit] border border-border dark:border-white/10 pointer-events-none z-20" />
                   <div className="absolute bottom-0 left-0 w-full h-[70px] flex justify-center items-center z-30 pointer-events-none">
-                    <span className="flex items-center gap-2 font-black normal-case text-xs tracking-normal transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:uppercase group-hover:tracking-[0.25em] text-[var(--card-accent)]">
-                      {isActive
-                        ? "Toca de nuevo para entrar"
-                        : "Haz click para entrar"}
+                    <motion.span
+                      className="flex items-center gap-2 font-black normal-case text-xs tracking-normal transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:uppercase group-hover:tracking-[0.25em] text-[var(--card-accent)]"
+                      animate={
+                        isNavigating
+                          ? { opacity: [1, 0.35, 1] }
+                          : { opacity: 1 }
+                      }
+                      transition={
+                        isNavigating
+                          ? { duration: 1.6, repeat: Infinity, ease: "easeInOut" }
+                          : { duration: 0.2 }
+                      }
+                    >
+                      {isNavigating
+                        ? "Entrando…"
+                        : isActive
+                          ? "Toca de nuevo para entrar"
+                          : "Haz click para entrar"}
                       <MorphHoverIcon
                         from={ArrowRight}
                         to={MoveRight}
-                        hovered={hoveredCard === mod.id || isActive}
+                        hovered={isLit}
                         size={14}
                         color="currentColor"
                         strokeWidth={2.5}
                         spring="snappy"
                       />
-                    </span>
+                    </motion.span>
                   </div>
                   <motion.div
                     className="w-full h-full flex flex-col justify-center items-center relative z-10 pb-[40px]"
                     variants={{
                       idle: { opacity: 1 },
                       hover: { opacity: 1 },
-                      active: { opacity: [1, 0.4, 1] },
+                      active: { opacity: [1, 0.45, 1] },
                     }}
                     transition={{
-                      duration: 1.4,
-                      repeat: isActive ? Infinity : 0,
+                      duration: 1.6,
+                      repeat: isNavigating || isActive ? Infinity : 0,
                       ease: "easeInOut",
                     }}
                   >
@@ -277,13 +297,13 @@ export function Dashboard() {
                         <div
                           className={cn(
                             "flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-4",
-                            isActive && "-translate-y-4",
+                            (isActive || isNavigating) && "-translate-y-4",
                             mod.morphIconBg,
                           )}
                         >
                           <MorphCycleIcon
                             icons={mod.morphIconCycle}
-                            hovered={hoveredCard === mod.id || isActive}
+                            hovered={isLit}
                             size={48}
                             color={mod.morphIconColor ?? "#1a95d3"}
                             spring="snappy"
@@ -293,14 +313,14 @@ export function Dashboard() {
                         <div
                           className={cn(
                             "flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:-translate-y-4",
-                            isActive && "-translate-y-4",
+                            (isActive || isNavigating) && "-translate-y-4",
                             mod.morphIconBg,
                           )}
                         >
                           <MorphHoverIcon
                             from={mod.morphIconFrom}
                             to={mod.morphIconTo}
-                            hovered={hoveredCard === mod.id || isActive}
+                            hovered={isLit}
                             size={48}
                             color={mod.morphIconColor ?? "#1a95d3"}
                             spring="snappy"
@@ -331,7 +351,7 @@ export function Dashboard() {
                       <h3 className="text-[1.25rem] lg:text-[1.4rem] font-black tracking-tight uppercase leading-[1.05] w-full break-words transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]">
                         <span
                           className="text-foreground transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white"
-                          style={{ color: isActive ? "#ffffff" : undefined }}
+                          style={{ color: isActive || isNavigating ? "#ffffff" : undefined }}
                         >
                           {mod.title}
                         </span>
@@ -339,7 +359,7 @@ export function Dashboard() {
                         <span
                           className={cn(
                             "text-[var(--card-accent)] transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white/90",
-                            isActive && "text-white/90",
+                            (isActive || isNavigating) && "text-white/90",
                           )}
                         >
                           {mod.subtitle}
@@ -347,7 +367,7 @@ export function Dashboard() {
                       </h3>
                       <p
                         className="text-[12px] lg:text-[13px] text-muted-foreground font-bold italic leading-snug pr-2 transition-colors duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:text-white/80"
-                        style={{ color: isActive ? "rgba(255,255,255,0.8)" : undefined }}
+                        style={{ color: isActive || isNavigating ? "rgba(255,255,255,0.8)" : undefined }}
                       >
                         {mod.desc}
                       </p>
