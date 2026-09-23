@@ -14,6 +14,7 @@ interface ManualPdfMobileViewerProps {
   url: string;
   onLoadError?: (message: string) => void;
   desktopFitHeight?: boolean;
+  pagesPerView?: 1 | 2;
 }
 
 function getTouchDistance(touches: TouchList) {
@@ -35,6 +36,7 @@ export default function ManualPdfMobileViewer({
   url,
   onLoadError,
   desktopFitHeight = false,
+  pagesPerView = 1,
 }: ManualPdfMobileViewerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLDivElement>(null);
@@ -194,6 +196,18 @@ export default function ManualPdfMobileViewer({
     pageRefs.current.get(pageNumber)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const doble = fitHeight && pagesPerView === 2;
+  const pageH = doble
+    ? Math.min(baseHeight, Math.max(120, ((pageWidth - 48) / 2) * 1.414))
+    : baseHeight;
+  const filas: number[][] = [];
+  const paso = doble ? 2 : 1;
+  for (let i = 0; i < numPages; i += paso) {
+    filas.push(
+      Array.from({ length: Math.min(paso, numPages - i) }, (_, k) => i + k + 1),
+    );
+  }
+
   return (
     <div
       ref={scrollRef}
@@ -219,7 +233,7 @@ export default function ManualPdfMobileViewer({
               if (!isPinching.current) scrollToPage(pageNumber);
             }}
             loading={
-              <div className="flex min-h-48 items-center justify-center">
+              <div className="flex min-h-[70dvh] w-full items-center justify-center">
                 <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
               </div>
             }
@@ -232,42 +246,46 @@ export default function ManualPdfMobileViewer({
             }
             className="flex flex-col items-center gap-3"
           >
-            {((fitHeight && baseHeight > 0) || (!fitHeight && baseWidth > 0)) &&
-              Array.from({ length: numPages }, (_, index) => {
-                const pageNumber = index + 1;
-                return (
-                  <div
-                    key={`page-${pageNumber}`}
-                    ref={(node) => {
-                      if (node) pageRefs.current.set(pageNumber, node);
-                      else pageRefs.current.delete(pageNumber);
-                    }}
-                    className="relative"
-                  >
-                    <Page
-                      pageNumber={pageNumber}
-                      width={fitHeight ? undefined : baseWidth}
-                      height={fitHeight ? baseHeight : undefined}
-                      renderTextLayer={false}
-                      renderAnnotationLayer
-                      className="bg-white shadow-md"
-                      onRenderSuccess={() => syncSizer(scaleRef.current)}
-                      loading={
-                        <div
-                          className="flex items-center justify-center bg-white dark:bg-zinc-800"
-                          style={
-                            fitHeight
-                              ? { height: baseHeight, width: baseHeight / 1.414 }
-                              : { width: baseWidth, height: baseWidth * 1.414 }
-                          }
-                        >
-                          <Loader2 className="size-6 animate-spin text-celeste-trifinio" />
-                        </div>
-                      }
-                    />
-                  </div>
-                );
-              })}
+            {((fitHeight && pageH > 0) || (!fitHeight && baseWidth > 0)) &&
+              filas.map((fila) => (
+                <div
+                  key={fila.join("-")}
+                  className="flex flex-row flex-wrap items-start justify-center gap-3"
+                >
+                  {fila.map((pageNumber) => (
+                    <div
+                      key={`page-${pageNumber}`}
+                      ref={(node) => {
+                        if (node) pageRefs.current.set(pageNumber, node);
+                        else pageRefs.current.delete(pageNumber);
+                      }}
+                      className="relative"
+                    >
+                      <Page
+                        pageNumber={pageNumber}
+                        width={fitHeight ? undefined : baseWidth}
+                        height={fitHeight ? pageH : undefined}
+                        renderTextLayer={false}
+                        renderAnnotationLayer
+                        className="bg-white shadow-md"
+                        onRenderSuccess={() => syncSizer(scaleRef.current)}
+                        loading={
+                          <div
+                            className="flex items-center justify-center bg-white dark:bg-zinc-800"
+                            style={
+                              fitHeight
+                                ? { height: pageH, width: pageH / 1.414 }
+                                : { width: baseWidth, height: baseWidth * 1.414 }
+                            }
+                          >
+                            <Loader2 className="size-6 animate-spin text-celeste-trifinio" />
+                          </div>
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
           </Document>
         </div>
       </div>

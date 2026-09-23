@@ -97,7 +97,7 @@ function QrCodigoRender({
     const qr = new QRCodeStyling({
       width: size,
       height: size,
-      type: "svg",
+      type: "canvas",
       data: url,
       margin,
       qrOptions: {
@@ -144,7 +144,7 @@ function QrCodigoRender({
     <div
       ref={containerRef}
       className={cn(
-        "size-full overflow-hidden [&_svg]:block [&_svg]:h-full [&_svg]:w-full",
+        "size-full overflow-hidden [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full",
         rounded && "rounded-2xl",
       )}
     />
@@ -220,7 +220,7 @@ export function QrPantallaCompleta({
 }) {
   const { boxRef, size: qrSize } = usePantallaQrSize(open);
   const reduceMotion = useReducedMotion();
-  const tituloVisible = titulo.replace(/_/g, " ").trim();
+  const tituloVisible = titulo.trim();
 
   useEffect(() => {
     if (!open) return;

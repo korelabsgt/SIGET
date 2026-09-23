@@ -465,7 +465,7 @@ export function ArchivosActividad({
     if (!token) return;
     setQr({
       url: urlOrigenArchivos(token),
-      titulo: nodo.nombre,
+      titulo: nodo.nombre.trim(),
     });
   };
 
