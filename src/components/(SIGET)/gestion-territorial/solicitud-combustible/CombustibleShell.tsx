@@ -10,8 +10,10 @@ import {
   GV_MODULO_SCROLL_OUTER_CLASS,
   GV_TABLE_AREA_CLASS,
 } from "../gestion-vehiculos/lib/page-shell";
-import { useGvPermissionRole } from "../gestion-vehiculos/lib/gv-permissions-hook";
-
+import {
+  useGvPermissionRole,
+  useRequireFlotaYCombustible,
+} from "../gestion-vehiculos/lib/gv-permissions-hook";
 import {
   GvDemoCleanupButton,
   GvDemoCleanupForSuper,
@@ -29,6 +31,7 @@ const SECCION_LABELS: Record<SeccionCombustible, string> = {
 };
 
 export function CombustibleShell() {
+  const allowed = useRequireFlotaYCombustible();
   const gvRole = useGvPermissionRole();
   const puedeVerVales = canViewValesCombustible(gvRole);
 
@@ -46,6 +49,8 @@ export function CombustibleShell() {
       setSeccion("solicitudes");
     }
   }, [puedeVerVales, seccion]);
+
+  if (!allowed) return null;
 
   return (
     <GvModuloPageFrame>

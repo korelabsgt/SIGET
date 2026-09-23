@@ -34,7 +34,7 @@ import { PushNotificationToggle } from "@/components/ui/PushNotificationToggle";
 import {
   ADMIN_MENU_OPTIONS,
   OBSERVATORIO_MENU_OPTIONS,
-  GESTION_TERRITORIAL_MENU_OPTIONS,
+  getVisibleGestionTerritorialMenuOptions,
   getPerfilMenuOptions,
   getVisibleAdminOptions,
   getVisibleDashboardModules,
@@ -510,9 +510,9 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
   }, []);
 
   const menuTop =
-    "top-[calc(var(--banner-height,0px)+var(--header-row-height))]";
+    "top-[calc(var(--banner-height,0px)+var(--app-header-height,var(--header-row-height)))]";
   const menuHeight =
-    "h-[calc(100dvh-var(--banner-height,0px)-var(--header-row-height))]";
+    "h-[calc(100dvh-var(--banner-height,0px)-var(--app-header-height,var(--header-row-height)))]";
 
   const metadata = user?.user_metadata || {};
   const usuario = metadata.username || user?.email?.split("@")[0] || "—";
@@ -596,7 +596,7 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
               onClick={() => setIsOpen(false)}
               className={cn(
                 "fixed right-0 bottom-0 left-0 z-[105] cursor-pointer",
-                "top-[calc(var(--banner-height,0px)+var(--header-row-height))]",
+                "top-[calc(var(--banner-height,0px)+var(--app-header-height,var(--header-row-height)))]",
                 isOpen ? "pointer-events-auto" : "pointer-events-none",
               )}
             />
@@ -610,11 +610,11 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
             >
         {user ? (
           <div className="shrink-0 border-b border-border/40 bg-zinc-100 dark:bg-zinc-800">
-            <div className="flex w-full items-center justify-between px-5 h-[var(--mobile-breadcrumb-height)] md:h-auto md:pt-5 md:pb-3">
+            <div className="flex w-full items-center justify-between gap-3 px-5 py-3">
               <button
                 type="button"
                 onClick={handleLogout}
-                className="group flex items-center justify-center gap-2 text-red-500 dark:text-red-400 cursor-pointer transition-colors duration-300 active:scale-95"
+                className="group flex min-h-11 items-center justify-center gap-2 text-red-500 dark:text-red-400 cursor-pointer transition-colors duration-300 active:scale-95"
               >
                 <LogOut className="size-4 md:size-5 shrink-0 rotate-180 transition-transform duration-500 ease-out group-hover:scale-125 group-hover:-translate-x-0.5" />
                 <span className="text-sm font-bold bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_2px] bg-left-bottom bg-no-repeat transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
@@ -624,7 +624,7 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
               <PushNotificationToggle />
             </div>
 
-            <div className="px-5 pb-4">
+            <div className="px-5 pb-5">
               <div className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border/50">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   <div className="min-w-0">
@@ -699,7 +699,7 @@ export default function Menu({ isOpen, setIsOpen, user }: MenuProps) {
                           title={gestionTerritorialModule.title}
                           subtitle={gestionTerritorialModule.subtitle}
                           desc={gestionTerritorialModule.desc}
-                          options={GESTION_TERRITORIAL_MENU_OPTIONS}
+                          options={getVisibleGestionTerritorialMenuOptions(effectiveRole)}
                           pathname={pathname}
                           open={openAccordionId === "gestion-territorial"}
                           onToggle={() => toggleAccordion("gestion-territorial")}

@@ -10,7 +10,10 @@ import {
   Telescope,
 } from "lucide";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
-import { canAccessGestionTerritorial } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
+import {
+  canAccessGestionTerritorial,
+  canSeeFlotaYCombustible,
+} from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
 
 export type DashboardModule = {
   id: string;
@@ -98,18 +101,18 @@ export const OBSERVATORIO_MENU_OPTIONS = [
 
 export const GESTION_TERRITORIAL_MENU_OPTIONS = [
   {
-    id: "memoria-labores",
-    title: "Memoria de Labores",
-    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    href: "/siget/gestion-territorial/memoria-labores",
-    animatedIcon: "wvhscmei",
-  },
-  {
     id: "asistencia-actividades",
     title: "Registro de Actividades",
     desc: "Gestión de asistentes, minuta de actividad y estadísticas en tiempo real.",
     href: "/siget/gestion-territorial/asistencia-actividades",
     animatedIcon: "unfvchvi",
+  },
+  {
+    id: "memoria-labores",
+    title: "Memoria de Labores",
+    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    href: "/siget/gestion-territorial/memoria-labores",
+    animatedIcon: "wvhscmei",
   },
   {
     id: "gestion-vehiculos",
@@ -126,6 +129,20 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     animatedIcon: "cdxxgczv",
   },
 ] as const;
+
+const FLOTA_COMBUSTIBLE_MENU_IDS = new Set([
+  "gestion-vehiculos",
+  "solicitud-combustible",
+]);
+
+export function getVisibleGestionTerritorialMenuOptions(role: string) {
+  if (canSeeFlotaYCombustible(role)) {
+    return [...GESTION_TERRITORIAL_MENU_OPTIONS];
+  }
+  return GESTION_TERRITORIAL_MENU_OPTIONS.filter(
+    (opt) => !FLOTA_COMBUSTIBLE_MENU_IDS.has(opt.id),
+  );
+}
 
 export const PERFIL_MENU_OPTIONS = [
   {

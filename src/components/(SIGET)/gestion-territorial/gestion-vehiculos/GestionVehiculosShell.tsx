@@ -10,6 +10,7 @@ import {
   GV_SUBMODULO_TITLES,
   type GvSubmoduloId,
 } from "./lib/tab-context";
+import { useRequireFlotaYCombustible } from "./lib/gv-permissions-hook";
 import { GvPageChromeProvider } from "./lib/gv-page-chrome";
 import {
   GV_MODULO_SCROLL_INNER_CLASS,
@@ -54,6 +55,7 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
 ];
 
 function GestionVehiculosShellInner() {
+  const allowed = useRequireFlotaYCombustible();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -109,6 +111,8 @@ function GestionVehiculosShellInner() {
   }, [section]);
 
   useGvDetailScrollToTop(true, section);
+
+  if (!allowed) return null;
 
   return (
     <GvSectionProvider section={section} selectSection={selectSection}>

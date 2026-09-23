@@ -92,6 +92,10 @@ export function canAccessGestionTerritorial(role: string | null | undefined): bo
   return slug === "admin" || isAdministradorOtRole(role);
 }
 
+export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {
+  return isSuperRole(role) || isAdministradorOtRole(role);
+}
+
 export function canViewAllSolicitudes(role: string | null | undefined): boolean {
   return canManageSolicitudesVehiculos(role);
 }
