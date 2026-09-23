@@ -281,3 +281,12 @@
   z-index: 0;
   background: #e4e4e7;
 }
+
+.leaflet-container .mapa-popup-lado .leaflet-popup-tip-container {
+  display: none;
+}
+
+.leaflet-container .mapa-popup-lado .leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.18);
+}

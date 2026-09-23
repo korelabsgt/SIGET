@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   CircleMarker,
   MapContainer,
+  Popup,
   TileLayer,
   useMap,
 } from "react-leaflet";
@@ -149,10 +150,14 @@ function VistaGeneralControl({
 export function MapaUbicacion({
   lat,
   lng,
+  titulo,
+  detalle,
   className,
 }: {
   lat: number | null;
   lng: number | null;
+  titulo?: string | null;
+  detalle?: string | null;
   className?: string;
 }) {
   const tienePin = lat != null && lng != null;
@@ -290,7 +295,34 @@ export function MapaUbicacion({
                 weight: 2,
                 opacity: 1,
               }}
-            />
+            >
+              <Popup
+                className="mapa-popup-lado"
+                offset={[78, 18]}
+                autoPan
+                autoPanPadding={[24, 24]}
+              >
+                <div className="min-w-44 max-w-64 font-sans text-zinc-800">
+                  {titulo?.trim() ? (
+                    <p className="text-sm font-black leading-snug text-[#1a4d7a]">
+                      {titulo}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#2E9BD0]">
+                      Punto GPS
+                    </p>
+                  )}
+                  {detalle?.trim() ? (
+                    <p className="mt-1.5 text-xs leading-relaxed text-zinc-600">
+                      {detalle}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs tabular-nums text-zinc-600">
+                    {lat.toFixed(6)}, {lng.toFixed(6)}
+                  </p>
+                </div>
+              </Popup>
+            </CircleMarker>
           ) : null}
         </MapContainer>
       </div>

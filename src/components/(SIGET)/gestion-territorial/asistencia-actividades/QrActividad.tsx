@@ -32,10 +32,11 @@ function usePantallaQrSize(open: boolean) {
 
     const update = () => {
       const side = Math.min(
-        window.innerWidth - 32,
-        window.innerHeight - 168,
+        window.innerWidth * 0.62,
+        window.innerHeight * 0.52,
+        440,
       );
-      setSize(Math.max(200, Math.floor(side)));
+      setSize(Math.max(200, Math.floor(side / 4) * 4));
     };
 
     update();

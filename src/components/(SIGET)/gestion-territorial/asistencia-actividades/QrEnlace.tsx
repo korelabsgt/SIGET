@@ -8,7 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUpRight, Check, ExternalLink, Link2 } from "lucide";
-import { QrCode, X } from "lucide-react";
+import { QrCode } from "lucide-react";
 import { toast } from "react-toastify";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import QRCodeStyling from "qr-code-styling";
@@ -19,7 +19,6 @@ const LOGO_TRIFINIO = "/trifinio/logo-vertical.png";
 
 function usePantallaQrSize(open: boolean) {
   const [boxEl, setBoxEl] = useState<HTMLDivElement | null>(null);
-  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null);
   const [size, setSize] = useState(280);
 
   useEffect(() => {
@@ -27,23 +26,28 @@ function usePantallaQrSize(open: boolean) {
 
     const update = () => {
       const { width, height } = boxEl.getBoundingClientRect();
-      const tituloAlto = titleEl?.getBoundingClientRect().height ?? 0;
-      const lado = Math.min(width, Math.max(0, height - tituloAlto - 16));
-      setSize(Math.max(160, Math.floor(lado)));
+      const reservaTituloYCerrar = 168;
+      const tope = Math.min(
+        width,
+        Math.max(0, height - reservaTituloYCerrar),
+        window.innerWidth * 0.62,
+        window.innerHeight * 0.52,
+        440,
+      );
+      setSize(Math.max(200, Math.floor(tope / 4) * 4));
     };
 
     update();
     const observer = new ResizeObserver(update);
     observer.observe(boxEl);
-    if (titleEl) observer.observe(titleEl);
     window.addEventListener("resize", update);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [open, boxEl, titleEl]);
+  }, [open, boxEl]);
 
-  return { boxRef: setBoxEl, titleRef: setTitleEl, size };
+  return { boxRef: setBoxEl, size };
 }
 
 function useQrContainerSize(minSize = 140) {
@@ -140,14 +144,68 @@ function QrCodigoRender({
     <div
       ref={containerRef}
       className={cn(
-        "size-full [&_svg]:block [&_svg]:size-full",
-        rounded && "overflow-hidden rounded-2xl",
+        "size-full overflow-hidden [&_svg]:block [&_svg]:h-full [&_svg]:w-full",
+        rounded && "rounded-2xl",
       )}
     />
   );
 }
 
 const QR_OVERLAY_EASE = [0.4, 0, 0.2, 1] as const;
+const QR_AZUL = "#1a4d7a";
+
+function TituloQrAjustado({
+  texto,
+  ancho,
+}: {
+  texto: string;
+  ancho: number;
+}) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [fontPx, setFontPx] = useState(18);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || ancho < 80) return;
+
+    const min = 14;
+    const max = Math.min(52, Math.round(ancho / 7));
+    let lo = min;
+    let hi = max;
+    let best = min;
+
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      el.style.fontSize = `${mid}px`;
+      const limite = mid * 1.25 * 2 + 2;
+      if (el.scrollHeight <= limite) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    el.style.fontSize = `${best}px`;
+    setFontPx(best);
+  }, [texto, ancho]);
+
+  return (
+    <h2
+      ref={ref}
+      className="mb-5 w-full text-center font-bold leading-[1.25] break-words"
+      style={{
+        color: QR_AZUL,
+        width: ancho,
+        fontSize: fontPx,
+        maxHeight: fontPx * 1.25 * 2,
+        overflow: "hidden",
+      }}
+    >
+      {texto}
+    </h2>
+  );
+}
 
 export function QrPantallaCompleta({
   open,
@@ -160,7 +218,7 @@ export function QrPantallaCompleta({
   url: string;
   titulo: string;
 }) {
-  const { boxRef, titleRef, size: qrSize } = usePantallaQrSize(open);
+  const { boxRef, size: qrSize } = usePantallaQrSize(open);
   const reduceMotion = useReducedMotion();
   const tituloVisible = titulo.replace(/_/g, " ").trim();
 
@@ -181,9 +239,6 @@ export function QrPantallaCompleta({
   const contentTransition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.32, ease: QR_OVERLAY_EASE };
-  const chromeTransition = reduceMotion
-    ? { duration: 0 }
-    : { duration: 0.28, ease: QR_OVERLAY_EASE, delay: 0.06 };
 
   return createPortal(
     <AnimatePresence>
@@ -198,54 +253,38 @@ export function QrPantallaCompleta({
           onClick={onClose}
           role="presentation"
         >
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-[5%] top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex size-11 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-celeste-trifinio transition-colors hover:bg-zinc-200"
-            aria-label="Cerrar"
-          >
-            <X size={28} strokeWidth={2.5} />
-          </button>
-
           <div
             ref={boxRef}
-            className="flex min-h-0 flex-1 flex-col items-center justify-center px-[5%] pt-14 pb-2"
+            className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-8"
           >
-            <h2
-              ref={titleRef}
-              className="mb-4 w-[90%] shrink-0 text-center text-base font-bold leading-tight break-words text-azul-trifinio sm:text-lg md:text-xl"
-            >
-              {tituloVisible}
-            </h2>
-            <motion.div
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reduceMotion ? undefined : { opacity: 0, scale: 0.92 }}
-              transition={contentTransition}
-              className="relative shrink-0 bg-white dark:bg-white"
-              style={{ width: qrSize, height: qrSize }}
+            <div
+              className="flex flex-col items-center"
+              style={{ width: qrSize }}
               onClick={(e) => e.stopPropagation()}
               role="presentation"
             >
-              <QrCodigoRender url={url} size={qrSize} margin={0} rounded={false} />
-            </motion.div>
+              <TituloQrAjustado texto={tituloVisible} ancho={qrSize} />
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.88 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.92 }}
+                transition={contentTransition}
+                className="relative aspect-square w-full shrink-0 overflow-hidden bg-white dark:bg-white"
+                style={{ width: qrSize, height: qrSize }}
+                role="presentation"
+              >
+                <QrCodigoRender url={url} size={qrSize} margin={8} rounded={false} />
+              </motion.div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-10 w-full cursor-pointer py-3 text-center text-sm font-bold uppercase tracking-[0.2em] transition-opacity hover:opacity-80"
+                style={{ color: QR_AZUL }}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
-
-          <motion.footer
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
-            transition={chromeTransition}
-            className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2"
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              className="mx-auto flex w-full max-w-xs cursor-pointer items-center justify-center py-3 text-sm font-bold uppercase tracking-[0.2em] text-celeste-trifinio transition-opacity hover:opacity-80"
-            >
-              Cerrar
-            </button>
-          </motion.footer>
         </motion.div>
       ) : null}
     </AnimatePresence>,

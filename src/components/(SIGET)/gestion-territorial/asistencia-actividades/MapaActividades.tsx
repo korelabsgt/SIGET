@@ -251,7 +251,13 @@ function MarcadorActividad({
         },
       }}
     >
-      <Popup autoPan={false} closeOnClick={false}>
+      <Popup
+        className="mapa-popup-lado"
+        offset={[78, 18]}
+        autoPan
+        autoPanPadding={[24, 24]}
+        closeOnClick
+      >
         <PopupActividad act={act} />
       </Popup>
     </CircleMarker>

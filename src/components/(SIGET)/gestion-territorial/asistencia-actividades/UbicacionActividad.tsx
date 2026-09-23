@@ -134,6 +134,8 @@ export function UbicacionActividad({
         <MapaUbicacion
           lat={lat}
           lng={lng}
+          titulo={actividad.nombre}
+          detalle={texto}
           className={fill ? "h-64 min-h-64 md:h-full md:min-h-0" : undefined}
         />
         {!tieneGps ? (
