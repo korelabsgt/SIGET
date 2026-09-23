@@ -74,6 +74,7 @@ export type SolicitudCombustibleRow = {
     placa: string;
     marca: string;
     modelo: string;
+    anio?: number | null;
   } | null;
   solicitante?: {
     id: string;

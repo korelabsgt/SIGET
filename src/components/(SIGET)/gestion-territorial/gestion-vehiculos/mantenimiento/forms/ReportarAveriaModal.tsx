@@ -15,7 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -321,19 +320,17 @@ export function ReportarAveriaModal({
                   </div>
                 ) : (
                   <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
-                    <Input
+                    <input
                       type="file"
-                      accept="image/jpeg, image/png, image/webp, image/jpg"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
                       className="absolute inset-0 size-full cursor-pointer opacity-0"
+                      aria-label="Subir evidencia fotográfica"
                       onChange={handleFileChange}
                     />
-                    <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30">
                       <UploadCloud className="size-5" />
                     </div>
-                    <p className="text-sm font-medium">Haz clic o arrastra una imagen aquí</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      PNG, JPG o WEBP (se optimiza a máx. 200 KB)
-                    </p>
+                    <p className="mt-3 text-sm font-medium">Haz clic o arrastra una imagen aquí</p>
                   </div>
                 )}
               </div>

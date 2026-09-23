@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { mesCalendarioGt, normalizarMesCalendario } from "@/lib/fechas-gt";
 import { GV_FILTRO_FIELD_CLASS } from "./gv-header-ui";
 import { GvMorphIcon } from "./morph-icon";
+import { useGvClientMounted } from "./use-gv-client-mounted";
 
 const MESES_CORTOS = [
   "Ene",
@@ -43,6 +44,7 @@ export function GvMonthPicker({
   onChange: (value: string) => void;
   className?: string;
 }) {
+  const mounted = useGvClientMounted();
   const parsed = parseMes(value);
   const [viewYear, setViewYear] = useState(parsed.year);
   const [open, setOpen] = useState(false);
@@ -68,18 +70,30 @@ export function GvMonthPicker({
     setOpen(false);
   };
 
+  const triggerClassName = cn(
+    GV_FILTRO_FIELD_CLASS,
+    "inline-flex h-11 w-[10.5rem] shrink-0 cursor-pointer items-center justify-between gap-2 px-3 text-left capitalize",
+    className,
+  );
+
+  if (!mounted) {
+    return (
+      <button type="button" className={triggerClassName} aria-hidden tabIndex={-1}>
+        <span className="truncate text-sm font-semibold">{label}</span>
+        <GvMorphIcon
+          icon={Calendar}
+          hoverIcon={CalendarDays}
+          size={16}
+          className="text-celeste-trifinio"
+        />
+      </button>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          data-morph-hover-scope
-          className={cn(
-            GV_FILTRO_FIELD_CLASS,
-            "inline-flex h-11 w-[10.5rem] shrink-0 cursor-pointer items-center justify-between gap-2 px-3 text-left capitalize",
-            className,
-          )}
-        >
+        <button type="button" data-morph-hover-scope className={triggerClassName}>
           <span className="truncate text-sm font-semibold">{label}</span>
           <GvMorphIcon
             icon={Calendar}

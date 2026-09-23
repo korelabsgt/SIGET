@@ -93,7 +93,15 @@ export function canAccessGestionTerritorial(role: string | null | undefined): bo
 }
 
 export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {
-  return isSuperRole(role) || isAdministradorOtRole(role);
+  if (!role) return false;
+  if (isSuperRole(role)) return true;
+
+  const slug = normalizeRoleSlug(role);
+  if (slug === "admin" || isAdministradorOtRole(role)) return true;
+  if (slug === "user") return true;
+  if (slug === "taller" || slug === "mecanico") return true;
+
+  return false;
 }
 
 export function canViewAllSolicitudes(role: string | null | undefined): boolean {

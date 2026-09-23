@@ -37,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../../gestion-vehiculos/lib/gv-permissions-hook";
+import { useGvClientMounted } from "../../gestion-vehiculos/lib/use-gv-client-mounted";
 import {
   canAprobarRechazarSolicitudCombustible,
   canExportCombustibleExcel,
@@ -74,6 +75,7 @@ const filtroItemClass =
   "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
 
 export function SolicitudesCombustible() {
+  const filtrosMontados = useGvClientMounted();
   const gvRole = useGvPermissionRole();
   const canResolver = canAprobarRechazarSolicitudCombustible(gvRole);
   const canExport = canExportCombustibleExcel(gvRole);
@@ -213,7 +215,13 @@ export function SolicitudesCombustible() {
     setPage(1);
   };
 
-  const vehiculoSelect = (
+  const vehiculoFiltroLabel = useMemo(() => {
+    if (vehiculoFilter === TODOS_VEHICULOS_REQUISICION) return "Todos los vehículos";
+    const vehiculo = vehiculosCatalogoFlota.find((v) => v.id === vehiculoFilter);
+    return vehiculo ? formatVehiculoOpcion(vehiculo) : "Todos los vehículos";
+  }, [vehiculoFilter, vehiculosCatalogoFlota]);
+
+  const vehiculoSelect = filtrosMontados ? (
     <Select value={vehiculoFilter} onValueChange={handleVehiculoChange}>
       <SelectTrigger className={cn(filtroTriggerClass, "gap-2")} data-morph-hover-scope>
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
@@ -235,20 +243,33 @@ export function SolicitudesCombustible() {
           Todos los vehículos
         </SelectItem>
         {vehiculosCatalogoFlota.map((v) => {
-            const label = formatVehiculoOpcion(v);
-            return (
-              <SelectItem
-                key={v.id}
-                value={v.id as string}
-                textValue={label}
-                className={filtroItemClass}
-              >
-                {label}
-              </SelectItem>
-            );
-          })}
+          const label = formatVehiculoOpcion(v);
+          return (
+            <SelectItem
+              key={v.id}
+              value={v.id as string}
+              textValue={label}
+              className={filtroItemClass}
+            >
+              {label}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
+  ) : (
+    <div
+      className={cn(filtroTriggerClass, "flex items-center gap-2")}
+      aria-hidden
+    >
+      <GvMorphIcon
+        icon={Car}
+        hoverIcon={CarFront}
+        size={16}
+        className="shrink-0 text-celeste-trifinio"
+      />
+      <span className="min-w-0 truncate">{vehiculoFiltroLabel}</span>
+    </div>
   );
 
   return (

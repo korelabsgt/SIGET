@@ -103,6 +103,7 @@ export default function ManualPdfMobileViewer({
   desktopFitHeight = false,
   pagesPerView = 1,
 }: ManualPdfMobileViewerProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
 
   const setScrollNode = useCallback((node: HTMLDivElement | null) => {
