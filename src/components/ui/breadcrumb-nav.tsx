@@ -37,7 +37,7 @@ function formatBreadcrumbLabel(segment: string): string {
 }
 
 const crumbRow =
-  "flex min-w-0 w-full items-center gap-1 overflow-x-auto text-[9px] font-medium text-muted-foreground sm:text-[10px] md:pt-0.5 md:text-xs";
+  "flex min-w-0 w-full max-h-[3.1em] flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-[9px] font-medium leading-tight text-muted-foreground sm:text-[10px] md:pt-0.5 md:text-xs";
 
 function SigetCrumb({ active = false }: { active?: boolean }) {
   if (active) {
@@ -120,7 +120,7 @@ export function BreadcrumbNav() {
           <SigetCrumb />
         </motion.div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-0.5">
           <AnimatePresence mode="popLayout" initial={false}>
             {segments.map((segment, index) => {
               if (segment === "siget") return null;
@@ -145,16 +145,21 @@ export function BreadcrumbNav() {
                     damping: 25,
                     mass: 1,
                   }}
-                  className="flex items-center gap-1 shrink-0 whitespace-nowrap group/segment"
+                  className={cn(
+                    "flex items-center gap-1",
+                    isLast
+                      ? "min-w-0 max-w-full"
+                      : "shrink-0 whitespace-nowrap group/segment",
+                  )}
                 >
-                  <ChevronRight className="size-3 md:size-3.5 text-muted-foreground/40 shrink-0 transition-all duration-300 group-hover/segment:text-celeste-trifinio group-hover/segment:translate-x-0.5" />
+                  <ChevronRight className="size-3 md:size-3.5 shrink-0 text-muted-foreground/40 transition-all duration-300 group-hover/segment:translate-x-0.5 group-hover/segment:text-celeste-trifinio" />
                   <Link
                     href={href}
                     className={cn(
                       isLast
                         ? cn(
                             crumbActive,
-                            "pointer-events-none whitespace-nowrap text-[10px] font-bold capitalize underline underline-offset-4 md:text-xs",
+                            "line-clamp-2 pointer-events-none min-w-0 whitespace-normal break-words text-[10px] font-bold capitalize leading-tight underline underline-offset-4 md:text-xs",
                           )
                         : crumbTextLink,
                     )}

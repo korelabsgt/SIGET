@@ -16,9 +16,12 @@ import {
   modalActionMessage,
 } from "@/components/ui/general-modal";
 import { fechaCalendarioGt } from "@/lib/fechas-gt";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useCrearActividad, useActividades } from "../lib/hooks";
 import { actividadFormSchema } from "../lib/zod";
+import { isPrivilegedAsistenciaRole } from "../lib/helpers";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
+import { CampoAsignarActividad } from "./CampoAsignarActividad";
 
 function nombreActividadNormalizado(nombre: string): string {
   return nombre.trim().replace(/\s+/g, " ").toLowerCase();
@@ -35,12 +38,16 @@ export function CrearActividad({
 }) {
   const crear = useCrearActividad();
   const { data: actividades = [] } = useActividades();
+  const { user, effectiveRole } = useUserContext();
+  const puedeAsignar = isPrivilegedAsistenciaRole(effectiveRole);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fechaRealizacion, setFechaRealizacion] = useState(fechaCalendarioGt);
   const [direccion, setDireccion] = useState("");
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [asignarOtro, setAsignarOtro] = useState(false);
+  const [encargadoId, setEncargadoId] = useState("");
 
   const resetForm = () => {
     setNombre("");
@@ -49,6 +56,8 @@ export function CrearActividad({
     setDireccion("");
     setDepartamento("");
     setMunicipio("");
+    setAsignarOtro(false);
+    setEncargadoId("");
   };
 
   const handleClose = () => {
@@ -69,6 +78,10 @@ export function CrearActividad({
       toast.error("Ya existe una actividad con ese nombre.");
       return;
     }
+    if (asignarOtro && !encargadoId) {
+      toast.warn("Elige a quién asignar la actividad.");
+      return;
+    }
     const parsed = actividadFormSchema.safeParse({
       nombre,
       descripcion,
@@ -77,6 +90,7 @@ export function CrearActividad({
       departamento,
       municipio,
       activo: true,
+      encargado_id: asignarOtro ? encargadoId : null,
     });
     if (!parsed.success) {
       toast.warn("Revisa los datos del formulario.");
@@ -117,6 +131,15 @@ export function CrearActividad({
             required
           />
         </ModalField>
+        <CampoAsignarActividad
+          open={open}
+          enabled={puedeAsignar}
+          asignar={asignarOtro}
+          onAsignarChange={setAsignarOtro}
+          encargadoId={encargadoId}
+          onEncargadoChange={setEncargadoId}
+          excludeId={user?.id}
+        />
         <ModalField>
           <ModalLabel htmlFor="act-fecha">Fecha de la actividad</ModalLabel>
           <ModalFechaInput

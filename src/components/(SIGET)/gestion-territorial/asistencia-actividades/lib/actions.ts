@@ -242,6 +242,47 @@ async function requireAuth() {
   return { supabase, user, error: null };
 }
 
+export type UsuarioAsignar = {
+  id: string;
+  nombre: string;
+};
+
+export async function getUsuariosParaAsignar(): Promise<UsuarioAsignar[]> {
+  const auth = await requireAuth();
+  if (!auth.supabase || !auth.user) return [];
+  if (!isPrivilegedAsistenciaRole(roleFromUser(auth.user))) return [];
+
+  const { data, error } = await auth.supabase
+    .from("profiles")
+    .select("id, nombre")
+    .order("nombre");
+
+  if (error || !data) return [];
+
+  return data
+    .map((row) => ({
+      id: String(row.id),
+      nombre: String(row.nombre ?? "").trim(),
+    }))
+    .filter((row) => row.nombre.length > 0);
+}
+
+async function resolverCreatedBy(
+  supabase: SupabaseServerClient,
+  user: { id: string; user_metadata?: { rol?: string }; role?: string },
+  encargadoId: string | null | undefined,
+): Promise<string> {
+  if (!isPrivilegedAsistenciaRole(roleFromUser(user)) || !encargadoId) {
+    return user.id;
+  }
+  const { data } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", encargadoId)
+    .maybeSingle();
+  return data?.id ? String(data.id) : user.id;
+}
+
 function parseCoord(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim()) {
@@ -617,6 +658,32 @@ export async function getParticipantePorDpi(
   return registroDesdeDpiRow(data, digits);
 }
 
+export async function getParticipanteParaRegistroPublico(
+  actividadId: string,
+  dpi: string,
+): Promise<{ participante: ParticipanteRecord | null; yaAsistio: boolean }> {
+  const digits = dpi.replace(/\D/g, "");
+  if (digits.length !== 13) return { participante: null, yaAsistio: false };
+
+  const supabase = createPublicClient();
+  const { data: enActividad } = await supabase
+    .from(ACT_TABLAS.registros)
+    .select("*")
+    .eq("actividad_id", actividadId)
+    .eq("dpi", digits)
+    .maybeSingle();
+
+  if (enActividad) {
+    return {
+      participante: registroDesdeDpiRow(enActividad, digits),
+      yaAsistio: true,
+    };
+  }
+
+  const participante = await getParticipantePorDpi(digits);
+  return { participante, yaAsistio: false };
+}
+
 export async function buscarDpisRegistrados(
   query: string,
 ): Promise<DpiSugerencia[]> {
@@ -684,6 +751,11 @@ export async function createActividad(
   }
 
   const slug = await generarSlugUnico(auth.supabase, parsed.data.nombre);
+  const createdBy = await resolverCreatedBy(
+    auth.supabase,
+    auth.user!,
+    parsed.data.encargado_id,
+  );
 
   const basePayload = {
     nombre: parsed.data.nombre,
@@ -693,7 +765,7 @@ export async function createActividad(
     departamento: parsed.data.departamento,
     municipio: parsed.data.municipio,
     activo: parsed.data.activo,
-    created_by: auth.user!.id,
+    created_by: createdBy,
   };
 
   let { data, error } = await auth.supabase
@@ -788,34 +860,37 @@ export async function updateActividad(
       ? slugActual
       : await generarSlugUnico(auth.supabase, parsed.data.nombre, id);
 
+  const payload: Record<string, unknown> = {
+    nombre: parsed.data.nombre,
+    slug,
+    descripcion: parsed.data.descripcion || null,
+    fecha_realizacion: parsed.data.fecha_realizacion,
+    direccion: parsed.data.direccion,
+    departamento: parsed.data.departamento,
+    municipio: parsed.data.municipio,
+    activo: parsed.data.activo,
+    updated_by: auth.user.id,
+  };
+
+  if (parsed.data.encargado_id) {
+    payload.created_by = await resolverCreatedBy(
+      auth.supabase,
+      auth.user,
+      parsed.data.encargado_id,
+    );
+  }
+
   const { error } = await auth.supabase
     .from(ACT_TABLAS.actividades)
-    .update({
-      nombre: parsed.data.nombre,
-      slug,
-      descripcion: parsed.data.descripcion || null,
-      fecha_realizacion: parsed.data.fecha_realizacion,
-      direccion: parsed.data.direccion,
-      departamento: parsed.data.departamento,
-      municipio: parsed.data.municipio,
-      activo: parsed.data.activo,
-      updated_by: auth.user.id,
-    })
+    .update(payload)
     .eq("id", id);
 
   if (error?.message?.includes("slug")) {
+    const retryPayload = { ...payload };
+    delete retryPayload.slug;
     const retry = await auth.supabase
       .from(ACT_TABLAS.actividades)
-      .update({
-        nombre: parsed.data.nombre,
-        descripcion: parsed.data.descripcion || null,
-        fecha_realizacion: parsed.data.fecha_realizacion,
-        direccion: parsed.data.direccion,
-        departamento: parsed.data.departamento,
-        municipio: parsed.data.municipio,
-        activo: parsed.data.activo,
-        updated_by: auth.user.id,
-      })
+      .update(retryPayload)
       .eq("id", id);
     if (retry.error) return mapDbError(retry.error);
     return { success: true, error: null };
@@ -946,14 +1021,6 @@ export async function registrarAsistencia(
     return mapDbError(dupError);
   }
 
-  if (existente) {
-    return {
-      success: false,
-      error: "DUPLICATE",
-      detail: "Este DPI ya está registrado en esta actividad.",
-    };
-  }
-
   const registroPayload = {
     actividad_id: data.actividad_id,
     dpi: data.dpi,
@@ -970,6 +1037,18 @@ export async function registrarAsistencia(
     puesto: data.puesto?.trim() || null,
     direccion_administrativa: null,
   };
+
+  if (existente) {
+    const { error } = await supabase
+      .from(ACT_TABLAS.registros)
+      .update(registroPayload)
+      .eq("id", existente.id)
+      .eq("actividad_id", data.actividad_id)
+      .eq("dpi", data.dpi);
+
+    if (error) return mapDbError(error);
+    return { success: true, error: null };
+  }
 
   const { error } = await supabase
     .from(ACT_TABLAS.registros)

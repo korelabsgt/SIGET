@@ -8,7 +8,7 @@ import {
   deleteRegistro,
   getActividad,
   getActividades,
-  getParticipantePorDpi,
+  getParticipanteParaRegistroPublico,
   getRegistrosActividad,
   buscarDpisRegistrados,
   registrarAsistencia,
@@ -17,6 +17,7 @@ import {
   setActividadActiva,
   updateRegistro,
   getUsuariosParaMinuta,
+  getUsuariosParaAsignar,
   getElaboroMinuta,
   getMinuta as getMinutaAction,
   guardarMinuta as guardarMinutaAction,
@@ -148,7 +149,13 @@ export function useEliminarActividad() {
 
 export function useBuscarParticipante() {
   return useMutation({
-    mutationFn: (dpi: string) => getParticipantePorDpi(dpi),
+    mutationFn: ({
+      actividadId,
+      dpi,
+    }: {
+      actividadId: string;
+      dpi: string;
+    }) => getParticipanteParaRegistroPublico(actividadId, dpi),
   });
 }
 
@@ -187,6 +194,15 @@ export function useEditarRegistro(actividadId: string) {
       qc.invalidateQueries({ queryKey: ["asist-registros", actividadId] });
       qc.invalidateQueries({ queryKey: ACTIVIDADES_KEY });
     },
+  });
+}
+
+export function useUsuariosParaAsignar(enabled = true) {
+  return useQuery({
+    queryKey: ["asist-usuarios-asignar"],
+    queryFn: getUsuariosParaAsignar,
+    enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

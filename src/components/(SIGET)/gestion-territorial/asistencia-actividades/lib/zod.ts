@@ -58,6 +58,7 @@ export const actividadFormSchema = z.object({
   departamento: z.string().trim().min(1, "Seleccione un departamento"),
   municipio: z.string().trim().min(1, "Seleccione un municipio"),
   activo: z.boolean().default(true),
+  encargado_id: z.string().uuid().nullable().optional(),
 });
 
 export type ActividadFormValues = z.infer<typeof actividadFormSchema>;

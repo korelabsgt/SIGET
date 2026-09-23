@@ -7,6 +7,7 @@
   --banner-height: 0px;
   --header-row-height: 3.5rem;
   --breadcrumb-row-height: 0px;
+  --app-header-height: var(--header-row-height);
   --mobile-header-height: var(--header-row-height);
   --mobile-breadcrumb-height: var(--breadcrumb-row-height);
 

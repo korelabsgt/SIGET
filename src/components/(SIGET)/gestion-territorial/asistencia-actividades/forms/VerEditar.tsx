@@ -17,7 +17,10 @@ import {
 } from "@/components/ui/general-modal";
 import { useEditarActividad, useActividades } from "../lib/hooks";
 import { actividadFormSchema, normalizarFechaInput, type ActividadRecord } from "../lib/zod";
+import { isPrivilegedAsistenciaRole } from "../lib/helpers";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { CamposUbicacionActividad } from "./CamposUbicacionActividad";
+import { CampoAsignarActividad } from "./CampoAsignarActividad";
 
 function nombreActividadNormalizado(nombre: string): string {
   return nombre.trim().replace(/\s+/g, " ").toLowerCase();
@@ -34,12 +37,16 @@ export function VerEditarActividad({
 }) {
   const editar = useEditarActividad();
   const { data: actividades = [] } = useActividades();
+  const { user, effectiveRole } = useUserContext();
+  const puedeAsignar = isPrivilegedAsistenciaRole(effectiveRole);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fechaRealizacion, setFechaRealizacion] = useState("");
   const [direccion, setDireccion] = useState("");
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [asignarOtro, setAsignarOtro] = useState(false);
+  const [encargadoId, setEncargadoId] = useState("");
   const [actividadSincronizada, setActividadSincronizada] = useState<
     ActividadRecord | null
   >(null);
@@ -52,6 +59,10 @@ export function VerEditarActividad({
     setDireccion(actividad.direccion ?? "");
     setDepartamento(actividad.departamento ?? "");
     setMunicipio(actividad.municipio ?? "");
+    const deOtro =
+      Boolean(actividad.created_by) && actividad.created_by !== user?.id;
+    setAsignarOtro(deOtro);
+    setEncargadoId(deOtro ? (actividad.created_by ?? "") : "");
   }
 
   const handleClose = () => {
@@ -74,6 +85,10 @@ export function VerEditarActividad({
       toast.error("Ya existe una actividad con ese nombre.");
       return;
     }
+    if (asignarOtro && !encargadoId) {
+      toast.warn("Elige a quién asignar la actividad.");
+      return;
+    }
     const parsed = actividadFormSchema.safeParse({
       nombre,
       descripcion,
@@ -82,6 +97,9 @@ export function VerEditarActividad({
       departamento,
       municipio,
       activo: actividad.activo,
+      encargado_id: asignarOtro
+        ? encargadoId
+        : (user?.id ?? null),
     });
     if (!parsed.success) {
       toast.warn("Revisa los datos del formulario.");
@@ -115,6 +133,15 @@ export function VerEditarActividad({
             required
           />
         </ModalField>
+        <CampoAsignarActividad
+          open={open}
+          enabled={puedeAsignar}
+          asignar={asignarOtro}
+          onAsignarChange={setAsignarOtro}
+          encargadoId={encargadoId}
+          onEncargadoChange={setEncargadoId}
+          excludeId={user?.id}
+        />
         <ModalField>
           <ModalLabel htmlFor="edit-fecha">Fecha de la actividad</ModalLabel>
           <ModalFechaInput

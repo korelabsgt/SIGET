@@ -1,7 +1,7 @@
 import type { ActividadRecord } from "./zod";
 import { normalizarFechaInput } from "./zod";
 
-export type TabAsistenciaActividades = "propios" | "otros";
+export type TabAsistenciaActividades = "propios" | "todas";
 
 export type GrupoMesActividades = {
   mesKey: string;
