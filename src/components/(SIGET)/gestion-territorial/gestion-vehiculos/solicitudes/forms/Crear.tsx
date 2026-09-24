@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PasajerosSelect } from "../PasajerosSelect";
+import { PilotoSelect } from "../PilotoSelect";
+import { useUser } from "@/components/(base)/providers/UserProvider";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -48,6 +50,7 @@ export function Crear({
   onSaved: () => void;
 }) {
   const crear = useCrearSolicitud();
+  const user = useUser();
   const { data: vehiculosBase = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
 
   const {
@@ -55,19 +58,23 @@ export function Crear({
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SolicitudInput>({
-    resolver: zodResolver(solicitudInputSchema),
+    resolver: zodResolver(solicitudInputSchema) as never,
     defaultValues: {
       fecha_inicio: "",
       fecha_fin_estimada: "",
       destino: "",
-      ruta_planificada: "",
       justificacion: "",
       pasajeros: "",
       vehiculo_id: "",
+      piloto_modo: "solicitante",
+      piloto_id: "",
     },
   });
+
+  const pilotoModo = watch("piloto_modo");
 
   useEffect(() => {
     if (open) {
@@ -75,10 +82,11 @@ export function Crear({
         fecha_inicio: "",
         fecha_fin_estimada: "",
         destino: "",
-        ruta_planificada: "",
         justificacion: "",
         pasajeros: "",
         vehiculo_id: "",
+        piloto_modo: "solicitante",
+        piloto_id: "",
       });
     }
   }, [open, reset]);
@@ -135,9 +143,53 @@ export function Crear({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Ruta Planificada (Opcional)</Label>
-            <Input placeholder="Ej. CA-1 Occidente..." {...register("ruta_planificada")} />
+          <div className="space-y-2">
+            <Label>Piloto del vehículo</Label>
+            <p className="text-xs text-muted-foreground">
+              Puede ser quien solicita o buscar otro usuario registrado.
+            </p>
+            <Controller
+              control={control}
+              name="piloto_modo"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      className="size-4 accent-[#2c5f9b]"
+                      checked={field.value === "solicitante"}
+                      onChange={() => field.onChange("solicitante")}
+                    />
+                    <span>Yo conduzco</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      className="size-4 accent-[#2c5f9b]"
+                      checked={field.value === "otro"}
+                      onChange={() => field.onChange("otro")}
+                    />
+                    <span>Otra persona</span>
+                  </label>
+                </div>
+              )}
+            />
+            {pilotoModo === "otro" ? (
+              <Controller
+                control={control}
+                name="piloto_id"
+                render={({ field }) => (
+                  <PilotoSelect
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    excludeUserId={user?.id}
+                  />
+                )}
+              />
+            ) : null}
+            {errors.piloto_id ? (
+              <p className="text-xs text-red-500">{errors.piloto_id.message}</p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">

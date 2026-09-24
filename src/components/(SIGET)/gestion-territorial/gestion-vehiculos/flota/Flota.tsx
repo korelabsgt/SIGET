@@ -43,6 +43,7 @@ const ESTADO_VEHICULO_LABELS: Record<(typeof ESTADOS_VEHICULO)[number], string> 
   LIBRE: "Libre",
   RESERVADO: "Reservado",
   EN_MANTENIMIENTO: "Mantenimiento",
+  RESERVA_INDIVIDUAL: "Reserva individual",
 };
 
 const filtroEstadoTriggerClass = cn(

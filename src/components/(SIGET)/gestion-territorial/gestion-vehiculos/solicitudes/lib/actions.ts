@@ -90,6 +90,7 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
+        piloto_profile:profiles!piloto(id, nombre, email),
         vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `)
       .order("created_at", { ascending: false });
@@ -118,7 +119,10 @@ export async function createSolicitud(input: SolicitudInput) {
 
     const parsed = solicitudInputSchema.parse(input);
 
-    const { vehiculo_id, ...rest } = parsed;
+    const { vehiculo_id, piloto_modo, piloto_id, ...rest } = parsed;
+
+    const pilotoUuid =
+      piloto_modo === "otro" && piloto_id?.trim() ? piloto_id.trim() : user.id;
 
     const fechasHoy = validarFechasMisionNoAnterioresAHoyGt(
       rest.fecha_inicio,
@@ -129,6 +133,20 @@ export async function createSolicitud(input: SolicitudInput) {
     }
 
     const supabase = await createClient();
+
+    const { data: perfilPiloto, error: pilotoError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", pilotoUuid)
+      .eq("activo", true)
+      .maybeSingle();
+
+    if (pilotoError || !perfilPiloto) {
+      return {
+        success: false,
+        error: "El piloto debe ser un usuario activo registrado en el sistema.",
+      };
+    }
 
     if (vehiculo_id) {
       const { data: vehiculo, error: vehiculoError } = await supabase
@@ -176,9 +194,9 @@ export async function createSolicitud(input: SolicitudInput) {
           fecha_inicio: rest.fecha_inicio,
           fecha_fin_estimada: rest.fecha_fin_estimada,
           destino: rest.destino,
-          ruta_planificada: rest.ruta_planificada || null,
           justificacion: rest.justificacion,
           pasajeros: rest.pasajeros || null,
+          piloto: pilotoUuid,
           estado: "PENDIENTE",
         },
       ])
@@ -393,11 +411,13 @@ export async function cambiarEstadoSolicitud(
   }
 }
 
-export async function searchProfiles(query: string) {
+export async function searchProfiles(query: string, excludeUserId?: string) {
   try {
     const { supabase } = await requireAuth();
     const term = query.trim();
     if (term.length < 3) return [];
+
+    const excluir = excludeUserId?.trim();
 
     const { data, error } = await supabase
       .from("profiles")
@@ -405,17 +425,20 @@ export async function searchProfiles(query: string) {
       .eq("activo", true)
       .or(`nombre.ilike.%${term}%,email.ilike.%${term}%`)
       .order("nombre", { ascending: true })
-      .limit(10);
+      .limit(excluir ? 11 : 10);
 
     if (error) {
       console.error("Error searchProfiles:", error);
       return [];
     }
 
-    return (data ?? []).filter(
-      (profile): profile is { id: string; nombre: string; email: string } =>
-        Boolean(profile.id),
-    );
+    return (data ?? [])
+      .filter(
+        (profile): profile is { id: string; nombre: string; email: string } =>
+          Boolean(profile.id),
+      )
+      .filter((profile) => !excluir || profile.id !== excluir)
+      .slice(0, 10);
   } catch (err) {
     console.error("Excepción en searchProfiles:", err);
     return [];

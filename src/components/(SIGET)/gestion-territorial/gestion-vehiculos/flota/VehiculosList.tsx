@@ -24,6 +24,8 @@ function EstadoBadge({ estado }: { estado: VehiculoRow["estado"] }) {
     RESERVADO: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400",
     EN_MANTENIMIENTO:
       "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
+    RESERVA_INDIVIDUAL:
+      "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400",
   };
 
   return (

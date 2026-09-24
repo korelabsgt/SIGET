@@ -711,6 +711,8 @@ export function formatEstadoVehiculoLabel(estado: VehiculoRow["estado"]): string
       return "Reservado";
     case "EN_MANTENIMIENTO":
       return "Mantenimiento";
+    case "RESERVA_INDIVIDUAL":
+      return "Reserva individual";
   }
 }
 

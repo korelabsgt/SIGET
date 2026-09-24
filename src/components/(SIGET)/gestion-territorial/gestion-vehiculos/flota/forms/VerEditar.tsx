@@ -30,6 +30,7 @@ import {
   combinarFotosVehiculo,
   estadoVehiculoConReservaFija,
   estadosVehiculoSeleccionables,
+  formatEstadoVehiculoLabel,
   separarFotosVehiculo,
   MAX_FOTOS_UNIDAD,
   MAX_FOTOS_VEHICULO,
@@ -290,7 +291,7 @@ export function VerEditar({
               >
                 {estadosVehiculoSeleccionables(placa).map((estado) => (
                   <option key={estado} value={estado}>
-                    {estado.replace("_", " ")}
+                    {formatEstadoVehiculoLabel(estado)}
                   </option>
                 ))}
               </select>

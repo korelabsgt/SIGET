@@ -25,15 +25,18 @@ const fechaHoraManual = (requerido: string) =>
     })
     .transform((val) => parseFechaHoraManualToIso(val));
 
+export const PILOTO_MODO = ["solicitante", "otro"] as const;
+
 export const solicitudInputSchema = z
   .object({
     fecha_inicio: fechaHoraManual("La fecha de inicio es requerida"),
     fecha_fin_estimada: fechaHoraManual("La fecha fin estimada es requerida"),
     destino: z.string().min(3, "El destino debe tener al menos 3 caracteres"),
-    ruta_planificada: z.string().optional(),
     justificacion: z.string().min(10, "La justificación debe ser detallada (min 10 caracteres)"),
     pasajeros: z.string().optional(),
     vehiculo_id: z.string().uuid("Vehículo inválido").optional().nullable().or(z.literal("")),
+    piloto_modo: z.enum(PILOTO_MODO),
+    piloto_id: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -58,6 +61,25 @@ export const solicitudInputSchema = z
         path: [fechas.path],
       });
     }
+  })
+  .superRefine((data, ctx) => {
+    if (data.piloto_modo !== "otro") return;
+    const id = data.piloto_id?.trim() ?? "";
+    if (!id) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Busque y seleccione al piloto",
+        path: ["piloto_id"],
+      });
+      return;
+    }
+    if (!z.string().uuid().safeParse(id).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Piloto inválido",
+        path: ["piloto_id"],
+      });
+    }
   });
 
 export type SolicitudInput = z.infer<typeof solicitudInputSchema>;
@@ -69,20 +91,24 @@ export interface SolicitudRow {
   fecha_inicio: string;
   fecha_fin_estimada: string;
   destino: string;
-  ruta_planificada: string | null;
   justificacion: string;
   pasajeros: string | null;
+  piloto: string | null;
   estado: typeof ESTADOS_SOLICITUD[number];
   aprobado_por: string | null;
   created_at: string;
-  
-  // Virtual / Joins
+
   solicitante?: {
     id: string;
     nombre: string;
     email: string;
   };
   aprobador?: {
+    id: string;
+    nombre: string;
+    email: string;
+  };
+  piloto_profile?: {
     id: string;
     nombre: string;
     email: string;

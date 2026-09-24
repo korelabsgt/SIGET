@@ -13,6 +13,21 @@ export function formatEstadoLabel(estado: SolicitudRow["estado"]) {
   return estado.replace("_", " ");
 }
 
+export function nombrePilotoSolicitud(
+  solicitud: Pick<
+    SolicitudRow,
+    "piloto" | "piloto_profile" | "solicitante_id" | "solicitante"
+  >,
+): string {
+  const desdePerfil = solicitud.piloto_profile?.nombre?.trim();
+  if (desdePerfil) return desdePerfil;
+  if (solicitud.piloto && solicitud.piloto === solicitud.solicitante_id) {
+    return solicitud.solicitante?.nombre?.trim() || "Solicitante";
+  }
+  if (solicitud.piloto) return "Usuario registrado";
+  return solicitud.solicitante?.nombre?.trim() || "No especificado";
+}
+
 export function formatDuracionMision(inicio: string, fin: string): string {
   const start = new Date(inicio);
   const end = new Date(fin);

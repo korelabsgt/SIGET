@@ -42,6 +42,8 @@ function estadoVehiculoBadgeClass(estado: string) {
       return "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400";
     case "EN_MANTENIMIENTO":
       return "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400";
+    case "RESERVA_INDIVIDUAL":
+      return "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400";
     default:
       return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
   }

@@ -6,7 +6,7 @@ import {
   Loader2,
   MapPin,
   Play,
-  Route,
+  Car,
   User,
   Users,
   X,
@@ -16,7 +16,12 @@ import { GvDetalleEncabezadoVehiculo } from "../lib/gv-detalle-modal-ui";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { type SolicitudRow } from "./lib/zod";
-import { estadoBadgeClass, formatDuracionMision, formatEstadoLabel } from "./lib/helpers";
+import {
+  estadoBadgeClass,
+  formatDuracionMision,
+  formatEstadoLabel,
+  nombrePilotoSolicitud,
+} from "./lib/helpers";
 import { cn } from "@/lib/utils";
 import { GV_DETALLE_CARD_CLASS, GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
 
@@ -114,14 +119,14 @@ function TarjetaVehiculoAsignado({ vehiculo }: { vehiculo: SolicitudRow["vehicul
 
 function BloqueMisionYVehiculo({
   justificacion,
-  ruta,
+  nombrePiloto,
   pasajeros,
   nombreSolicitante,
   vehiculo,
   className,
 }: {
   justificacion: string;
-  ruta: string;
+  nombrePiloto: string;
   pasajeros: string;
   nombreSolicitante: string;
   vehiculo: SolicitudRow["vehiculo"];
@@ -148,7 +153,7 @@ function BloqueMisionYVehiculo({
         </div>
 
         <div className="mt-2 lg:col-start-1 lg:row-start-3 lg:mt-6">
-          <FilaMision icon={Route} label="Ruta planificada" value={ruta} />
+          <FilaMision icon={Car} label="Piloto" value={nombrePiloto} destacado />
           <FilaMision icon={Users} label="Pasajeros" value={pasajeros} />
           <FilaMision icon={User} label="Solicitante" value={nombreSolicitante} destacado />
         </div>
@@ -257,7 +262,7 @@ function ContenidoDetalle({
   onClose?: () => void;
 }) {
   const pasajeros = solicitud.pasajeros?.trim() || "Ninguno registrado";
-  const ruta = solicitud.ruta_planificada?.trim() || "No especificada";
+  const nombrePiloto = nombrePilotoSolicitud(solicitud);
   const nombreSolicitante = solicitud.solicitante?.nombre?.trim() || "Desconocido";
   const acciones = (
     <AccionesSolicitud
@@ -329,7 +334,7 @@ function ContenidoDetalle({
 
         <BloqueMisionYVehiculo
           justificacion={solicitud.justificacion}
-          ruta={ruta}
+          nombrePiloto={nombrePiloto}
           pasajeros={pasajeros}
           nombreSolicitante={nombreSolicitante}
           vehiculo={solicitud.vehiculo}
@@ -378,7 +383,7 @@ function ContenidoDetalle({
 
       <BloqueMisionYVehiculo
         justificacion={solicitud.justificacion}
-        ruta={ruta}
+        nombrePiloto={nombrePiloto}
         pasajeros={pasajeros}
         nombreSolicitante={nombreSolicitante}
         vehiculo={solicitud.vehiculo}

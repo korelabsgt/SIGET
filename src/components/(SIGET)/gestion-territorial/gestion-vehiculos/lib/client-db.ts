@@ -65,6 +65,7 @@ export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
         *,
         solicitante:profiles!solicitante_id(id, nombre, email),
         aprobador:profiles!aprobado_por(id, nombre, email),
+        piloto_profile:profiles!piloto(id, nombre, email),
         vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, color, kilometraje_actual, estado)
       `,
     )
