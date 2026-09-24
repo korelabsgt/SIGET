@@ -67,7 +67,6 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     hoverGradientTo: "#1a95d3",
     hoverBorderColor: "#2c5f9b",
     href: "/siget/gestion-territorial",
-    allowedRoles: ["super", "admin"],
   },
   {
     id: "perfil",
