@@ -16,7 +16,9 @@ import {
   GvDetalleTarjetaAnidada,
 } from "../lib/gv-detalle-modal-ui";
 import { GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
+import { BitacoraEvidenciaDetalle } from "./BitacoraEvidenciaDetalle";
 import { type BitacoraRow } from "./lib/zod";
+import { evidenciasBitacora } from "./lib/helpers";
 
 function formatMontoCombustible(monto: number) {
   if (monto <= 0) return "Sin recarga";
@@ -40,6 +42,7 @@ function ContenidoBitacora({
   const marca = bitacora.ot_vehiculos?.marca;
   const modelo = bitacora.ot_vehiculos?.modelo;
   const comentarios = bitacora.comentarios ?? [];
+  const evidenciaPaths = evidenciasBitacora(bitacora);
   const sinRecarga = Number(bitacora.monto_combustible) <= 0;
 
   if (embedded) {
@@ -94,6 +97,11 @@ function ContenidoBitacora({
           </section>
 
           <section className="min-w-0 max-w-full">
+            <GvDetalleSeccionTitulo>Recibo de combustible</GvDetalleSeccionTitulo>
+            <BitacoraEvidenciaDetalle paths={evidenciaPaths} />
+          </section>
+
+          <section className="min-w-0 max-w-full">
             <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
             <GvDetalleComentarioLista comentarios={comentarios} />
           </section>
@@ -139,6 +147,13 @@ function ContenidoBitacora({
               <GvDetalleFilaVehiculo label="Vale" value={bitacora.vale_combustible?.trim() || "—"} />
             </div>
           </GvDetalleTarjetaAnidada>
+        </section>
+
+        <section className="min-w-0 max-w-full">
+          <GvDetalleSeccionTitulo>Recibo de combustible</GvDetalleSeccionTitulo>
+          <div className="mt-4 w-full min-w-0">
+            <BitacoraEvidenciaDetalle paths={evidenciaPaths} />
+          </div>
         </section>
 
         <section className="min-w-0 max-w-full">

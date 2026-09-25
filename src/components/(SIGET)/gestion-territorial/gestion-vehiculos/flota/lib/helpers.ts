@@ -548,11 +548,17 @@ export function esVehiculoDisponible(
   return estado === "LIBRE" || estado === "DISPONIBLE";
 }
 
-export function esVehiculoSeleccionableParaSolicitud(
+export function esVehiculoOperableParaIniciarMision(
   vehiculo: Pick<VehiculoRow, "estado">,
 ): boolean {
   const estado = estadoVehiculoNormalizado(vehiculo.estado);
   return estado !== "EN_MANTENIMIENTO";
+}
+
+export function esVehiculoSeleccionableParaSolicitud(
+  vehiculo: Pick<VehiculoRow, "estado">,
+): boolean {
+  return esVehiculoDisponible(vehiculo);
 }
 
 export function aplicarEstadoFlotaOperativoHoy(
@@ -564,12 +570,16 @@ export function aplicarEstadoFlotaOperativoHoy(
   }
   if (!vehiculo.id) return vehiculo;
 
+  const misionEnCurso = solicitudes.some(
+    (s) => s.vehiculo_id === vehiculo.id && s.estado === "EN_MISION",
+  );
   const hoy = fechaCalendarioGt();
-  const reservadoHoy = vehiculoReservadoEnDiaCalendario(
+  const reservadoPorCalendarioHoy = vehiculoReservadoEnDiaCalendario(
     vehiculo.id,
     hoy,
     solicitudes,
   );
+  const reservadoHoy = misionEnCurso || reservadoPorCalendarioHoy;
   const estado = estadoVehiculoConReservaFija(
     vehiculo.placa,
     reservadoHoy ? "RESERVADO" : "LIBRE",

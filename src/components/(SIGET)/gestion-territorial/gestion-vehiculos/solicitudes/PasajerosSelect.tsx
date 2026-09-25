@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { searchProfiles } from "./lib/actions";
 
@@ -23,6 +22,7 @@ function etiquetaUsuario(profile: Pick<ProfileOption, "nombre" | "email">): stri
 }
 
 export function PasajerosSelect({ value, onChange }: PasajerosSelectProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [options, setOptions] = React.useState<ProfileOption[]>([]);
@@ -75,11 +75,6 @@ export function PasajerosSelect({ value, onChange }: PasajerosSelectProps) {
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
 
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (!next) setQuery("");
-  };
-
   const commitSelection = (next: ProfileOption[]) => {
     setSelected(next);
     onChange(next.map((profile) => etiquetaUsuario(profile)).join(", "));
@@ -91,67 +86,92 @@ export function PasajerosSelect({ value, onChange }: PasajerosSelectProps) {
       ? selected.filter((item) => item.id !== profile.id)
       : [...selected.filter((item) => item.id !== profile.id), profile];
     commitSelection(next);
+    setQuery("");
+    inputRef.current?.focus();
   };
 
   const handleRemove = (profileId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     commitSelection(selected.filter((item) => item.id !== profileId));
+    inputRef.current?.focus();
   };
 
+  const handleInputChange = (next: string) => {
+    setQuery(next);
+    setOpen(true);
+  };
+
+  const showList =
+    open &&
+    (query.length >= 3 ||
+      loading ||
+      options.length > 0 ||
+      (query.length > 0 && query.length < 3));
+
   return (
-    <Popover modal={false} open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          role="combobox"
-          aria-expanded={open}
-          className="flex h-auto min-h-[40px] w-full cursor-pointer items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:bg-zinc-950"
+    <Popover
+      modal={false}
+      open={showList}
+      onOpenChange={(next) => {
+        if (!next) setOpen(false);
+      }}
+    >
+      <PopoverAnchor asChild>
+        <div
+          className="flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 dark:bg-zinc-950"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+              inputRef.current?.focus();
+            }
+          }}
         >
-          <div className="flex w-full flex-wrap items-center gap-1 overflow-hidden">
-            {selected.length > 0 ? (
-              selected.map((profile) => (
-                <Badge
-                  key={profile.id}
-                  variant="secondary"
-                  className="mb-1 mr-1 bg-blue-100 font-normal text-[#00A3FF] hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
-                >
-                  {etiquetaUsuario(profile)}
-                  <button
-                    type="button"
-                    className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    onMouseDown={(e) => handleRemove(profile.id, e)}
-                  >
-                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </button>
-                </Badge>
-              ))
-            ) : (
-              <span className="font-normal text-muted-foreground">Buscar usuarios...</span>
-            )}
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </button>
-      </PopoverTrigger>
+          {selected.map((profile) => (
+            <Badge
+              key={profile.id}
+              variant="secondary"
+              className="max-w-full bg-blue-100 font-normal text-[#00A3FF] hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
+            >
+              <span className="truncate">{etiquetaUsuario(profile)}</span>
+              <button
+                type="button"
+                className="ml-1 shrink-0 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onMouseDown={(e) => handleRemove(profile.id, e)}
+                aria-label={`Quitar ${etiquetaUsuario(profile)}`}
+              >
+                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              </button>
+            </Badge>
+          ))}
+          <input
+            ref={inputRef}
+            type="text"
+            role="combobox"
+            aria-expanded={showList}
+            aria-autocomplete="list"
+            placeholder={selected.length > 0 ? "Agregar pasajero…" : "Buscar usuarios…"}
+            value={query}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onFocus={() => setOpen(true)}
+            className="min-w-[8rem] flex-1 border-0 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {loading ? (
+            <Loader2 className="size-4 shrink-0 animate-spin opacity-50" aria-hidden />
+          ) : null}
+        </div>
+      </PopoverAnchor>
       <PopoverContent
         align="start"
         collisionPadding={12}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="z-[250] w-[var(--radix-popover-trigger-width)] border border-border bg-white p-0 opacity-100 shadow-lg dark:bg-zinc-900"
+        onInteractOutside={() => setOpen(false)}
+        className="z-[250] w-[var(--radix-popover-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900"
       >
-        <div className="flex items-center border-b border-border px-3 dark:border-zinc-700">
-          <Input
-            placeholder="Nombre o correo (mín. 3 letras)..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="h-10 rounded-none border-0 px-0 shadow-none focus-visible:ring-0"
-          />
-          {loading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-50" /> : null}
-        </div>
-        <div className="max-h-[220px] overflow-y-auto p-1">
+        <div className="max-h-[220px] overflow-y-auto">
           {query.length > 0 && query.length < 3 ? (
             <p className="p-2 text-center text-sm text-muted-foreground">
-              Escribe al menos 3 letras...
+              Escribe al menos 3 letras…
             </p>
           ) : null}
           {query.length >= 3 && !loading && options.length === 0 ? (

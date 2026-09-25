@@ -75,6 +75,8 @@ export function GvModalFechaInput({ className, onChange, ...props }: GvModalFech
   );
 }
 
+export { GvFechaHoraPickerInput } from "./gv-fecha-hora-picker";
+
 export function GvModalFechaHoraInput({ className, onChange, ...props }: GvModalFechaInputProps) {
   return (
     <ModalInput

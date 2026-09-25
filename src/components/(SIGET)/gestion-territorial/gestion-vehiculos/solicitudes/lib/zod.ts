@@ -84,6 +84,12 @@ export const solicitudInputSchema = z
 
 export type SolicitudInput = z.infer<typeof solicitudInputSchema>;
 
+export const rechazoSolicitudComentarioSchema = z
+  .string()
+  .trim()
+  .min(5, "Indique el motivo del rechazo (mín. 5 caracteres)")
+  .max(2000, "El comentario es demasiado largo");
+
 export interface SolicitudRow {
   id: string;
   solicitante_id: string;
@@ -96,6 +102,7 @@ export interface SolicitudRow {
   piloto: string | null;
   estado: typeof ESTADOS_SOLICITUD[number];
   aprobado_por: string | null;
+  comentarios: string | null;
   created_at: string;
 
   solicitante?: {

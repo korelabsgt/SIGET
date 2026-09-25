@@ -165,6 +165,7 @@ export {
 export {
   GvFechaInput,
   GvFechaHoraInput,
+  GvFechaHoraPickerInput,
   GvModalFechaInput,
   GvModalFechaHoraInput,
 } from "./gv-fecha-input";

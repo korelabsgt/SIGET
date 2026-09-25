@@ -16,6 +16,11 @@ export function canAprobarRechazarSolicitudCombustible(role: string | null | und
   return isAdminNormalRole(role) || isAdministradorOtRole(role);
 }
 
+/** Listar todas las solicitudes de combustible (no solo las propias). */
+export function canViewAllSolicitudesCombustible(role: string | null | undefined): boolean {
+  return canAprobarRechazarSolicitudCombustible(role);
+}
+
 /** Exportar requisición a Excel: super, admin central y administrador OT. */
 export function canExportCombustibleExcel(role: string | null | undefined): boolean {
   if (!role) return false;

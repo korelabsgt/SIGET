@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GV_QUERY_OPTIONS, shareInflight } from "../../../gestion-vehiculos/lib/query";
+import { BITACORA_PENDIENTE_BLOQUEOS_KEY } from "../../../gestion-vehiculos/lib/bitacora-pendiente-hooks";
 import { VALES_COMBUSTIBLE_KEY } from "../../vales/lib/hooks";
 import {
   createSolicitudCombustible,
@@ -25,7 +26,10 @@ export function useSolicitudesCombustible() {
 
 export function useInvalidateSolicitudesCombustible() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: SOLICITUDES_COMBUSTIBLE_KEY });
+  return () => {
+    void qc.invalidateQueries({ queryKey: SOLICITUDES_COMBUSTIBLE_KEY });
+    void qc.invalidateQueries({ queryKey: BITACORA_PENDIENTE_BLOQUEOS_KEY });
+  };
 }
 
 export function useCrearSolicitudCombustible() {

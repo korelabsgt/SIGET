@@ -29,6 +29,7 @@ import {
 import {
   FONDOS_COMBUSTIBLE,
   valeLoteInputSchema,
+  type FondoCombustible,
   type ValeLoteFormValues,
   type ValeLoteInput,
 } from "../lib/zod";
@@ -38,10 +39,12 @@ export function CrearVale({
   open,
   onOpenChange,
   onSaved,
+  defaultFondo = "OT",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  defaultFondo?: FondoCombustible;
 }) {
   const crear = useCrearValeCombustible();
 
@@ -54,13 +57,13 @@ export function CrearVale({
     formState: { errors, isSubmitting },
   } = useForm<ValeLoteFormValues, unknown, ValeLoteInput>({
     resolver: zodResolver(valeLoteInputSchema),
-    defaultValues: { fondo: "OT" },
+    defaultValues: { fondo: defaultFondo },
   });
 
   useEffect(() => {
     if (!open) return;
-    reset({ fondo: "OT" });
-  }, [open, reset]);
+    reset({ fondo: defaultFondo });
+  }, [open, reset, defaultFondo]);
 
   const onClose = () => onOpenChange(false);
 

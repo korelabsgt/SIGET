@@ -8,11 +8,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
 
-import { fetchSolicitudes, fetchVehiculosDisponibles } from "../../lib/client-db";
+import { fetchVehiculosDisponibles } from "../../lib/client-db";
 
 import { VEHICULOS_KEY } from "../../flota/lib/hooks";
 
-import { createSolicitud } from "./actions";
+import { createSolicitud, getSolicitudes } from "./actions";
 
 import type { SolicitudInput } from "./zod";
 
@@ -36,7 +36,7 @@ export function useSolicitudes(options?: {
 
     queryKey: SOLICITUDES_KEY,
 
-    queryFn: () => shareInflight("ter-solicitudes", fetchSolicitudes),
+    queryFn: () => shareInflight("ter-solicitudes", getSolicitudes),
 
     enabled: options?.enabled ?? true,
 

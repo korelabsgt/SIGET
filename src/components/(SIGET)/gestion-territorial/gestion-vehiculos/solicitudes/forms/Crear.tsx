@@ -31,7 +31,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
-import { GvFechaHoraInput } from "../../lib/gv-fecha-input";
+import { GvFechaHoraPickerInput } from "../../lib/gv-fecha-input";
+import { useBitacoraPendienteBloqueos } from "../../lib/bitacora-pendiente-hooks";
+import {
+  mensajeBloqueoNuevaSolicitudVehiculo,
+} from "../../lib/bitacora-pendiente-bloqueo";
+import { GvBitacoraPendienteAviso } from "../../lib/GvBitacoraPendienteAviso";
 
 const selectTriggerClass =
   "h-10 w-full cursor-pointer rounded-lg border border-border bg-zinc-50 shadow-none dark:border-zinc-700 dark:bg-zinc-950";
@@ -51,6 +56,8 @@ export function Crear({
 }) {
   const crear = useCrearSolicitud();
   const user = useUser();
+  const { data: bloqueos } = useBitacoraPendienteBloqueos();
+  const bloqueoVehiculo = bloqueos?.vehiculo ?? null;
   const { data: vehiculosBase = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
 
   const {
@@ -75,6 +82,7 @@ export function Crear({
   });
 
   const pilotoModo = watch("piloto_modo");
+  const fechaInicioManual = watch("fecha_inicio");
 
   useEffect(() => {
     if (open) {
@@ -118,17 +126,31 @@ export function Crear({
       {open ? (
         <GvModalForm onSubmit={handleSubmit(onSubmit)}>
           <GvModalFormBody className="space-y-3">
+          {bloqueoVehiculo ? (
+            <GvBitacoraPendienteAviso
+              mensaje={mensajeBloqueoNuevaSolicitudVehiculo(bloqueoVehiculo)}
+            />
+          ) : null}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
-              <GvFechaHoraInput id="fecha_inicio" {...register("fecha_inicio")} />
+              <GvFechaHoraPickerInput
+                id="fecha_inicio"
+                solicitudNoPasadaGt
+                {...register("fecha_inicio")}
+              />
               {errors.fecha_inicio && (
                 <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fecha_fin_estimada">Fecha y Hora de Retorno Estimado</Label>
-              <GvFechaHoraInput id="fecha_fin_estimada" {...register("fecha_fin_estimada")} />
+              <GvFechaHoraPickerInput
+                id="fecha_fin_estimada"
+                solicitudNoPasadaGt
+                solicitudPisoManual={fechaInicioManual}
+                {...register("fecha_fin_estimada")}
+              />
               {errors.fecha_fin_estimada && (
                 <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
               )}
@@ -277,7 +299,10 @@ export function Crear({
 
           <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={crear.isPending || isSubmitting} />
-            <ModalSubmit disabled={crear.isPending || isSubmitting} label="Enviar" />
+            <ModalSubmit
+              disabled={Boolean(bloqueoVehiculo) || crear.isPending || isSubmitting}
+              label="Enviar"
+            />
           </GvModalFooter>
         </GvModalForm>
       ) : null}

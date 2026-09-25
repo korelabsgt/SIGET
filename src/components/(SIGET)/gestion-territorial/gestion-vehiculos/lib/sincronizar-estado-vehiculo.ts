@@ -52,12 +52,15 @@ export async function sincronizarEstadoFlotaVehiculo(
     throw new Error("No se pudieron verificar las misiones del vehículo.");
   }
 
+  const lista = (solicitudesCalendario ?? []) as SolicitudCalendarioRef[];
+  const misionEnCurso = lista.some((s) => s.estado === "EN_MISION");
   const hoy = fechaCalendarioGt();
-  const reservadoHoy = vehiculoReservadoEnDiaCalendario(
+  const reservadoPorCalendarioHoy = vehiculoReservadoEnDiaCalendario(
     vehiculoId,
     hoy,
-    (solicitudesCalendario ?? []) as SolicitudCalendarioRef[],
+    lista,
   );
+  const reservadoHoy = misionEnCurso || reservadoPorCalendarioHoy;
 
   const { data: vehiculo, error: vehiculoError } = await supabase
     .from(VEHICULOS_TABLE)

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CirclePlus, Loader2, Plus } from "lucide";
-import { toast } from "react-toastify";
 
 import { GvMorphIcon } from "../../gestion-vehiculos/lib/morph-icon";
 
@@ -11,6 +10,12 @@ import {
   GV_TABLE_BODY_CENTER_CLASS,
   gvTableShellVisibleRows,
 } from "../../gestion-vehiculos/lib/table-ui";
+import {
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
+} from "../../gestion-vehiculos/lib/gv-header-ui";
+import { GvTabFilter } from "../../gestion-vehiculos/lib/gv-tab-filter";
 import { useGvTablePagination } from "../../gestion-vehiculos/lib/table-pagination";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
 import { GvExportReporteButton } from "../../gestion-vehiculos/lib/gv-export-ui";
@@ -24,7 +29,15 @@ import { useSolicitudesCombustible } from "../solicitudes/lib/hooks";
 
 import { ValesPanel } from "./ValesPanel";
 import { CrearVale } from "./forms/CrearVale";
+import { ExportCuentaCorrienteModal } from "./forms/ExportCuentaCorrienteModal";
 import { useValesCombustible } from "./lib/hooks";
+import { FONDOS_COMBUSTIBLE, type FondoCombustible } from "./lib/zod";
+
+const FONDO_TAB_LABELS: Record<FondoCombustible, string> = {
+  OT: "OT",
+  HAME: "HAME",
+};
+
 export function Vales() {
   const gvRole = useGvPermissionRole();
   const canAdmin = canManageValesCombustible(gvRole);
@@ -33,8 +46,16 @@ export function Vales() {
   const { data: vales = [], isLoading } = useValesCombustible();
   const { data: solicitudes = [], isLoading: loadingSolicitudes } =
     useSolicitudesCombustible();
+  const [fondoTab, setFondoTab] = useState<FondoCombustible>("OT");
   const [formOpen, setFormOpen] = useState(false);
-  const [exportandoCuenta, setExportandoCuenta] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  const valesPorFondo = useMemo(
+    () => vales.filter((row) => row.fondo === fondoTab),
+    [vales, fondoTab],
+  );
+
+  const paginacionKey = `vales-combustible-${fondoTab}`;
 
   const {
     pageItems,
@@ -43,60 +64,67 @@ export function Vales() {
     pageSize,
     setPage,
     setPageSize,
-  } = useGvTablePagination(vales, "vales-combustible");
-
-  const handleExportCuentaCorriente = async () => {
-    setExportandoCuenta(true);
-    try {
-      const { exportCuentaCorrienteCuponesExcel } = await import(
-        "./lib/cuenta-corriente-cupones-excel"
-      );
-      const result = await exportCuentaCorrienteCuponesExcel(vales, solicitudes);
-      if (!result.ok) {
-        if (result.reason === "no_data") {
-          toast.warn("No hay ingresos ni egresos para generar la cuenta corriente.");
-        } else {
-          toast.error("No se pudo generar el Excel.");
-        }
-        return;
-      }
-      toast.success("Cuenta corriente descargada.");
-    } catch {
-      toast.error("No se pudo generar el Excel.");
-    } finally {
-      setExportandoCuenta(false);
-    }
-  };
+  } = useGvTablePagination(valesPorFondo, paginacionKey);
 
   return (
     <>
-      <CrearVale open={formOpen} onOpenChange={setFormOpen} />
+      <CrearVale
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        defaultFondo={fondoTab}
+      />
+
+      <ExportCuentaCorrienteModal
+        open={exportModalOpen}
+        onOpenChange={setExportModalOpen}
+        fondo={fondoTab}
+        lotes={valesPorFondo}
+        valesInventario={vales}
+        solicitudes={solicitudes}
+      />
 
       <GestionVehiculosTableShell
         visibleRows={gvTableShellVisibleRows(pageSize)}
         toolbar={
-          canAdmin || canExport ? (
-            <div className="flex w-full min-w-0 justify-end gap-2">
-              {canExport ? (
-                <GvExportReporteButton
-                  onClick={() => void handleExportCuentaCorriente()}
-                  disabled={isLoading || loadingSolicitudes || vales.length === 0}
-                  loading={exportandoCuenta}
-                />
-              ) : null}
-              {canAdmin ? (
-                <GvSigetActionButton
-                  label="Registrar"
-                  accentColor={sigetAccent.crear}
-                  morphFrom={Plus}
-                  morphTo={CirclePlus}
-                  onClick={() => setFormOpen(true)}
-                  ariaLabel="Registrar lote de vales"
-                  className="h-11 w-auto shrink-0 rounded-xl px-4"
-                />
-              ) : null}
+          <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
+            <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
+              <GvTabFilter
+                value={fondoTab}
+                onChange={setFondoTab}
+                layoutId="combustible-vales-fondo"
+                layout="responsive-grid"
+                fill
+                compact
+                className="min-w-0 w-full flex-1 lg:w-auto"
+                options={FONDOS_COMBUSTIBLE.map((fondo) => ({
+                  value: fondo,
+                  label: FONDO_TAB_LABELS[fondo],
+                }))}
+              />
             </div>
-          ) : undefined
+
+            {canAdmin || canExport ? (
+              <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+                {canExport ? (
+                  <GvExportReporteButton
+                    onClick={() => setExportModalOpen(true)}
+                    disabled={isLoading || loadingSolicitudes || valesPorFondo.length === 0}
+                  />
+                ) : null}
+                {canAdmin ? (
+                  <GvSigetActionButton
+                    label="Registrar"
+                    accentColor={sigetAccent.crear}
+                    morphFrom={Plus}
+                    morphTo={CirclePlus}
+                    onClick={() => setFormOpen(true)}
+                    ariaLabel="Registrar lote de vales"
+                    className="h-11 w-auto shrink-0 rounded-xl px-4"
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         }
         pagination={{
           pageSafe,
@@ -116,7 +144,11 @@ export function Vales() {
             </span>
           </div>
         ) : (
-          <ValesPanel vales={pageItems} canDelete={canDelete} />
+          <ValesPanel
+            vales={pageItems}
+            canDelete={canDelete}
+            fondoActivo={fondoTab}
+          />
         )}
       </GestionVehiculosTableShell>
     </>

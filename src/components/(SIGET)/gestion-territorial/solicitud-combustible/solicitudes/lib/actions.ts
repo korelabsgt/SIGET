@@ -3,11 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { canViewAllSolicitudes } from "../../../gestion-vehiculos/lib/permissions";
 import {
   canAprobarRechazarSolicitudCombustible,
+  canViewAllSolicitudesCombustible,
 } from "../../lib/permissions";
 import { COMBUSTIBLE_BASE_ROUTE } from "../../lib/routes";
+import {
+  fetchBitacoraPendienteBloqueos,
+  mensajeBloqueoNuevaSolicitudCombustible,
+} from "../../../gestion-vehiculos/lib/bitacora-pendiente-bloqueo";
 import type { ValeLoteRow } from "../../vales/lib/zod";
 import { esMisionVehiculoActiva } from "./helpers";
 import {
@@ -37,7 +41,11 @@ const SELECT_QUERY_MISION = `
     fecha_inicio,
     fecha_fin_estimada,
     estado,
-    vehiculo_id
+    vehiculo_id,
+    piloto,
+    solicitante_id,
+    solicitante:profiles!solicitante_id(id, nombre, email),
+    piloto_profile:profiles!piloto(id, nombre, email)
   )
 `;
 
@@ -64,7 +72,6 @@ const SOLICITUDES_VEHICULO_TABLE = "ot_solicitudes";
 async function resolveSolicitudVehiculoVinculo(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  role: string,
   vehiculoId: string,
   solicitudVehiculoId: string | null | undefined,
 ): Promise<{ id: string | null } | { error: string }> {
@@ -94,8 +101,8 @@ async function resolveSolicitudVehiculoVinculo(
     };
   }
 
-  if (!canViewAllSolicitudes(role) && solicitudVehiculo.solicitante_id !== userId) {
-    return { error: "No tiene permiso para vincular esa solicitud de vehículo." };
+  if (solicitudVehiculo.solicitante_id !== userId) {
+    return { error: "Solo puede vincular misiones de vehículo que usted solicitó." };
   }
 
   if (solicitudVehiculo.vehiculo_id && solicitudVehiculo.vehiculo_id !== vehiculoId) {
@@ -123,15 +130,35 @@ async function requireAuth() {
   return { user, role, supabase };
 }
 
+function querySolicitudesCombustible(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  select: string,
+  userId: string,
+  role: string,
+) {
+  let query = supabase
+    .from(TABLE)
+    .select(select)
+    .order("fecha_solicitud", { ascending: false });
+
+  if (!canViewAllSolicitudesCombustible(role)) {
+    query = query.eq("solicitante_id", userId);
+  }
+
+  return query;
+}
+
 export async function getSolicitudesCombustible(): Promise<SolicitudCombustibleRow[]> {
   try {
-    const { supabase } = await requireAuth();
-    const withMision = await supabase
-      .from(TABLE)
-      .select(SELECT_QUERY_MISION)
-      .order("fecha_solicitud", { ascending: false });
+    const { user, role, supabase } = await requireAuth();
+    const withMision = await querySolicitudesCombustible(
+      supabase,
+      SELECT_QUERY_MISION,
+      user.id,
+      role,
+    );
     if (!withMision.error) {
-      return (withMision.data ?? []) as SolicitudCombustibleRow[];
+      return (withMision.data ?? []) as unknown as SolicitudCombustibleRow[];
     }
 
     if (!esErrorVinculoMisionNoDisponible(withMision.error)) {
@@ -139,17 +166,19 @@ export async function getSolicitudesCombustible(): Promise<SolicitudCombustibleR
       return [];
     }
 
-    const base = await supabase
-      .from(TABLE)
-      .select(SELECT_QUERY_BASE)
-      .order("fecha_solicitud", { ascending: false });
+    const base = await querySolicitudesCombustible(
+      supabase,
+      SELECT_QUERY_BASE,
+      user.id,
+      role,
+    );
 
     if (base.error) {
       console.error("getSolicitudesCombustible:", base.error);
       return [];
     }
 
-    return (base.data ?? []) as SolicitudCombustibleRow[];
+    return (base.data ?? []) as unknown as SolicitudCombustibleRow[];
   } catch (error) {
     console.error("getSolicitudesCombustible:", error);
     return [];
@@ -160,7 +189,7 @@ export async function createSolicitudCombustible(
   input: SolicitudCombustibleInput,
 ): Promise<{ success: true; id: string } | { success: false; error: string }> {
   try {
-    const { user, role, supabase } = await requireAuth();
+    const { user, supabase } = await requireAuth();
 
     const parsed = solicitudCombustibleInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -173,13 +202,20 @@ export async function createSolicitudCombustible(
     const vinculo = await resolveSolicitudVehiculoVinculo(
       supabase,
       user.id,
-      role,
       parsed.data.vehiculo_id,
       parsed.data.solicitud_vehiculo_id,
     );
 
     if ("error" in vinculo) {
       return { success: false, error: vinculo.error };
+    }
+
+    const bloqueos = await fetchBitacoraPendienteBloqueos(supabase, user.id);
+    if (bloqueos.combustible) {
+      return {
+        success: false,
+        error: mensajeBloqueoNuevaSolicitudCombustible(bloqueos.combustible),
+      };
     }
 
     if (vinculo.id) {

@@ -98,8 +98,8 @@ function VehiculoListRow({
           {vehiculo.placa}
         </span>
       </td>
-      <td className={cn(cellPad, "w-0 whitespace-nowrap text-left align-middle")}>
-        <span className="inline-flex min-w-[4.5rem] flex-col tabular-nums leading-tight">
+      <td className={cn(cellPad, "w-0 whitespace-nowrap text-center align-middle")}>
+        <span className="inline-flex min-w-[4.5rem] flex-col items-center tabular-nums leading-tight">
           <span className="text-sm font-semibold text-foreground">
             {vehiculo.kilometraje_actual.toLocaleString("es-GT")}
           </span>
@@ -111,17 +111,17 @@ function VehiculoListRow({
       <td className={cn(cellPad, "w-0 pr-2.5 text-center align-middle")}>
         <VehiculoTablaFoto vehiculo={vehiculo} onOpenGaleria={onOpenGaleria} />
       </td>
-      <td className={cn(cellPad, "w-0 whitespace-nowrap pl-2.5 pr-1 text-left align-middle")}>
-        <span className="inline-flex max-w-full items-baseline gap-1.5 truncate capitalize">
+      <td className={cn(cellPad, "w-0 whitespace-nowrap pl-2.5 pr-1 text-center align-middle")}>
+        <span className="inline-flex max-w-full items-baseline justify-center gap-1.5 truncate capitalize">
           <span className="font-semibold text-foreground">{vehiculo.marca}</span>
           <span className="truncate text-sm text-muted-foreground">{vehiculo.modelo}</span>
         </span>
       </td>
-      <td className={cn(cellPad, "w-0 whitespace-nowrap pl-1 text-left align-middle capitalize")}>
+      <td className={cn(cellPad, "w-0 whitespace-nowrap pl-1 text-center align-middle capitalize")}>
         <span className="text-sm text-foreground">{vehiculo.color?.trim() || "—"}</span>
       </td>
       <td className="w-full p-0" aria-hidden="true" />
-      <td className={cn(cellPad, "w-0 whitespace-nowrap text-right align-middle")}>
+      <td className={cn(cellPad, "w-0 whitespace-nowrap text-center align-middle")}>
         <EstadoBadge estado={vehiculo.estado} />
       </td>
       {canManage ? (
@@ -179,12 +179,12 @@ export function VehiculosList({
           <tr className="border-b border-border bg-sky-50/80 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950/30">
             <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>No.</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>Placa</th>
-            <th className={cn(cellPad, "w-0 whitespace-nowrap text-left")}>Km</th>
+            <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>Km</th>
             <th className={cn(cellPad, "w-0 whitespace-nowrap pr-2.5 text-center")}>Foto</th>
-            <th className={cn(cellPad, "w-0 whitespace-nowrap pl-2.5 pr-1 text-left")}>Marca / modelo</th>
-            <th className={cn(cellPad, "w-0 whitespace-nowrap pl-1 text-left")}>Color</th>
+            <th className={cn(cellPad, "w-0 whitespace-nowrap pl-2.5 pr-1 text-center")}>Marca / modelo</th>
+            <th className={cn(cellPad, "w-0 whitespace-nowrap pl-1 text-center")}>Color</th>
             <th className="w-full p-0" aria-hidden="true" />
-            <th className={cn(cellPad, "w-0 whitespace-nowrap text-right")}>Estado</th>
+            <th className={cn(cellPad, "w-0 whitespace-nowrap text-center")}>Estado</th>
             {canManage ? <th className={gvTableActionThClass}>Acciones</th> : null}
           </tr>
         </thead>

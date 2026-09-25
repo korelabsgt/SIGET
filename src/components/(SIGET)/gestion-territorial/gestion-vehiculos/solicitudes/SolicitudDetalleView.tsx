@@ -25,6 +25,32 @@ import {
 import { cn } from "@/lib/utils";
 import { GV_DETALLE_CARD_CLASS, GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
 
+function BloqueMotivoRechazo({
+  solicitud,
+}: {
+  solicitud: Pick<SolicitudRow, "estado" | "comentarios">;
+}) {
+  if (solicitud.estado !== "RECHAZADA") return null;
+  const texto = solicitud.comentarios?.trim();
+  if (!texto) return null;
+
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/80 dark:bg-red-950/30">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
+        Motivo del rechazo
+      </p>
+      <p
+        className={cn(
+          "mt-2 text-sm leading-relaxed text-red-900 dark:text-red-100",
+          GV_DETALLE_TEXTO_CLASS,
+        )}
+      >
+        {texto}
+      </p>
+    </div>
+  );
+}
+
 function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
     .toLowerCase()
@@ -171,6 +197,7 @@ function AccionesSolicitud({
   solicitud,
   canAprobarRechazar,
   puedeControlMision,
+  puedeIniciarPorHorario,
   misionPendiente,
   onAction,
   anchoCompleto = false,
@@ -178,6 +205,7 @@ function AccionesSolicitud({
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
   puedeControlMision: boolean;
+  puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
   anchoCompleto?: boolean;
@@ -211,6 +239,20 @@ function AccionesSolicitud({
   }
 
   if (puedeControlMision && solicitud.estado === "APROBADA") {
+    if (!puedeIniciarPorHorario) {
+      return (
+        <p
+          className={cn(
+            "rounded-xl bg-amber-50 px-4 py-3 text-xs font-medium leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+            anchoCompleto && "text-center",
+          )}
+        >
+          Podrá iniciar la misión a partir del{" "}
+          <span className="font-bold">{formatFechaHoraGv(solicitud.fecha_inicio)}</span>.
+        </p>
+      );
+    }
+
     return (
       <button
         type="button"
@@ -248,6 +290,7 @@ function ContenidoDetalle({
   solicitud,
   canAprobarRechazar,
   puedeControlMision,
+  puedeIniciarPorHorario,
   misionPendiente,
   onAction,
   embedded,
@@ -256,6 +299,7 @@ function ContenidoDetalle({
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
   puedeControlMision: boolean;
+  puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
   onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
   embedded: boolean;
@@ -269,6 +313,7 @@ function ContenidoDetalle({
       solicitud={solicitud}
       canAprobarRechazar={canAprobarRechazar}
       puedeControlMision={puedeControlMision}
+      puedeIniciarPorHorario={puedeIniciarPorHorario}
       misionPendiente={misionPendiente}
       onAction={onAction}
       anchoCompleto={embedded}
@@ -332,6 +377,8 @@ function ContenidoDetalle({
           />
         </div>
 
+        <BloqueMotivoRechazo solicitud={solicitud} />
+
         <BloqueMisionYVehiculo
           justificacion={solicitud.justificacion}
           nombrePiloto={nombrePiloto}
@@ -381,6 +428,10 @@ function ContenidoDetalle({
         />
       </div>
 
+      <div className="mt-6">
+        <BloqueMotivoRechazo solicitud={solicitud} />
+      </div>
+
       <BloqueMisionYVehiculo
         justificacion={solicitud.justificacion}
         nombrePiloto={nombrePiloto}
@@ -397,6 +448,7 @@ export function SolicitudDetalleView({
   solicitud,
   canAprobarRechazar,
   puedeControlMision,
+  puedeIniciarPorHorario = true,
   misionPendiente = false,
   embedded = false,
   onBack,
@@ -406,6 +458,7 @@ export function SolicitudDetalleView({
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
   puedeControlMision: boolean;
+  puedeIniciarPorHorario?: boolean;
   misionPendiente?: boolean;
   embedded?: boolean;
   onBack?: () => void;
@@ -418,6 +471,7 @@ export function SolicitudDetalleView({
         solicitud={solicitud}
         canAprobarRechazar={canAprobarRechazar}
         puedeControlMision={puedeControlMision}
+        puedeIniciarPorHorario={puedeIniciarPorHorario}
         misionPendiente={misionPendiente}
         onAction={onAction}
         embedded
@@ -444,6 +498,7 @@ export function SolicitudDetalleView({
           solicitud={solicitud}
           canAprobarRechazar={canAprobarRechazar}
           puedeControlMision={puedeControlMision}
+          puedeIniciarPorHorario={puedeIniciarPorHorario}
           misionPendiente={misionPendiente}
           onAction={onAction}
           embedded={false}

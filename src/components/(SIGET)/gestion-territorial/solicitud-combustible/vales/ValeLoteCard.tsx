@@ -26,9 +26,11 @@ import { useEliminarValeCombustible } from "./lib/hooks";
 export function ValeLoteCard({
   row,
   canDelete,
+  hideFondo = false,
 }: {
   row: ValeLoteRow;
   canDelete: boolean;
+  hideFondo?: boolean;
 }) {
   const eliminar = useEliminarValeCombustible();
 
@@ -46,7 +48,9 @@ export function ValeLoteCard({
       <GvMobileRecordHeader
         title={
           <p className="truncate font-semibold text-foreground">
-            {formatFondoLabel(row.fondo)} · {formatDenominacion(row.denominacion)}
+            {hideFondo
+              ? formatDenominacion(row.denominacion)
+              : `${formatFondoLabel(row.fondo)} · ${formatDenominacion(row.denominacion)}`}
           </p>
         }
         badge={

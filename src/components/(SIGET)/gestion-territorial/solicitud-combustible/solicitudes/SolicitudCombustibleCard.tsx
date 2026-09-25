@@ -27,6 +27,7 @@ import {
 export function SolicitudCombustibleCard({
   row,
   canResolver,
+  showSolicitante,
   showAcciones,
   onResolver,
   exporting,
@@ -34,6 +35,7 @@ export function SolicitudCombustibleCard({
 }: {
   row: SolicitudCombustibleRow;
   canResolver: boolean;
+  showSolicitante: boolean;
   showAcciones: boolean;
   onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
   exporting: boolean;
@@ -69,9 +71,11 @@ export function SolicitudCombustibleCard({
       />
 
       <GvMobileRecordMeta>
-        <GvMobileRecordMetaRow icon={<User className="size-3.5 text-celeste-trifinio" />}>
-          {formatSolicitanteNombre(row)}
-        </GvMobileRecordMetaRow>
+        {showSolicitante ? (
+          <GvMobileRecordMetaRow icon={<User className="size-3.5 text-celeste-trifinio" />}>
+            {formatSolicitanteNombre(row)}
+          </GvMobileRecordMetaRow>
+        ) : null}
         <GvMobileRecordMetaRow icon={<MapPin className="size-3.5 text-celeste-trifinio" />}>
           <span className="line-clamp-2" title={mision}>
             {mision}

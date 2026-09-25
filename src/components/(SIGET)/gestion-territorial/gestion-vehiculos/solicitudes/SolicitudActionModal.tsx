@@ -29,6 +29,7 @@ import {
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
 
@@ -50,7 +51,7 @@ import { cn } from "@/lib/utils";
 
 import { cambiarEstadoSolicitud } from "./lib/actions";
 
-import { ESTADOS_SOLICITUD, type SolicitudRow } from "./lib/zod";
+import { ESTADOS_SOLICITUD, rechazoSolicitudComentarioSchema, type SolicitudRow } from "./lib/zod";
 
 import { formatEstadoLabel } from "./lib/helpers";
 
@@ -128,7 +129,7 @@ const ACTION_META: Record<
 
     title: "Rechazar solicitud",
 
-    description: "La solicitud quedará marcada como rechazada y no podrá asignarse vehículo.",
+    description: "Indique el motivo del rechazo. El solicitante podrá ver este comentario.",
 
     confirmLabel: "Rechazar",
 
@@ -185,6 +186,7 @@ export function SolicitudActionModal({
   const submitInFlightRef = useRef(false);
 
   const [selectedVehiculo, setSelectedVehiculo] = useState("");
+  const [comentarioRechazo, setComentarioRechazo] = useState("");
 
   const cargarLibres = open && actionType === "APROBAR";
 
@@ -212,7 +214,15 @@ export function SolicitudActionModal({
 
   }, [cargarLibres, solicitud?.vehiculo_id, loadingVehiculos]);
 
+  useEffect(() => {
+    if (!open || actionType !== "RECHAZAR") {
+      setComentarioRechazo("");
+    }
+  }, [open, actionType]);
 
+  const comentarioRechazoValido = rechazoSolicitudComentarioSchema.safeParse(
+    comentarioRechazo,
+  ).success;
 
   const vehiculoPreferido = solicitud?.vehiculo ?? null;
 
@@ -302,7 +312,15 @@ export function SolicitudActionModal({
 
     }
 
-
+    if (actionType === "RECHAZAR") {
+      const parsed = rechazoSolicitudComentarioSchema.safeParse(comentarioRechazo);
+      if (!parsed.success) {
+        toast.error(
+          parsed.error.issues[0]?.message ?? "Indique el motivo del rechazo.",
+        );
+        return;
+      }
+    }
 
     submitInFlightRef.current = true;
 
@@ -317,8 +335,11 @@ export function SolicitudActionModal({
 
 
         const payload =
-
-          actionType === "APROBAR" ? { vehiculo_id: selectedVehiculo } : undefined;
+          actionType === "APROBAR"
+            ? { vehiculo_id: selectedVehiculo }
+            : {
+                comentarios: rechazoSolicitudComentarioSchema.parse(comentarioRechazo),
+              };
 
 
 
@@ -361,8 +382,8 @@ export function SolicitudActionModal({
     solicitudNoPendiente ||
 
     (actionType === "APROBAR" &&
-
-      (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo));
+      (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo)) ||
+    (actionType === "RECHAZAR" && !comentarioRechazoValido);
 
 
 
@@ -582,23 +603,33 @@ export function SolicitudActionModal({
 
 
 
-          {actionType === "RECHAZAR" && !solicitudNoPendiente && (
-
-            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
-
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
-
-              <p className="text-sm leading-relaxed text-red-800 dark:text-red-300">
-
-                Esta acción no se puede deshacer. El solicitante deberá crear una nueva solicitud
-
-                si aún necesita el vehículo.
-
-              </p>
-
+          {actionType === "RECHAZAR" && !solicitudNoPendiente ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
+                <p className="text-sm leading-relaxed text-red-800 dark:text-red-300">
+                  Esta acción no se puede deshacer. El solicitante deberá crear una nueva solicitud
+                  si aún necesita el vehículo.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="comentario_rechazo_solicitud">Motivo del rechazo</Label>
+                <Textarea
+                  id="comentario_rechazo_solicitud"
+                  rows={4}
+                  value={comentarioRechazo}
+                  onChange={(e) => setComentarioRechazo(e.target.value)}
+                  placeholder="Explique por qué no se aprueba la solicitud…"
+                  className="resize-none bg-white dark:bg-zinc-950"
+                />
+                {!comentarioRechazoValido && comentarioRechazo.trim().length > 0 ? (
+                  <p className="text-xs text-red-500">
+                    Escriba al menos 5 caracteres explicando el rechazo.
+                  </p>
+                ) : null}
+              </div>
             </div>
-
-          )}
+          ) : null}
 
           </div>
 

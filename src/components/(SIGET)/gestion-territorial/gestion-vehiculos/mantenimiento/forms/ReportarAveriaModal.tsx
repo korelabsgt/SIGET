@@ -37,7 +37,11 @@ import {
 } from "../../lib/gv-modal-shell";
 import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
 import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
-import { comprimirImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
+import {
+  comprimirImagenVehiculo,
+  IMAGEN_VEHICULO_ACCEPT_ATTR,
+  IMAGEN_VEHICULO_CAPTURE_ATTR,
+} from "../../lib/imagen-vehiculo-compress";
 
 export type VehiculoAveriaFijo = {
   id: string;
@@ -322,7 +326,8 @@ export function ReportarAveriaModal({
                   <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
                     <input
                       type="file"
-                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+                      capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
                       className="absolute inset-0 size-full cursor-pointer opacity-0"
                       aria-label="Subir evidencia fotográfica"
                       onChange={handleFileChange}

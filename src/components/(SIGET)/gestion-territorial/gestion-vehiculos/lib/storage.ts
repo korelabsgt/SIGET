@@ -1,6 +1,17 @@
 export const VEHICULOS_STORAGE_BUCKET = "vehiculos";
 export const VEHICULOS_SIGNED_URL_TTL_SEC = 3600;
 
+/** Carpetas dentro del bucket `vehiculos` (Storage crea la ruta al subir el primer archivo). */
+export const VEHICULOS_STORAGE_CARPETA_FLOTA = "flota";
+export const VEHICULOS_STORAGE_CARPETA_FALLAS = "fallas";
+export const VEHICULOS_STORAGE_CARPETA_RECIBOS = "recibos";
+
+export function rutaStorageVehiculos(carpeta: string, nombreArchivo: string): string {
+  const carpetaLimpia = carpeta.replace(/^\/+|\/+$/g, "");
+  const archivo = nombreArchivo.replace(/^\/+/, "");
+  return `${carpetaLimpia}/${archivo}`;
+}
+
 export function isLocalImageSrc(value: string): boolean {
   return value.startsWith("blob:") || value.startsWith("data:");
 }

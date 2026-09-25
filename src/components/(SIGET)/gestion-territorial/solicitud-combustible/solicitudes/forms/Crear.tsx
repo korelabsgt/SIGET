@@ -42,6 +42,10 @@ import {
   SIN_SOLICITUD_VEHICULO_VINCULO,
 } from "../lib/helpers";
 import { useCrearSolicitudCombustible } from "../lib/hooks";
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useBitacoraPendienteBloqueos } from "../../../gestion-vehiculos/lib/bitacora-pendiente-hooks";
+import { mensajeBloqueoNuevaSolicitudCombustible } from "../../../gestion-vehiculos/lib/bitacora-pendiente-bloqueo";
+import { GvBitacoraPendienteAviso } from "../../../gestion-vehiculos/lib/GvBitacoraPendienteAviso";
 
 export function CrearSolicitudCombustible({
   open,
@@ -53,6 +57,9 @@ export function CrearSolicitudCombustible({
   onSaved?: () => void;
 }) {
   const crear = useCrearSolicitudCombustible();
+  const { user } = useUserContext();
+  const { data: bloqueos } = useBitacoraPendienteBloqueos();
+  const bloqueoCombustible = bloqueos?.combustible ?? null;
   const { data: vehiculos = [], isLoading: loadingVehiculos } = useVehiculos();
   const { data: solicitudesVehiculo = [], isLoading: loadingSolicitudesVehiculo } =
     useSolicitudes();
@@ -76,8 +83,8 @@ export function CrearSolicitudCombustible({
   const solicitudVehiculoId = useWatch({ control, name: "solicitud_vehiculo_id" });
 
   const misionesVinculables = useMemo(
-    () => misionesParaVinculoCombustible(solicitudesVehiculo),
-    [solicitudesVehiculo],
+    () => misionesParaVinculoCombustible(solicitudesVehiculo, user?.id),
+    [solicitudesVehiculo, user?.id],
   );
 
   const misionSeleccionada = useMemo(
@@ -133,6 +140,11 @@ export function CrearSolicitudCombustible({
       {open ? (
         <GvModalForm onSubmit={handleSubmit(onSubmit)}>
           <GvModalFormBody className="space-y-4">
+            {bloqueoCombustible ? (
+              <GvBitacoraPendienteAviso
+                mensaje={mensajeBloqueoNuevaSolicitudCombustible(bloqueoCombustible)}
+              />
+            ) : null}
             <div className="space-y-2">
               <Label>Misión vinculada (opcional)</Label>
               <Controller
@@ -266,7 +278,10 @@ export function CrearSolicitudCombustible({
 
           <GvModalFooter>
             <ModalCancelButton onClick={onClose} disabled={crear.isPending || isSubmitting} />
-            <ModalSubmit disabled={crear.isPending || isSubmitting} label="Enviar" />
+            <ModalSubmit
+              disabled={Boolean(bloqueoCombustible) || crear.isPending || isSubmitting}
+              label="Enviar"
+            />
           </GvModalFooter>
         </GvModalForm>
       ) : null}

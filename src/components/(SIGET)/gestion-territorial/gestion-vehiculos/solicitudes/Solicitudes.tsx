@@ -34,7 +34,6 @@ import { formatEstadoLabel } from "./lib/helpers";
 
 import { GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS } from "../lib/gv-header-ui";
 
-import { useGvPanelChrome } from "../lib/gv-page-chrome";
 
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 
@@ -44,9 +43,21 @@ import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 
-import { canAprobarRechazarSolicitudes } from "../lib/permissions";
+import {
+  canAprobarRechazarSolicitudes,
+  canViewGvCampanaNotificaciones,
+} from "../lib/permissions";
 
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
+
+import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
+
+import { SolicitudesNotificaciones } from "./SolicitudesNotificaciones";
+
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useBitacoraPendienteBloqueos } from "../lib/bitacora-pendiente-hooks";
+import { mensajeBloqueoNuevaSolicitudVehiculo } from "../lib/bitacora-pendiente-bloqueo";
+import { cn } from "@/lib/utils";
 
 
 
@@ -80,7 +91,14 @@ export function Solicitudes() {
 
   const gvRole = useGvPermissionRole();
 
+  const { user } = useUserContext();
+
+  const { data: bloqueosBitacora } = useBitacoraPendienteBloqueos();
+  const bloqueoNuevaSolicitudVehiculo = bloqueosBitacora?.vehiculo ?? null;
+
   const canAprobarRechazar = canAprobarRechazarSolicitudes(gvRole);
+
+  const puedeVerCampanaGestion = canViewGvCampanaNotificaciones(gvRole);
 
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
 
@@ -242,6 +260,20 @@ export function Solicitudes() {
 
     <>
 
+      <GvHeaderExtras panelId="solicitudes">
+        {!loading ? (
+          <SolicitudesNotificaciones
+            solicitudes={solicitudes}
+            variant={puedeVerCampanaGestion ? "gestion" : "usuario"}
+            userId={user?.id}
+            onAbrirSolicitud={(id) => {
+              const sol = solicitudes.find((item) => item.id === id);
+              if (sol) setDetailSolicitud(sol);
+            }}
+          />
+        ) : null}
+      </GvHeaderExtras>
+
       <GvTableSectionMotion panelId="solicitudes">
 
         <GestionVehiculosTableShell
@@ -326,9 +358,22 @@ export function Solicitudes() {
 
                   type="button"
 
-                  onClick={() => setFormOpen(true)}
+                  onClick={() => {
+                    if (bloqueoNuevaSolicitudVehiculo) {
+                      toast.warn(
+                        mensajeBloqueoNuevaSolicitudVehiculo(bloqueoNuevaSolicitudVehiculo),
+                      );
+                      return;
+                    }
+                    setFormOpen(true);
+                  }}
 
-                  className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                  className={cn(
+                    GV_HEADER_OUTLINE_BUTTON_CLASS,
+                    bloqueoNuevaSolicitudVehiculo && "cursor-not-allowed opacity-50",
+                  )}
+
+                  aria-disabled={bloqueoNuevaSolicitudVehiculo ? true : undefined}
 
                 >
 

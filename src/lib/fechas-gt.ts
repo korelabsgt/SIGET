@@ -178,6 +178,37 @@ export function formatFechaManualGt(value: string | null | undefined): string {
   return `${d}/${m}/${y}`;
 }
 
+export function partesFechaHoraGt(fecha = new Date()): {
+  calendario: string;
+  hour: number;
+  minute: number;
+} {
+  const calendario = fechaCalendarioGt(fecha);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIMEZONE_GT,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(fecha);
+
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+
+  return { calendario, hour, minute };
+}
+
+export function instanteGtDesdePartesCalendario(
+  calendario: string,
+  hour: number,
+  minute: number,
+): number {
+  const norm = normalizarFechaCalendario(calendario);
+  if (!norm) return Number.NaN;
+  const iso = `${norm}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00-06:00`;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? Number.NaN : ms;
+}
+
 export function parseFechaManualGt(formatted: string): string | null {
   if (formatted.length !== 10) return null;
   const [dd, mm, yyyy] = formatted.split("/");

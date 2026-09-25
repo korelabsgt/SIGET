@@ -27,9 +27,11 @@ import {
 
 function SolicitudCombustibleRowItem({
   row,
+  showSolicitante,
   onDetail,
 }: {
   row: SolicitudCombustibleRow;
+  showSolicitante: boolean;
   onDetail: (row: SolicitudCombustibleRow) => void;
 }) {
   const vehiculo = row.vehiculo;
@@ -66,14 +68,16 @@ function SolicitudCombustibleRowItem({
           ) : null}
         </div>
       </td>
-      <td className="px-4 py-3 align-middle">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-foreground">{solicitanteNombre}</p>
-          {solicitanteEmail ? (
-            <p className="truncate text-xs text-muted-foreground">{solicitanteEmail}</p>
-          ) : null}
-        </div>
-      </td>
+      {showSolicitante ? (
+        <td className="px-4 py-3 align-middle">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-foreground">{solicitanteNombre}</p>
+            {solicitanteEmail ? (
+              <p className="truncate text-xs text-muted-foreground">{solicitanteEmail}</p>
+            ) : null}
+          </div>
+        </td>
+      ) : null}
       <td className="whitespace-nowrap px-4 py-3 align-middle">
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoBadgeClassCombustible(row.estado)}`}
@@ -110,9 +114,11 @@ function SolicitudCombustibleRowItem({
 
 export function SolicitudesCombustibleList({
   solicitudes,
+  showSolicitante,
   onDetail,
 }: {
   solicitudes: SolicitudCombustibleRow[];
+  showSolicitante: boolean;
   onDetail: (row: SolicitudCombustibleRow) => void;
 }) {
   if (solicitudes.length === 0) {
@@ -132,7 +138,7 @@ export function SolicitudesCombustibleList({
           { key: "fecha", label: "Fecha" },
           { key: "vehiculo", label: "Vehículo" },
           { key: "mision", label: "Misión vinculada" },
-          { key: "solicitante", label: "Solicitante" },
+          ...(showSolicitante ? [{ key: "solicitante", label: "Solicitante" }] : []),
           { key: "estado", label: "Estado" },
           { key: "cupones", label: "Cupones" },
           { key: "acciones", label: "Acciones", className: gvTableActionThClass },
@@ -140,7 +146,12 @@ export function SolicitudesCombustibleList({
       />
       <tbody>
         {solicitudes.map((row) => (
-          <SolicitudCombustibleRowItem key={row.id} row={row} onDetail={onDetail} />
+          <SolicitudCombustibleRowItem
+            key={row.id}
+            row={row}
+            showSolicitante={showSolicitante}
+            onDetail={onDetail}
+          />
         ))}
       </tbody>
     </GestionVehiculosTable>

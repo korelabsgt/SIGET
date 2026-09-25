@@ -15,7 +15,7 @@ import {
 import { GvTableMorphRow } from "../../gestion-vehiculos/lib/gv-table-morph-row";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
 
-import type { ValeLoteRow } from "./lib/zod";
+import type { FondoCombustible, ValeLoteRow } from "./lib/zod";
 import {
   formatDenominacion,
   formatFondoLabel,
@@ -27,9 +27,11 @@ import { useEliminarValeCombustible } from "./lib/hooks";
 function ValeLoteRowItem({
   row,
   canDelete,
+  showFondo,
 }: {
   row: ValeLoteRow;
   canDelete: boolean;
+  showFondo: boolean;
 }) {
   const eliminar = useEliminarValeCombustible();
 
@@ -44,7 +46,11 @@ function ValeLoteRowItem({
 
   return (
     <GvTableMorphRow>
-      <td className="px-4 py-3 align-middle text-sm font-semibold">{formatFondoLabel(row.fondo)}</td>
+      {showFondo ? (
+        <td className="px-4 py-3 align-middle text-sm font-semibold">
+          {formatFondoLabel(row.fondo)}
+        </td>
+      ) : null}
       <td className="px-4 py-3 align-middle text-sm tabular-nums">
         {formatDenominacion(row.denominacion)}
       </td>
@@ -83,16 +89,18 @@ function ValeLoteRowItem({
 export function ValesList({
   vales,
   canDelete,
+  fondoActivo,
 }: {
   vales: ValeLoteRow[];
   canDelete: boolean;
+  fondoActivo: FondoCombustible;
 }) {
   if (vales.length === 0) {
     return (
       <GestionVehiculosTableEmpty
         icon={<Fuel className="size-10" strokeWidth={1.75} />}
-        title="Sin lotes de vales"
-        description="Registre un talonario de cupones para poder aprobar solicitudes."
+        title={`Sin lotes (${fondoActivo})`}
+        description={`Registre un talonario de cupones para el fondo ${fondoActivo}.`}
       />
     );
   }
@@ -101,7 +109,6 @@ export function ValesList({
     <GestionVehiculosTable>
       <GestionVehiculosThead
         cells={[
-          { key: "fondo", label: "Fondo" },
           { key: "denominacion", label: "Denominación" },
           { key: "rango", label: "Rango" },
           { key: "disponibles", label: "Disponibles" },
@@ -114,7 +121,12 @@ export function ValesList({
       />
       <tbody>
         {vales.map((row) => (
-          <ValeLoteRowItem key={row.id} row={row} canDelete={canDelete} />
+          <ValeLoteRowItem
+            key={row.id}
+            row={row}
+            canDelete={canDelete}
+            showFondo={false}
+          />
         ))}
       </tbody>
     </GestionVehiculosTable>

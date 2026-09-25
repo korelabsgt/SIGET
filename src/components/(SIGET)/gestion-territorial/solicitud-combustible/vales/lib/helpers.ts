@@ -20,6 +20,10 @@ export function formatValeLoteResumen(row: ValeLoteRow): string {
   return `${formatFondoLabel(row.fondo)} · ${formatDenominacion(row.denominacion)} · ${formatRangoCupones(row.cupon_del, row.cupon_al)}`;
 }
 
+export function formatValeLoteOpcionExport(row: ValeLoteRow): string {
+  return `${formatRangoCupones(row.cupon_del, row.cupon_al)} · ${formatDenominacion(row.denominacion)}`;
+}
+
 export function formatValeLoteFecha(value: string): string {
   return formatFechaHoraGv(value);
 }

@@ -52,6 +52,18 @@ export type SolicitudCombustibleVehiculoVinculo = {
   fecha_fin_estimada: string;
   estado: string;
   vehiculo_id: string | null;
+  piloto: string | null;
+  solicitante_id: string;
+  solicitante?: {
+    id: string;
+    nombre: string | null;
+    email: string | null;
+  } | null;
+  piloto_profile?: {
+    id: string;
+    nombre: string | null;
+    email: string | null;
+  } | null;
 };
 
 export type SolicitudCombustibleRow = {

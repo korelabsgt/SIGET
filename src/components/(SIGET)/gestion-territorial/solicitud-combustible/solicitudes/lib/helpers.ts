@@ -1,5 +1,6 @@
 import { montoTotalCuponesEntregados } from "../../../gestion-vehiculos/bitacoras/lib/combustible-mision";
 import { formatFechaHoraGv } from "../../../gestion-vehiculos/lib/gv-fechas";
+import { nombrePilotoSolicitud } from "../../../gestion-vehiculos/solicitudes/lib/helpers";
 import { formatDenominacion } from "../../vales/lib/helpers";
 import type { ValeLoteRow } from "../../vales/lib/zod";
 import type { SolicitudRow } from "../../../gestion-vehiculos/solicitudes/lib/zod";
@@ -32,9 +33,14 @@ export function esMisionVehiculoActiva(
   return fin.getTime() >= Date.now();
 }
 
-export function misionesParaVinculoCombustible(solicitudes: SolicitudRow[]): SolicitudRow[] {
+export function misionesParaVinculoCombustible(
+  solicitudes: SolicitudRow[],
+  solicitanteId?: string | null,
+): SolicitudRow[] {
+  const sid = solicitanteId?.trim();
   return solicitudes
     .filter(esMisionVehiculoActiva)
+    .filter((solicitud) => !sid || solicitud.solicitante_id === sid)
     .sort(
       (a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime(),
     );
@@ -43,11 +49,12 @@ export function misionesParaVinculoCombustible(solicitudes: SolicitudRow[]): Sol
 export function solicitudesVehiculoVinculables(
   solicitudes: SolicitudRow[],
   vehiculoId: string,
+  solicitanteId?: string | null,
 ): SolicitudRow[] {
   const vehiculo = vehiculoId.trim();
   if (!vehiculo) return [];
 
-  return misionesParaVinculoCombustible(solicitudes).filter((solicitud) => {
+  return misionesParaVinculoCombustible(solicitudes, solicitanteId).filter((solicitud) => {
     if (!solicitud.vehiculo_id) return true;
     return solicitud.vehiculo_id === vehiculo;
   });
@@ -73,6 +80,43 @@ export function formatVehiculoSolicitudCombustible(row: SolicitudCombustibleRow)
 
 export function formatSolicitanteNombre(row: SolicitudCombustibleRow): string {
   return row.solicitante?.nombre?.trim() || row.solicitante?.email?.trim() || "—";
+}
+
+export function pilotoRequisicionCombustible(row: SolicitudCombustibleRow): string {
+  const mision = row.solicitud_vehiculo;
+  if (!mision) {
+    return formatSolicitanteNombre(row);
+  }
+
+  const solicitanteMision = mision.solicitante;
+  const pilotoProfile = mision.piloto_profile;
+
+  const nombre = nombrePilotoSolicitud({
+    piloto: mision.piloto,
+    piloto_profile: pilotoProfile
+      ? {
+          id: pilotoProfile.id,
+          nombre: pilotoProfile.nombre ?? "",
+          email: pilotoProfile.email ?? "",
+        }
+      : undefined,
+    solicitante_id: mision.solicitante_id,
+    solicitante: solicitanteMision
+      ? {
+          id: solicitanteMision.id,
+          nombre: solicitanteMision.nombre ?? "",
+          email: solicitanteMision.email ?? "",
+        }
+      : undefined,
+  });
+
+  if (nombre !== "Usuario registrado") return nombre;
+
+  return (
+    mision.piloto_profile?.email?.trim() ||
+    mision.solicitante?.email?.trim() ||
+    formatSolicitanteNombre(row)
+  );
 }
 
 export function propositoEntregaCombustible(row: SolicitudCombustibleRow): string {

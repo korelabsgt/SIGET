@@ -3,17 +3,41 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import {
+  esVehiculoDisponible,
+  esVehiculoOperableParaIniciarMision,
+} from "../../flota/lib/helpers";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
-import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
+import {
+  canAprobarRechazarSolicitudes,
+  canIniciarMisionSolicitud,
+  canManageSolicitudesVehiculos,
+  canViewAllSolicitudes,
+  isSuperRole,
+  puedeIniciarMisionEnHorarioProgramado,
+} from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
-import { formatEstadoLabel } from "./helpers";
+import {
+  fetchBitacoraPendienteBloqueos,
+  mensajeBloqueoNuevaSolicitudVehiculo,
+} from "../../lib/bitacora-pendiente-bloqueo";
+import {
+  COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
+  formatEstadoLabel,
+  horaInicioSolicitudPasada,
+} from "./helpers";
 import {
   findConflictoDiaVehiculo,
   validarFechasMisionNoAnterioresAHoyGt,
   type SolicitudCalendarioRef,
 } from "./calendario-reservas";
 import { formatFechaCalendarioGt, formatFechaHoraGt } from "@/lib/fechas-gt";
-import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
+import {
+  type SolicitudInput,
+  rechazoSolicitudComentarioSchema,
+  solicitudInputSchema,
+  type SolicitudRow,
+} from "./zod";
 
 const TABLE = "ot_solicitudes";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
@@ -80,8 +104,72 @@ async function requireAuth() {
   return { user, role, supabase };
 }
 
+async function rechazarSolicitudVencidaPorId(
+  admin: ReturnType<typeof createAdminClient>,
+  id: string,
+): Promise<boolean> {
+  const { error } = await admin
+    .from(TABLE)
+    .update({
+      estado: "RECHAZADA",
+      comentarios: COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
+      aprobado_por: null,
+    })
+    .eq("id", id)
+    .eq("estado", "PENDIENTE");
+
+  if (error) {
+    console.error("rechazarSolicitudVencidaPorId:", error);
+    return false;
+  }
+
+  return true;
+}
+
+async function rechazarSolicitudesPendientesVencidas(): Promise<void> {
+  const admin = createAdminClient();
+  const ahoraIso = new Date().toISOString();
+
+  const { data, error } = await admin
+    .from(TABLE)
+    .select("id, fecha_inicio")
+    .eq("estado", "PENDIENTE")
+    .lt("fecha_inicio", ahoraIso);
+
+  if (error) {
+    console.error("rechazarSolicitudesPendientesVencidas:", error);
+    return;
+  }
+
+  const ids = (data ?? [])
+    .filter((row) => horaInicioSolicitudPasada(row.fecha_inicio))
+    .map((row) => row.id);
+
+  if (ids.length === 0) return;
+
+  const { error: updateError } = await admin
+    .from(TABLE)
+    .update({
+      estado: "RECHAZADA",
+      comentarios: COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
+      aprobado_por: null,
+    })
+    .in("id", ids)
+    .eq("estado", "PENDIENTE");
+
+  if (updateError) {
+    console.error("rechazarSolicitudesPendientesVencidas update:", updateError);
+    return;
+  }
+
+  revalidatePath(REVALIDATE_ROUTE);
+  revalidatePath(FLOTA_ROUTE);
+}
+
 export async function getSolicitudes(): Promise<SolicitudRow[]> {
   try {
+    await rechazarSolicitudesPendientesVencidas();
+
     const { user, role, supabase } = await requireAuth();
 
     let query = supabase
@@ -134,6 +222,14 @@ export async function createSolicitud(input: SolicitudInput) {
 
     const supabase = await createClient();
 
+    const bloqueos = await fetchBitacoraPendienteBloqueos(supabase, user.id);
+    if (bloqueos.vehiculo) {
+      return {
+        success: false,
+        error: mensajeBloqueoNuevaSolicitudVehiculo(bloqueos.vehiculo),
+      };
+    }
+
     const { data: perfilPiloto, error: pilotoError } = await supabase
       .from("profiles")
       .select("id")
@@ -161,10 +257,11 @@ export async function createSolicitud(input: SolicitudInput) {
       if (!vehiculo) {
         return { success: false, error: "El vehículo seleccionado no existe." };
       }
-      if (vehiculo.estado === "EN_MANTENIMIENTO") {
+      if (!esVehiculoDisponible(vehiculo)) {
         return {
           success: false,
-          error: "El vehículo está en mantenimiento. Elija otro o deje sin preferencia.",
+          error:
+            "Solo puede preferir vehículos en estado Libre. Elija otro o deje sin preferencia.",
         };
       }
 
@@ -232,7 +329,7 @@ export async function createSolicitud(input: SolicitudInput) {
 export async function cambiarEstadoSolicitud(
   id: string,
   nuevoEstado: "PENDIENTE" | "APROBADA" | "EN_MISION" | "RECHAZADA" | "FINALIZADA",
-  payload?: { vehiculo_id?: string }
+  payload?: { vehiculo_id?: string; comentarios?: string }
 ) {
   try {
     const { user, role } = await requireAuth();
@@ -249,19 +346,12 @@ export async function cambiarEstadoSolicitud(
     const esTransicionAprobacion =
       nuevoEstado === "APROBADA" || nuevoEstado === "RECHAZADA";
 
-    if (esTransicionMision) {
-      if (canManageSolicitudesVehiculos(role) && !esSuper) {
-        return {
-          success: false,
-          error: "Solo el solicitante puede iniciar la misión.",
-        };
-      }
-    } else if (esTransicionAprobacion) {
-      if (!esAdmin) {
-        return { success: false, error: "No tienes permisos para realizar esta acción." };
-      }
-    } else {
+    if (!esTransicionMision && !esTransicionAprobacion) {
       return { success: false, error: "Transición de estado no permitida." };
+    }
+
+    if (esTransicionAprobacion && !esAdmin) {
+      return { success: false, error: "No tienes permisos para realizar esta acción." };
     }
 
     const supabase = await createClient();
@@ -276,11 +366,28 @@ export async function cambiarEstadoSolicitud(
       return { success: false, error: "No se encontró la solicitud." };
     }
 
+    if (
+      actual.estado === "PENDIENTE" &&
+      horaInicioSolicitudPasada(actual.fecha_inicio)
+    ) {
+      const adminVencida = createAdminClient();
+      await rechazarSolicitudVencidaPorId(adminVencida, actual.id);
+      revalidatePath(REVALIDATE_ROUTE);
+      revalidatePath(FLOTA_ROUTE);
+      return {
+        success: false,
+        error:
+          "La solicitud venció sin respuesta y fue rechazada automáticamente. Actualice la lista.",
+      };
+    }
+
     if (esTransicionMision) {
-      if (!esSuper && actual.solicitante_id !== user.id) {
+      if (
+        !canIniciarMisionSolicitud(role, actual.solicitante_id, user.id)
+      ) {
         return {
           success: false,
-          error: "Solo el solicitante puede iniciar esta misión.",
+          error: "No tienes permiso para iniciar esta misión.",
         };
       }
 
@@ -288,6 +395,16 @@ export async function cambiarEstadoSolicitud(
         return {
           success: false,
           error: "La misión solo puede iniciarse cuando la solicitud está aprobada.",
+        };
+      }
+
+      if (
+        !puedeIniciarMisionEnHorarioProgramado(role, actual.fecha_inicio)
+      ) {
+        return {
+          success: false,
+          error:
+            "La misión solo puede iniciarse desde la fecha y hora de salida programadas en la solicitud.",
         };
       }
     }
@@ -319,10 +436,18 @@ export async function cambiarEstadoSolicitud(
         return { success: false, error: "No se pudo verificar el vehículo asignado." };
       }
 
-      if (vehiculo.estado === "EN_MANTENIMIENTO") {
+      if (nuevoEstado === "APROBADA") {
+        if (!esVehiculoDisponible(vehiculo)) {
+          return {
+            success: false,
+            error: "Solo puede asignar vehículos en estado Libre. Elija otro.",
+          };
+        }
+      } else if (!esVehiculoOperableParaIniciarMision(vehiculo)) {
         return {
           success: false,
-          error: "El vehículo está en mantenimiento. Elija otro.",
+          error:
+            "El vehículo asignado está en mantenimiento y no puede iniciar la misión.",
         };
       }
 
@@ -349,12 +474,32 @@ export async function cambiarEstadoSolicitud(
       estado: typeof nuevoEstado;
       aprobado_por?: string;
       vehiculo_id?: string;
+      comentarios?: string | null;
     } = {
       estado: nuevoEstado,
     };
 
     if (nuevoEstado === "APROBADA" || nuevoEstado === "RECHAZADA") {
       updateData.aprobado_por = user.id;
+    }
+
+    if (nuevoEstado === "RECHAZADA") {
+      const parsedComentario = rechazoSolicitudComentarioSchema.safeParse(
+        payload?.comentarios ?? "",
+      );
+      if (!parsedComentario.success) {
+        return {
+          success: false,
+          error:
+            parsedComentario.error.issues[0]?.message ??
+            "Debe indicar el motivo del rechazo.",
+        };
+      }
+      updateData.comentarios = parsedComentario.data;
+    }
+
+    if (nuevoEstado === "APROBADA") {
+      updateData.comentarios = null;
     }
 
     if (payload?.vehiculo_id) {

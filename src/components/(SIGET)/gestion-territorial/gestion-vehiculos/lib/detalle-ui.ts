@@ -42,4 +42,4 @@ export const GV_STATS_KPI_TITLE_CLASS =
   "line-clamp-2 min-h-[2.75rem] text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:min-h-0 sm:text-xs sm:tracking-wider";
 
 export const GV_STATS_KPI_VALUE_CLASS =
-  "mt-auto truncate text-base font-black tabular-nums text-foreground sm:mt-1 sm:text-2xl";
+  "mt-auto max-w-full text-base font-black tabular-nums leading-tight text-foreground sm:mt-1 sm:text-2xl";

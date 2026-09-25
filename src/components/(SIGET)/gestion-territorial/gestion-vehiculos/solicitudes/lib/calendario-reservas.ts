@@ -1,7 +1,9 @@
 import {
   TIMEZONE_GT,
   fechaCalendarioGt,
+  instanteGtDesdePartesCalendario,
   normalizarFechaCalendario,
+  partesFechaHoraGt,
 } from "@/lib/fechas-gt";
 
 import type { SolicitudRow } from "./zod";
@@ -23,6 +25,55 @@ export function fechaCalendarioDesdeIso(iso: string): string {
   return fechaCalendarioGt(date);
 }
 
+export function instanteMinimoPosteriorGt(iso: string): number | null {
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return null;
+  return ms + 60_000;
+}
+
+export type PisoPickerSolicitudGt = {
+  calendarioMin: string;
+  msMin: number;
+  hourMin: number;
+  minuteMin: number;
+};
+
+export function pisoPickerSolicitudGt(pisoIso?: string | null): PisoPickerSolicitudGt {
+  const ahora = partesFechaHoraGt();
+  const hoy = ahora.calendario;
+  const msAhora = instanteGtDesdePartesCalendario(
+    ahora.calendario,
+    ahora.hour,
+    ahora.minute,
+  );
+
+  let calendarioMin = hoy;
+  let msMin = msAhora;
+  let hourMin = ahora.hour;
+  let minuteMin = ahora.minute;
+
+  if (pisoIso) {
+    const msPiso = instanteMinimoPosteriorGt(pisoIso);
+    const diaPiso = fechaCalendarioDesdeIso(pisoIso);
+    if (msPiso !== null && diaPiso) {
+      if (diaPiso > hoy) {
+        calendarioMin = diaPiso;
+        msMin = msPiso;
+        const partes = partesFechaHoraGt(new Date(msPiso));
+        hourMin = partes.hour;
+        minuteMin = partes.minute;
+      } else if (msPiso > msMin) {
+        msMin = msPiso;
+        const partes = partesFechaHoraGt(new Date(msPiso));
+        hourMin = partes.hour;
+        minuteMin = partes.minute;
+      }
+    }
+  }
+
+  return { calendarioMin, msMin, hourMin, minuteMin };
+}
+
 export function validarFechasMisionNoAnterioresAHoyGt(
   fechaInicioIso: string,
   fechaFinIso: string,
@@ -36,12 +87,23 @@ export function validarFechasMisionNoAnterioresAHoyGt(
   const hoy = fechaCalendarioGt();
   const diaInicio = fechaCalendarioDesdeIso(fechaInicioIso);
   const diaFin = fechaCalendarioDesdeIso(fechaFinIso);
+  const ahoraMs = Date.now();
+  const inicioMs = new Date(fechaInicioIso).getTime();
+  const finMs = new Date(fechaFinIso).getTime();
 
   if (!diaInicio || diaInicio < hoy) {
     return {
       ok: false,
       path: "fecha_inicio",
-      message: "La salida no puede ser anterior al día de hoy.",
+      message: "La salida no puede ser en un día anterior a hoy.",
+    };
+  }
+
+  if (Number.isNaN(inicioMs) || inicioMs < ahoraMs) {
+    return {
+      ok: false,
+      path: "fecha_inicio",
+      message: "La salida no puede ser anterior a la hora actual.",
     };
   }
 
@@ -49,7 +111,15 @@ export function validarFechasMisionNoAnterioresAHoyGt(
     return {
       ok: false,
       path: "fecha_fin_estimada",
-      message: "El retorno estimado no puede ser anterior al día de hoy.",
+      message: "El retorno estimado no puede ser en un día anterior a hoy.",
+    };
+  }
+
+  if (Number.isNaN(finMs) || finMs < ahoraMs) {
+    return {
+      ok: false,
+      path: "fecha_fin_estimada",
+      message: "El retorno estimado no puede ser anterior a la hora actual.",
     };
   }
 

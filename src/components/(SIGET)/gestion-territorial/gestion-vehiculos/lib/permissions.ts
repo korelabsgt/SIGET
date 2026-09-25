@@ -75,14 +75,33 @@ export function canGestionarMisionPropiaSolicitud(role: string | null | undefine
   return !canManageSolicitudesVehiculos(role);
 }
 
-export function canGestionarMisionSolicitud(
+export function canIniciarMisionSolicitud(
   role: string | null | undefined,
   solicitudSolicitanteId: string,
   userId: string | null | undefined,
 ): boolean {
   if (isSuperRole(role)) return true;
-  if (canManageSolicitudesVehiculos(role)) return false;
+  if (canManageSolicitudesVehiculos(role)) return true;
   return Boolean(userId && solicitudSolicitanteId === userId);
+}
+
+export function canGestionarMisionSolicitud(
+  role: string | null | undefined,
+  solicitudSolicitanteId: string,
+  userId: string | null | undefined,
+): boolean {
+  return canIniciarMisionSolicitud(role, solicitudSolicitanteId, userId);
+}
+
+export function puedeIniciarMisionEnHorarioProgramado(
+  role: string | null | undefined,
+  fechaInicioIso: string,
+  ahoraMs: number = Date.now(),
+): boolean {
+  if (isSuperRole(role) || canManageSolicitudesVehiculos(role)) return true;
+  const inicioMs = new Date(fechaInicioIso).getTime();
+  if (Number.isNaN(inicioMs)) return false;
+  return ahoraMs >= inicioMs;
 }
 
 export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {

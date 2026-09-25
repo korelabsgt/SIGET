@@ -1,6 +1,9 @@
 import { differenceInMinutes } from "date-fns";
 import { type SolicitudRow } from "./zod";
 
+export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
+  "Rechazada automáticamente: venció la fecha y hora de salida programadas sin respuesta.";
+
 export function estadoBadgeClass(estado: SolicitudRow["estado"]) {
   if (estado === "PENDIENTE") return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400";
   if (estado === "APROBADA") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400";
@@ -46,11 +49,31 @@ export function formatDuracionMision(inicio: string, fin: string): string {
   return parts.join(" ") || "—";
 }
 
+export function horaInicioSolicitudPasada(
+  fechaInicio: string | null | undefined,
+): boolean {
+  if (!fechaInicio) return false;
+  const inicio = new Date(fechaInicio);
+  if (Number.isNaN(inicio.getTime())) return false;
+  return inicio.getTime() < Date.now();
+}
+
 export function solicitudPendienteVencida(
   solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio">,
 ): boolean {
   if (solicitud.estado !== "PENDIENTE") return false;
-  const inicio = new Date(solicitud.fecha_inicio);
-  if (Number.isNaN(inicio.getTime())) return false;
-  return inicio.getTime() < Date.now();
+  return horaInicioSolicitudPasada(solicitud.fecha_inicio);
+}
+
+export function solicitudMisionAprobadaSinIniciar(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio">,
+): boolean {
+  return solicitud.estado === "APROBADA";
+}
+
+export function solicitudMisionAprobadaSinIniciarVencida(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio">,
+): boolean {
+  if (!solicitudMisionAprobadaSinIniciar(solicitud)) return false;
+  return horaInicioSolicitudPasada(solicitud.fecha_inicio);
 }

@@ -34,7 +34,7 @@ export const GV_TABLE_TOOLBAR_CLASS =
   "w-full shrink-0 min-h-[5.0625rem] border-b border-border p-4 dark:border-zinc-700 lg:h-[5.0625rem] lg:overflow-hidden";
 
 export const GV_TABLE_KPI_SLOT_CLASS =
-  "flex shrink-0 items-stretch border-b border-border px-4 py-3 dark:border-zinc-700 min-h-[7.875rem] sm:h-[7rem] sm:min-h-0";
+  "flex shrink-0 items-stretch border-b border-border px-4 py-3 dark:border-zinc-700 sm:h-[7rem] sm:min-h-0";
 
 export function GvTableKpiSlot({ children }: { children?: ReactNode }) {
   return (

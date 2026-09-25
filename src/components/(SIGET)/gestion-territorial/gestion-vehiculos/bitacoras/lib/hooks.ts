@@ -6,6 +6,7 @@ import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
 import { fetchBitacoras } from "../../lib/client-db";
 import { useVehiculos, VEHICULOS_KEY } from "../../flota/lib/hooks";
 import { SOLICITUDES_KEY } from "../../solicitudes/lib/hooks";
+import { BITACORA_PENDIENTE_BLOQUEOS_KEY } from "../../lib/bitacora-pendiente-hooks";
 import type { BitacoraInput } from "./zod";
 
 export const BITACORAS_KEY = ["ter-bitacoras"];
@@ -80,6 +81,7 @@ export function useCrearBitacora() {
       qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
       qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
       qc.invalidateQueries({ queryKey: BITACORAS_MISIONES_VINCULABLES_KEY });
+      qc.invalidateQueries({ queryKey: BITACORA_PENDIENTE_BLOQUEOS_KEY });
     },
   });
 }

@@ -4,7 +4,11 @@ import { type SolicitudRow } from "./lib/zod";
 import { SolicitudDetalleView } from "./SolicitudDetalleView";
 import { GvModalShell, GV_MODAL_DETALLE_CONTENT_CLASS, GvModalInset } from "../lib/gv-modal-shell";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
-import { canAprobarRechazarSolicitudes, canGestionarMisionSolicitud } from "../lib/permissions";
+import {
+  canAprobarRechazarSolicitudes,
+  canGestionarMisionSolicitud,
+  puedeIniciarMisionEnHorarioProgramado,
+} from "../lib/permissions";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 
 export function SolicitudDetalleModal({
@@ -31,6 +35,10 @@ export function SolicitudDetalleModal({
     solicitud.solicitante_id,
     user?.id,
   );
+  const puedeIniciarPorHorario = puedeIniciarMisionEnHorarioProgramado(
+    gvRole,
+    solicitud.fecha_inicio,
+  );
 
   return (
     <GvModalShell
@@ -46,6 +54,7 @@ export function SolicitudDetalleModal({
           solicitud={solicitud}
           canAprobarRechazar={canAprobarRechazar}
           puedeControlMision={puedeControlMision}
+          puedeIniciarPorHorario={puedeIniciarPorHorario}
           misionPendiente={misionPendiente}
           embedded
           onClose={onClose}

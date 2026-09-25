@@ -11,7 +11,8 @@ import {
   loteValePorRangoCupones,
   montoTotalEntregaCombustibleConInventario,
 } from "../../solicitudes/lib/helpers";
-import type { FondoCombustible, ValeLoteRow } from "./zod";
+import { formatDenominacion, formatRangoCupones } from "./helpers";
+import type { ValeLoteRow } from "./zod";
 
 const COLUMN_COUNT = 7;
 
@@ -121,13 +122,26 @@ function numeroRequisicionPorAnio(
   return `${String(next).padStart(3, "0")}/${year}`;
 }
 
-function movimientosPorFondo(
-  fondo: FondoCombustible,
+function movimientosPorLote(
+  lote: ValeLoteRow,
   vales: ValeLoteRow[],
   solicitudes: SolicitudCombustibleRow[],
 ): MovimientoCuenta[] {
   const movimientos: MovimientoCuenta[] = [];
   const indiceRequisicionAnio = new Map<string, number>();
+
+  const fechaIngreso = new Date(lote.created_at);
+  const montoIngreso = lote.cantidad * lote.denominacion;
+  movimientos.push({
+    sortAt: fechaIngreso.getTime(),
+    ingresoPrimero: 0,
+    fecha: fechaIngreso,
+    concepto: conceptoIngreso(lote),
+    ingreso: montoIngreso,
+    egreso: null,
+    cuponDel: lote.cupon_del,
+    cuponAl: lote.cupon_al,
+  });
 
   const solicitudesOrdenadas = [...solicitudes]
     .filter(
@@ -143,25 +157,9 @@ function movimientosPorFondo(
       return ta - tb;
     });
 
-  for (const lote of vales.filter((v) => v.fondo === fondo)) {
-    const fecha = new Date(lote.created_at);
-    const monto = lote.cantidad * lote.denominacion;
-    movimientos.push({
-      sortAt: fecha.getTime(),
-      ingresoPrimero: 0,
-      fecha,
-      concepto: conceptoIngreso(lote),
-      ingreso: monto,
-      egreso: null,
-      cuponDel: lote.cupon_del,
-      cuponAl: lote.cupon_al,
-    });
-  }
-
   for (const row of solicitudesOrdenadas) {
-    const lote = loteValePorRangoCupones(row, vales);
-    const fondoMov = lote?.fondo ?? "OT";
-    if (fondoMov !== fondo) continue;
+    const loteEgreso = loteValePorRangoCupones(row, vales);
+    if (!loteEgreso || loteEgreso.id !== lote.id) continue;
 
     const monto = montoTotalEntregaCombustibleConInventario(row, vales);
     if (monto == null || row.cupon_del == null || row.cupon_al == null) continue;
@@ -187,13 +185,23 @@ function movimientosPorFondo(
   });
 }
 
+function mesClave(fecha: Date): string {
+  return format(fecha, "yyyy-MM");
+}
+
+function etiquetaMes(fecha: Date): string {
+  const raw = format(fecha, "MMMM yyyy", { locale: es });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 function buildCuentaCorrienteSheet(
   workbook: ExcelJS.Workbook,
   sheetName: string,
-  fondo: FondoCombustible,
+  lote: ValeLoteRow,
   movimientos: MovimientoCuenta[],
   logoBuffer: ArrayBuffer | null,
 ) {
+  const fondo = lote.fondo;
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
   });
@@ -248,11 +256,19 @@ function buildCuentaCorrienteSheet(
   applyBorders(sheet, 5, 5, 1, 7, mediumBorder);
   sheet.getRow(5).height = 26;
 
-  mergeSet(sheet, 6, 1, 7, `Fondo: ${fondo}`, {
-    font: { bold: true, size: 10 },
-    alignment: { horizontal: "center", vertical: "middle" },
-  });
+  mergeSet(
+    sheet,
+    6,
+    1,
+    7,
+    `Fondo: ${fondo} · Lote ${formatRangoCupones(lote.cupon_del, lote.cupon_al)} · ${formatDenominacion(lote.denominacion)}`,
+    {
+      font: { bold: true, size: 10 },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    },
+  );
   applyBorders(sheet, 6, 6, 1, 7, thinBorder);
+  sheet.getRow(6).height = 22;
 
   const headerRow = 7;
   const headers = [
@@ -278,8 +294,21 @@ function buildCuentaCorrienteSheet(
 
   let saldo = 0;
   let dataRow = headerRow + 1;
+  let mesActual = "";
 
   for (const mov of movimientos) {
+    const claveMes = mesClave(mov.fecha);
+    if (claveMes !== mesActual) {
+      mesActual = claveMes;
+      mergeSet(sheet, dataRow, 1, 7, etiquetaMes(mov.fecha), {
+        font: { bold: true, size: 10, color: { argb: "FF2C5F9B" } },
+        alignment: { horizontal: "left", vertical: "middle" },
+      });
+      sheet.getRow(dataRow).height = 20;
+      applyBorders(sheet, dataRow, dataRow, 1, 7, thinBorder);
+      dataRow += 1;
+    }
+
     const ingreso = mov.ingreso ?? 0;
     const egreso = mov.egreso ?? 0;
     saldo += ingreso - egreso;
@@ -329,24 +358,13 @@ function buildCuentaCorrienteSheet(
 }
 
 export async function exportCuentaCorrienteCuponesExcel(
+  lote: ValeLoteRow,
   vales: ValeLoteRow[],
   solicitudes: SolicitudCombustibleRow[],
 ): Promise<ExportCuentaCorrienteResult> {
-  const fondos = Array.from(
-    new Set([
-      ...vales.map((v) => v.fondo),
-      ...solicitudes
-        .filter((s) => s.estado === "APROBADO")
-        .map((s) => loteValePorRangoCupones(s, vales)?.fondo ?? "OT"),
-    ]),
-  ) as FondoCombustible[];
+  const movimientos = movimientosPorLote(lote, vales, solicitudes);
 
-  const conDatos = fondos.filter((fondo) => {
-    const movs = movimientosPorFondo(fondo, vales, solicitudes);
-    return movs.length > 0;
-  });
-
-  if (conDatos.length === 0) {
+  if (movimientos.length === 0) {
     return { ok: false, reason: "no_data" };
   }
 
@@ -356,23 +374,19 @@ export async function exportCuentaCorrienteCuponesExcel(
     workbook.created = new Date();
     const logoBuffer = await fetchLogoBuffer();
 
-    for (const fondo of conDatos) {
-      const movimientos = movimientosPorFondo(fondo, vales, solicitudes);
-      buildCuentaCorrienteSheet(
-        workbook,
-        `Cuenta ${fondo}`.slice(0, 31),
-        fondo,
-        movimientos,
-        logoBuffer,
-      );
-    }
+    const sheetName = `Lote ${lote.cupon_del}`.slice(0, 31);
+    buildCuentaCorrienteSheet(workbook, sheetName, lote, movimientos, logoBuffer);
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const fecha = format(new Date(), "yyyy-MM-dd");
-    saveAs(blob, `Cuenta_Corriente_Cupones_${fecha}.xlsx`);
+    const rango =
+      lote.cupon_del === lote.cupon_al
+        ? String(lote.cupon_del)
+        : `${lote.cupon_del}-${lote.cupon_al}`;
+    saveAs(blob, `Cuenta_Corriente_${lote.fondo}_${rango}_${fecha}.xlsx`);
     return { ok: true };
   } catch {
     return { ok: false, reason: "error" };

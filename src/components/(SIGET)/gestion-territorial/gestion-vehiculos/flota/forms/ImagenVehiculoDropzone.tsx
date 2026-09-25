@@ -12,9 +12,11 @@ import {
   type TipoFotoVehiculo,
 } from "../lib/helpers";
 import { canManageFlota } from "../../lib/permissions";
-import { esTipoImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
-
-const ACCEPT_ATTR = ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
+import {
+  esTipoImagenVehiculo,
+  IMAGEN_VEHICULO_ACCEPT_ATTR,
+  IMAGEN_VEHICULO_CAPTURE_ATTR,
+} from "../../lib/imagen-vehiculo-compress";
 
 function filtrarArchivosValidos(seleccionados: File[]): File[] {
   const validos: File[] = [];
@@ -116,7 +118,8 @@ export function ImagenVehiculoDropzone({
               </span>
               <Input
                 type="file"
-                accept={ACCEPT_ATTR}
+                accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+                capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
                 multiple
                 disabled={disabled}
                 className="absolute inset-0 size-full cursor-pointer opacity-0"
@@ -129,7 +132,8 @@ export function ImagenVehiculoDropzone({
         <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
           <Input
             type="file"
-            accept={ACCEPT_ATTR}
+            accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+            capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
             multiple
             disabled={disabled}
             className="absolute inset-0 size-full cursor-pointer opacity-0"
@@ -245,7 +249,8 @@ export function TarjetaCirculacionCampo({
           >
             <Input
               type="file"
-              accept={ACCEPT_ATTR}
+              accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+              capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
               disabled={disabled}
               className="absolute inset-0 size-full cursor-pointer opacity-0"
               onChange={handleFileChange}

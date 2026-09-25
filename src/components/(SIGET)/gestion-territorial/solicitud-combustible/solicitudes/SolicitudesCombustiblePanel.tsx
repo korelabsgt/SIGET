@@ -12,6 +12,7 @@ export function SolicitudesCombustiblePanel({
   catalogo,
   canResolver,
   canExport,
+  showSolicitante,
   onResolver,
   exportingId,
   onExportExcel,
@@ -20,6 +21,7 @@ export function SolicitudesCombustiblePanel({
   catalogo?: SolicitudCombustibleRow[];
   canResolver: boolean;
   canExport: boolean;
+  showSolicitante: boolean;
   onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
   exportingId?: string | null;
   onExportExcel?: (row: SolicitudCombustibleRow) => void;
@@ -43,12 +45,17 @@ export function SolicitudesCombustiblePanel({
     <>
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="hidden min-h-0 flex-1 flex-col lg:flex">
-          <SolicitudesCombustibleList solicitudes={solicitudes} onDetail={setSelected} />
+          <SolicitudesCombustibleList
+            solicitudes={solicitudes}
+            showSolicitante={showSolicitante}
+            onDetail={setSelected}
+          />
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:hidden">
           <SolicitudesCombustibleCards
             solicitudes={solicitudes}
             canResolver={canResolver}
+            showSolicitante={showSolicitante}
             showAccionesColumn={showAccionesEnCards}
             onResolver={onResolver}
             exportingId={exportingId}
@@ -63,6 +70,7 @@ export function SolicitudesCombustiblePanel({
         solicitud={selected}
         canResolver={canResolver}
         canExport={canExport}
+        showSolicitante={showSolicitante}
         exporting={exportingId === selected?.id}
         onResolver={onResolver}
         onExportExcel={onExportExcel}

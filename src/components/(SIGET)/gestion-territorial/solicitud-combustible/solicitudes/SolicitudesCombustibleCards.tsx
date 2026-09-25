@@ -11,6 +11,7 @@ import { SolicitudCombustibleCard } from "./SolicitudCombustibleCard";
 export function SolicitudesCombustibleCards({
   solicitudes,
   canResolver,
+  showSolicitante,
   showAccionesColumn,
   showAcciones,
   onResolver,
@@ -19,6 +20,7 @@ export function SolicitudesCombustibleCards({
 }: {
   solicitudes: SolicitudCombustibleRow[];
   canResolver: boolean;
+  showSolicitante: boolean;
   showAccionesColumn?: boolean;
   showAcciones?: boolean;
   onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
@@ -43,6 +45,7 @@ export function SolicitudesCombustibleCards({
           key={row.id}
           row={row}
           canResolver={canResolver}
+          showSolicitante={showSolicitante}
           showAcciones={mostrarAcciones}
           onResolver={onResolver}
           exporting={exportingId === row.id}

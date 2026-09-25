@@ -41,6 +41,7 @@ import { useGvClientMounted } from "../../gestion-vehiculos/lib/use-gv-client-mo
 import {
   canAprobarRechazarSolicitudCombustible,
   canExportCombustibleExcel,
+  canViewAllSolicitudesCombustible,
 } from "../lib/permissions";
 
 import {
@@ -52,6 +53,8 @@ import { SolicitudesCombustiblePanel } from "./SolicitudesCombustiblePanel";
 import { CrearSolicitudCombustible } from "./forms/Crear";
 import { ResolverSolicitudCombustibleModal } from "./forms/ResolverModal";
 import { useSolicitudesCombustible } from "./lib/hooks";
+import { useBitacoraPendienteBloqueos } from "../../gestion-vehiculos/lib/bitacora-pendiente-hooks";
+import { mensajeBloqueoNuevaSolicitudCombustible } from "../../gestion-vehiculos/lib/bitacora-pendiente-bloqueo";
 import type { SolicitudCombustibleRow } from "./lib/zod";
 
 const TABS = ["TODAS", "PENDIENTES", "RECHAZADAS"] as const;
@@ -79,7 +82,10 @@ export function SolicitudesCombustible() {
   const gvRole = useGvPermissionRole();
   const canResolver = canAprobarRechazarSolicitudCombustible(gvRole);
   const canExport = canExportCombustibleExcel(gvRole);
+  const canViewAll = canViewAllSolicitudesCombustible(gvRole);
   const { data: solicitudes = [], isLoading } = useSolicitudesCombustible();
+  const { data: bloqueosBitacora } = useBitacoraPendienteBloqueos();
+  const bloqueoNuevaSolicitudCombustible = bloqueosBitacora?.combustible ?? null;
   const { data: vehiculosFlota = [] } = useVehiculos();
   const vehiculosCatalogoFlota = useMemo(
     () => listarVehiculosCatalogoFlota(vehiculosFlota),
@@ -322,7 +328,18 @@ export function SolicitudesCombustible() {
                 accentColor={sigetAccent.crear}
                 morphFrom={Plus}
                 morphTo={CirclePlus}
-                onClick={() => setFormOpen(true)}
+                disabled={Boolean(bloqueoNuevaSolicitudCombustible)}
+                onClick={() => {
+                  if (bloqueoNuevaSolicitudCombustible) {
+                    toast.warn(
+                      mensajeBloqueoNuevaSolicitudCombustible(
+                        bloqueoNuevaSolicitudCombustible,
+                      ),
+                    );
+                    return;
+                  }
+                  setFormOpen(true);
+                }}
                 ariaLabel="Nueva solicitud de combustible"
                 className="h-11 w-auto shrink-0 rounded-xl px-4"
               />
@@ -352,6 +369,7 @@ export function SolicitudesCombustible() {
             catalogo={solicitudesFiltradas}
             canResolver={canResolver}
             canExport={canExport}
+            showSolicitante={canViewAll}
             onResolver={handleResolver}
             exportingId={exportingId}
             onExportExcel={canExport ? (row) => void handleExportExcel(row) : undefined}

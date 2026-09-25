@@ -12,6 +12,8 @@ import {
   formatSolicitanteNombre,
   montoTotalEntregaCombustible,
   denominacionCuponSolicitud,
+  pilotoRequisicionCombustible,
+  propositoEntregaCombustible,
 } from "../../solicitudes/lib/helpers";
 
 const COLUMN_COUNT = 10;
@@ -238,9 +240,9 @@ function buildRequisicionSheet(
   applyBorders(sheet, 6, 6, 1, 10, thinBorder);
 
   const placa = row.vehiculo?.placa?.trim().toUpperCase() ?? "";
-  const piloto = formatSolicitanteNombre(row);
-  const servicio = "Plan Trifinio — Oficina Territorial";
-  const actividad = row.comentarios?.trim() ?? "";
+  const alServicioDe = formatSolicitanteNombre(row);
+  const piloto = pilotoRequisicionCombustible(row);
+  const actividad = propositoEntregaCombustible(row);
 
   mergeSet(sheet, 7, 1, 3, "No. de Placas:", {
     font: { bold: true, size: 10 },
@@ -253,7 +255,7 @@ function buildRequisicionSheet(
     font: { bold: true, size: 10 },
     alignment: { vertical: "middle" },
   });
-  underlineValue(sheet, 8, 4, 10, servicio);
+  underlineValue(sheet, 8, 4, 10, alServicioDe);
   applyBorders(sheet, 8, 8, 1, 10, thinBorder);
 
   mergeSet(sheet, 9, 1, 3, "Nombre del Piloto:", {

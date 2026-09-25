@@ -1,3 +1,4 @@
+import { normalizeVehiculoStoragePath } from "../../lib/storage";
 import type { BitacoraRow } from "./zod";
 import { parseComentariosJsonb } from "./zod";
 import { format } from "date-fns";
@@ -9,10 +10,29 @@ import {
 } from "@/lib/fechas-gt";
 import { registroEnPeriodoCalendario } from "../../lib/periodo-filtro";
 
+export const BITACORA_RECIBO_PENDIENTE = "__recibo_pendiente__";
+
+export function evidenciasBitacora(
+  bitacora: Pick<BitacoraRow, "evidencia_url">,
+): string[] {
+  const paths = bitacora.evidencia_url ?? [];
+  const normalized = paths
+    .filter(
+      (item) =>
+        typeof item === "string" &&
+        item.trim().length > 0 &&
+        item.trim() !== BITACORA_RECIBO_PENDIENTE,
+    )
+    .map((url) => normalizeVehiculoStoragePath(url) ?? url.trim())
+    .filter((url) => url.length > 0);
+  return [...new Set(normalized)].slice(0, 1);
+}
+
 export function normalizeBitacoraRow(row: BitacoraRow): BitacoraRow {
   return {
     ...row,
     comentarios: parseComentariosJsonb(row.comentarios),
+    evidencia_url: evidenciasBitacora(row),
   };
 }
 

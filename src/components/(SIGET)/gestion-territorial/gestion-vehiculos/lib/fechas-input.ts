@@ -122,6 +122,10 @@ export function maskFechaManual(raw: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
+export function partesFechaHoraManual(value: string) {
+  return extraerSlotsFecha(value, true);
+}
+
 export function maskFechaHoraManual(raw: string): string {
   let { day, month, year, hour, minute } = extraerSlotsFecha(raw, true);
   if (!day && !month && !year && !hour && !minute) return "";

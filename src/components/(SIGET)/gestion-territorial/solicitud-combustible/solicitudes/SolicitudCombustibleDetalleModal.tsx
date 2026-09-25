@@ -37,6 +37,7 @@ export function SolicitudCombustibleDetalleModal({
   solicitud,
   canResolver,
   canExport,
+  showSolicitante,
   exporting,
   onResolver,
   onExportExcel,
@@ -46,6 +47,7 @@ export function SolicitudCombustibleDetalleModal({
   solicitud: SolicitudCombustibleRow | null;
   canResolver: boolean;
   canExport: boolean;
+  showSolicitante: boolean;
   exporting: boolean;
   onResolver: (row: SolicitudCombustibleRow, accion: "APROBAR" | "RECHAZAR") => void;
   onExportExcel?: (row: SolicitudCombustibleRow) => void;
@@ -81,7 +83,9 @@ export function SolicitudCombustibleDetalleModal({
           <DetalleFila label="Vehículo" value={vehiculoTitulo} />
           <DetalleFila label="Placa" value={vehiculoPlaca} />
           <DetalleFila label="Misión vinculada" value={formatMisionVinculadaCombustible(solicitud)} />
-          <DetalleFila label="Solicitante" value={formatSolicitanteNombre(solicitud)} />
+          {showSolicitante ? (
+            <DetalleFila label="Solicitante" value={formatSolicitanteNombre(solicitud)} />
+          ) : null}
           <DetalleFila label="Cupones (del – al)" value={formatCuponesAsignados(solicitud)} />
           <DetalleFila
             label="Cantidad de cupones"

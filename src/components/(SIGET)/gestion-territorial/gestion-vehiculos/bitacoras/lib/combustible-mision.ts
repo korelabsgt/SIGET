@@ -36,3 +36,10 @@ export function combustibleAprobadoParaBitacora(
 
   return { vale, monto, cantidad };
 }
+
+export function misionRequiereReciboCombustible(
+  row: CombustibleAprobadoMision | null | undefined,
+): boolean {
+  if (!row) return false;
+  return combustibleAprobadoParaBitacora(row) !== null;
+}

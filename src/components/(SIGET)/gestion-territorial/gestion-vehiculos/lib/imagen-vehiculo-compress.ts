@@ -18,3 +18,9 @@ export async function comprimirImagenVehiculo(file: File): Promise<File> {
 }
 
 export const GV_IMAGEN_VEHICULO_TIPOS = [...ALLOWED_IMAGEN_TYPES, JPG_ALIAS] as const;
+
+export const IMAGEN_VEHICULO_ACCEPT_ATTR =
+  ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,image/jpg";
+
+/** En móvil prioriza cámara trasera; en escritorio se ignora. */
+export const IMAGEN_VEHICULO_CAPTURE_ATTR = "environment" as const;

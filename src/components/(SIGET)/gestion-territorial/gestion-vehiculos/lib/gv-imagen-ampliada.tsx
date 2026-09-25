@@ -11,13 +11,17 @@ export function GvImagenAmpliada({
   onError,
   thumbClassName,
   imagenClassName,
+  thumbFit = "cover",
 }: {
   src: string;
   alt: string;
   onError?: () => void;
   thumbClassName?: string;
   imagenClassName?: string;
+  /** `contain` muestra el recibo completo sin recortar (bitácora). */
+  thumbFit?: "cover" | "contain";
 }) {
+  const recibo = thumbFit === "contain";
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -69,7 +73,10 @@ export function GvImagenAmpliada({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "block w-full cursor-pointer overflow-hidden rounded-xl border-0 bg-zinc-200/60 p-0 dark:bg-zinc-900/60",
+          "block w-full cursor-pointer overflow-hidden border-0 p-0 transition-[box-shadow,opacity] hover:opacity-[0.98]",
+          recibo
+            ? "rounded-2xl bg-gradient-to-b from-sky-50/90 to-zinc-100/80 shadow-sm ring-1 ring-zinc-200/90 dark:from-sky-950/30 dark:to-zinc-950 dark:ring-zinc-700"
+            : "rounded-xl bg-zinc-200/60 dark:bg-zinc-900/60",
           thumbClassName,
         )}
       >
@@ -77,7 +84,12 @@ export function GvImagenAmpliada({
           src={src}
           alt={alt}
           onError={onError}
-          className={cn("aspect-[4/3] w-full object-cover object-center", imagenClassName)}
+          className={cn(
+            recibo
+              ? "mx-auto max-h-[min(22rem,52vh)] w-full object-contain p-4 sm:p-5"
+              : "aspect-[4/3] w-full object-cover object-center",
+            imagenClassName,
+          )}
         />
       </button>
       {overlay}

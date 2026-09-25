@@ -27,10 +27,22 @@ import {
   Trash,
   Trash2,
 } from "lucide";
-import { Loader2 } from "lucide-react";
+import { Loader2, UploadCloud, X } from "lucide-react";
 import { toast } from "react-toastify";
 
+import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  rutaStorageVehiculos,
+  VEHICULOS_STORAGE_BUCKET,
+  VEHICULOS_STORAGE_CARPETA_RECIBOS,
+} from "../../lib/storage";
+import {
+  comprimirImagenVehiculo,
+  IMAGEN_VEHICULO_ACCEPT_ATTR,
+  IMAGEN_VEHICULO_CAPTURE_ATTR,
+} from "../../lib/imagen-vehiculo-compress";
+import { BITACORA_RECIBO_PENDIENTE } from "../lib/helpers";
 import { GvMorphIcon } from "../../lib/morph-icon";
 import { useUser } from "@/components/(base)/providers/UserProvider";
 import { type BitacoraInput, bitacoraInputSchema } from "../lib/zod";
@@ -40,7 +52,10 @@ import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
 import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
 import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
 import { getCombustibleAprobadoPorMision } from "../lib/actions";
-import { combustibleAprobadoParaBitacora } from "../lib/combustible-mision";
+import {
+  combustibleAprobadoParaBitacora,
+  misionRequiereReciboCombustible,
+} from "../lib/combustible-mision";
 import {
   GvModalForm,
   GvModalFormBody,
@@ -106,6 +121,8 @@ export function Crear({
     watch,
     setValue,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<BitacoraInput>({
     resolver: zodResolver(bitacoraInputSchema) as never,
@@ -119,6 +136,7 @@ export function Crear({
       vale_combustible: "",
       monto_combustible: 0,
       comentarios: [],
+      evidencia_url: [],
     },
   });
 
@@ -134,7 +152,31 @@ export function Crear({
   const [averiaVehiculoId, setAveriaVehiculoId] = useState("");
   const [averiaVehiculoFijo, setAveriaVehiculoFijo] = useState<VehiculoAveriaFijo | null>(null);
   const [combustibleMisionAviso, setCombustibleMisionAviso] = useState<string | null>(null);
+  const [reciboCombustibleObligatorio, setReciboCombustibleObligatorio] = useState(false);
+  const [evidenciaFile, setEvidenciaFile] = useState<File | null>(null);
+  const [evidenciaPreviewUrl, setEvidenciaPreviewUrl] = useState<string | null>(null);
+  const [evidenciaPathSubido, setEvidenciaPathSubido] = useState<string | null>(null);
+  const [subiendoEvidencia, setSubiendoEvidencia] = useState(false);
   const prevFieldsLen = useRef(0);
+
+  const clearEvidencia = () => {
+    if (evidenciaPreviewUrl) URL.revokeObjectURL(evidenciaPreviewUrl);
+    setEvidenciaFile(null);
+    setEvidenciaPreviewUrl(null);
+    setEvidenciaPathSubido(null);
+    setValue("evidencia_url", [], { shouldValidate: true });
+  };
+
+  const handleEvidenciaFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0];
+    event.target.value = "";
+    if (!selected) return;
+    if (evidenciaPreviewUrl) URL.revokeObjectURL(evidenciaPreviewUrl);
+    setEvidenciaPathSubido(null);
+    setEvidenciaFile(selected);
+    setEvidenciaPreviewUrl(URL.createObjectURL(selected));
+    setValue("evidencia_url", [BITACORA_RECIBO_PENDIENTE], { shouldValidate: true });
+  };
 
   const selectedMisionId = watch("solicitud_id");
   const selectedVehiculoId = watch("vehiculo_id");
@@ -193,8 +235,14 @@ export function Crear({
       setAveriaVehiculoFijo(null);
       setEditingIds(new Set());
       setCombustibleMisionAviso(null);
+      setReciboCombustibleObligatorio(false);
+      clearEvidencia();
       return;
     }
+
+    setEvidenciaFile(null);
+    setEvidenciaPreviewUrl(null);
+    setEvidenciaPathSubido(null);
 
     reset({
       solicitud_id: "",
@@ -206,6 +254,7 @@ export function Crear({
       vale_combustible: "",
       monto_combustible: 0,
       comentarios: [],
+      evidencia_url: [],
     });
   }, [open, reset, user?.id]);
 
@@ -227,6 +276,9 @@ export function Crear({
 
     if (!selectedMisionId) {
       setCombustibleMisionAviso(null);
+      setReciboCombustibleObligatorio(false);
+      clearEvidencia();
+      clearErrors("evidencia_url");
       return;
     }
 
@@ -235,11 +287,19 @@ export function Crear({
     void getCombustibleAprobadoPorMision(selectedMisionId).then((row) => {
       if (cancelled) return;
 
+      const requiereRecibo = misionRequiereReciboCombustible(row);
+      setReciboCombustibleObligatorio(requiereRecibo);
+
+      if (!requiereRecibo) {
+        clearEvidencia();
+        clearErrors("evidencia_url");
+      }
+
       if (!row) {
         setValue("vale_combustible", "", { shouldValidate: false });
         setValue("monto_combustible", 0, { shouldValidate: false });
         setCombustibleMisionAviso(
-          "No hay solicitud de combustible aprobada vinculada a esta misión. Puede registrar vale y monto manualmente.",
+          "No hay solicitud de combustible aprobada vinculada a esta misión.",
         );
         return;
       }
@@ -247,7 +307,7 @@ export function Crear({
       const datos = combustibleAprobadoParaBitacora(row);
       if (!datos) {
         setCombustibleMisionAviso(
-          "La solicitud de combustible no tiene rango de cupones. Complete vale y monto manualmente.",
+          "Hay combustible aprobado sin rango de cupones. Complete vale y monto manualmente.",
         );
         return;
       }
@@ -257,11 +317,11 @@ export function Crear({
 
       if (datos.monto > 0) {
         setCombustibleMisionAviso(
-          `${datos.cantidad} cupón(es) asignados a esta misión · vale ${datos.vale}`,
+          `${datos.cantidad} cupón(es) entregados · vale ${datos.vale}. Debe adjuntar el recibo de carga.`,
         );
       } else {
         setCombustibleMisionAviso(
-          `Vale ${datos.vale} (${datos.cantidad} cupón(es)). Indique el monto total si la aprobación es anterior a registrar la denominación.`,
+          `Vale ${datos.vale} (${datos.cantidad} cupón(es) entregados). Adjunte el recibo; indique el monto si falta denominación en la aprobación.`,
         );
       }
     });
@@ -269,7 +329,7 @@ export function Crear({
     return () => {
       cancelled = true;
     };
-  }, [open, selectedMisionId, setValue]);
+  }, [open, selectedMisionId, setValue, clearErrors]);
 
   useEffect(() => {
     if (selectedVehiculoId && !selectedMisionId) {
@@ -282,6 +342,18 @@ export function Crear({
   }, [selectedVehiculoId, selectedMisionId, vehiculos, setValue]);
 
   const onFormValidated = (data: BitacoraInput) => {
+    if (reciboCombustibleObligatorio) {
+      const tieneRecibo =
+        Boolean(evidenciaFile) ||
+        Boolean(evidenciaPathSubido) ||
+        (data.evidencia_url?.includes(BITACORA_RECIBO_PENDIENTE) ?? false);
+      if (!tieneRecibo) {
+        setError("evidencia_url", {
+          message: "Debe adjuntar el recibo de combustible de esta misión.",
+        });
+        return;
+      }
+    }
     setPendingBitacora(data);
     setConsultaAveriaOpen(true);
   };
@@ -290,8 +362,47 @@ export function Crear({
     data: BitacoraInput,
     huboAveria: boolean,
   ): Promise<"listo" | "reporte_pendiente" | "error"> => {
+    setSubiendoEvidencia(true);
     try {
-      const res = await crear.mutateAsync(data);
+      let evidenciaPaths = data.evidencia_url ?? [];
+
+      if (reciboCombustibleObligatorio && !evidenciaFile && !evidenciaPathSubido) {
+        toast.error("Debe adjuntar el recibo de combustible de esta misión.");
+        return "error";
+      }
+
+      if (!reciboCombustibleObligatorio) {
+        evidenciaPaths = [];
+      }
+
+      if (evidenciaFile && !evidenciaPathSubido) {
+        const compressed = await comprimirImagenVehiculo(evidenciaFile);
+        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.jpg`;
+        const filePath = rutaStorageVehiculos(VEHICULOS_STORAGE_CARPETA_RECIBOS, fileName);
+        const supabase = createClient();
+
+        const { error: uploadError } = await supabase.storage
+          .from(VEHICULOS_STORAGE_BUCKET)
+          .upload(filePath, compressed, {
+            upsert: false,
+            contentType: "image/jpeg",
+          });
+
+        if (uploadError) {
+          toast.error(`Error subiendo la imagen: ${uploadError.message}`);
+          return "error";
+        }
+
+        evidenciaPaths = [filePath];
+        setEvidenciaPathSubido(filePath);
+        if (evidenciaPreviewUrl) URL.revokeObjectURL(evidenciaPreviewUrl);
+        setEvidenciaFile(null);
+        setEvidenciaPreviewUrl(null);
+      } else if (evidenciaPathSubido) {
+        evidenciaPaths = [evidenciaPathSubido];
+      }
+
+      const res = await crear.mutateAsync({ ...data, evidencia_url: evidenciaPaths });
       if (!res.success) {
         toast.error(res.error || "Hubo un error al guardar la bitácora");
         return "error";
@@ -333,6 +444,8 @@ export function Crear({
     } catch {
       toast.error("Error inesperado");
       return "error";
+    } finally {
+      setSubiendoEvidencia(false);
     }
   };
 
@@ -357,7 +470,8 @@ export function Crear({
     onOpenChange(false);
   };
 
-  const flujoBloqueado = consultaAveriaOpen || reportarAveriaOpen || crear.isPending;
+  const flujoBloqueado =
+    consultaAveriaOpen || reportarAveriaOpen || crear.isPending || subiendoEvidencia;
 
   const handleClose = () => {
     if (crear.isPending) return;
@@ -556,6 +670,86 @@ export function Crear({
                 <p className="text-xs text-muted-foreground">{combustibleMisionAviso}</p>
               ) : null}
 
+              {reciboCombustibleObligatorio ? (
+              <ModalField>
+                <ModalLabel>
+                  Recibo de combustible
+                  <span className="ml-1 text-red-500" aria-hidden>
+                    *
+                  </span>
+                </ModalLabel>
+                <p className="text-xs text-muted-foreground">
+                  Esta misión tiene vales de combustible aprobados. Fotografía del recibo de carga
+                  (máx. 200 KB, JPG, PNG o WEBP). En celular puedes tomar foto con la cámara.
+                </p>
+                {errors.evidencia_url ? (
+                  <p className="text-xs text-red-500">{errors.evidencia_url.message}</p>
+                ) : null}
+                {evidenciaPreviewUrl ? (
+                  <div
+                    className={cn(
+                      "relative overflow-hidden rounded-2xl border border-border bg-zinc-100 dark:bg-zinc-950",
+                      modalFieldClass,
+                    )}
+                  >
+                    <div className="flex min-h-[11rem] items-center justify-center p-3 sm:min-h-[13rem]">
+                      <img
+                        src={evidenciaPreviewUrl}
+                        alt="Vista previa del recibo"
+                        className="max-h-52 w-full object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-2 border-t border-border/80 bg-white/90 px-3 py-2.5 backdrop-blur-sm dark:bg-zinc-900/90">
+                      <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-sky-100 px-3 py-1.5 text-xs font-bold text-[#2c5f9b] transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:text-[#6f9fd4] dark:hover:bg-sky-900">
+                        Cambiar
+                        <input
+                          type="file"
+                          accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+                          capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
+                          className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
+                          aria-label="Cambiar recibo de combustible"
+                          onChange={handleEvidenciaFileChange}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={clearEvidencia}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-red-100 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-200 dark:bg-red-950/80 dark:text-red-400 dark:hover:bg-red-900/80"
+                      >
+                        <X className="size-3.5" />
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    className={cn(
+                      "relative flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300/90 bg-gradient-to-b from-sky-50/80 to-zinc-50/40 px-6 py-8 text-center transition-colors hover:border-[#2c5f9b]/50 hover:from-sky-100/90 hover:to-sky-50/50 dark:border-zinc-600 dark:from-sky-950/25 dark:to-zinc-950/40 dark:hover:border-[#6f9fd4]/50 dark:hover:from-sky-950/40",
+                      modalFieldClass,
+                    )}
+                  >
+                    <div className="pointer-events-none mb-4 flex size-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-sky-200/80 dark:bg-zinc-900 dark:ring-sky-900/60">
+                      <UploadCloud className="size-7 text-[#2c5f9b] dark:text-[#6f9fd4]" />
+                    </div>
+                    <p className="pointer-events-none text-base font-bold text-[#2c5f9b] dark:text-[#6f9fd4]">
+                      Tomar foto o subir recibo
+                    </p>
+                    <p className="pointer-events-none mt-2 max-w-xs text-sm text-muted-foreground">
+                      En celular se abre la cámara o la galería; en computadora, elige un archivo
+                    </p>
+                    <input
+                      type="file"
+                      accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
+                      capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
+                      className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
+                      aria-label="Tomar foto o subir recibo de combustible"
+                      onChange={handleEvidenciaFileChange}
+                    />
+                  </label>
+                )}
+              </ModalField>
+              ) : null}
+
               <ModalField>
                 <ModalLabel>Comentarios del viaje</ModalLabel>
                 <p className="text-xs text-muted-foreground">
@@ -679,7 +873,10 @@ export function Crear({
 
             <GvModalFooter>
               <ModalCancelButton onClick={handleClose} disabled={flujoBloqueado} />
-              <ModalSubmit disabled={flujoBloqueado} label="Registrar" />
+              <ModalSubmit
+                disabled={flujoBloqueado}
+                label={subiendoEvidencia ? "Subiendo" : "Registrar"}
+              />
             </GvModalFooter>
           </GvModalForm>
         ) : null}

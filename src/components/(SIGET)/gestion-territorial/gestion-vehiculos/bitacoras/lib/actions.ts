@@ -3,13 +3,16 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
-import { normalizeBitacoraRow } from "./helpers";
+import { evidenciasBitacora, normalizeBitacoraRow } from "./helpers";
 import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
 import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
-import type { CombustibleAprobadoMision } from "./combustible-mision";
+import {
+  misionRequiereReciboCombustible,
+  type CombustibleAprobadoMision,
+} from "./combustible-mision";
 
 const TABLE = "ot_bitacoras";
 const SOLICITUD_COMBUSTIBLE_TABLE = "ot_solicitud_combustible";
@@ -61,6 +64,18 @@ export async function createBitacora(input: BitacoraInput) {
     const parsed = bitacoraInputSchema.parse(input);
     const comentarios = toComentariosJsonbPayload(parsed.comentarios);
     const solicitudId = parsed.solicitud_id?.trim() || null;
+    let evidenciaPaths = evidenciasBitacora(parsed);
+
+    if (solicitudId) {
+      const combustibleMision = await fetchCombustibleAprobadoPorMision(supabase, solicitudId);
+      if (misionRequiereReciboCombustible(combustibleMision) && evidenciaPaths.length === 0) {
+        return {
+          success: false,
+          error:
+            "Esta misión tiene combustible aprobado con vales entregados. Debe adjuntar el recibo.",
+        };
+      }
+    }
 
     if (solicitudId) {
       const { data: solicitud, error: solicitudError } = await supabase
@@ -104,6 +119,7 @@ export async function createBitacora(input: BitacoraInput) {
       vale_combustible: parsed.vale_combustible || null,
       monto_combustible: parsed.monto_combustible,
       comentarios,
+      evidencia_url: evidenciaPaths,
       fecha: new Date().toISOString(),
     });
 
@@ -221,6 +237,52 @@ export async function getSolicitudesEnMision() {
   }
 }
 
+async function fetchCombustibleAprobadoPorMision(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  solicitudVehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = solicitudVehiculoId.trim();
+  if (!id) return null;
+
+  const { data, error } = await supabase
+    .from(SOLICITUD_COMBUSTIBLE_TABLE)
+    .select("cupon_del, cupon_al, denominacion_cupon")
+    .eq("solicitud_vehiculo_id", id)
+    .eq("estado", "APROBADO")
+    .order("fecha_aprobacion", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error?.message?.includes("denominacion_cupon")) {
+    const { data: legacy, error: legacyError } = await supabase
+      .from(SOLICITUD_COMBUSTIBLE_TABLE)
+      .select("cupon_del, cupon_al")
+      .eq("solicitud_vehiculo_id", id)
+      .eq("estado", "APROBADO")
+      .order("fecha_aprobacion", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (legacyError || !legacy) return null;
+    return {
+      cupon_del: legacy.cupon_del as number,
+      cupon_al: legacy.cupon_al as number,
+      denominacion_cupon: null,
+    };
+  }
+
+  if (error || !data) return null;
+
+  if (data.cupon_del == null || data.cupon_al == null) return null;
+
+  return {
+    cupon_del: Number(data.cupon_del),
+    cupon_al: Number(data.cupon_al),
+    denominacion_cupon:
+      data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
+  };
+}
+
 export async function getCombustibleAprobadoPorMision(
   solicitudVehiculoId: string,
 ): Promise<CombustibleAprobadoMision | null> {
@@ -229,44 +291,7 @@ export async function getCombustibleAprobadoPorMision(
 
   try {
     const { supabase } = await requireAuth();
-
-    const { data, error } = await supabase
-      .from(SOLICITUD_COMBUSTIBLE_TABLE)
-      .select("cupon_del, cupon_al, denominacion_cupon")
-      .eq("solicitud_vehiculo_id", id)
-      .eq("estado", "APROBADO")
-      .order("fecha_aprobacion", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error?.message?.includes("denominacion_cupon")) {
-      const { data: legacy, error: legacyError } = await supabase
-        .from(SOLICITUD_COMBUSTIBLE_TABLE)
-        .select("cupon_del, cupon_al")
-        .eq("solicitud_vehiculo_id", id)
-        .eq("estado", "APROBADO")
-        .order("fecha_aprobacion", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (legacyError || !legacy) return null;
-      return {
-        cupon_del: legacy.cupon_del as number,
-        cupon_al: legacy.cupon_al as number,
-        denominacion_cupon: null,
-      };
-    }
-
-    if (error || !data) return null;
-
-    if (data.cupon_del == null || data.cupon_al == null) return null;
-
-    return {
-      cupon_del: Number(data.cupon_del),
-      cupon_al: Number(data.cupon_al),
-      denominacion_cupon:
-        data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
-    };
+    return await fetchCombustibleAprobadoPorMision(supabase, id);
   } catch (error) {
     console.error("getCombustibleAprobadoPorMision:", error);
     return null;

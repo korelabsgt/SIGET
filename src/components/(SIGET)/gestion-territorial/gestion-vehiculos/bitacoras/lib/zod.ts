@@ -70,6 +70,7 @@ export const bitacoraInputSchema = z
     vale_combustible: z.string().optional().nullable(),
     monto_combustible: z.coerce.number().min(0).default(0),
     comentarios: z.array(bitacoraComentarioInputSchema).default([]),
+    evidencia_url: z.array(z.string().min(1)).max(1).default([]),
   })
   .refine((data) => data.km_final >= data.km_inicial, {
     message: "El kilometraje final debe ser mayor o igual al inicial",
@@ -91,6 +92,7 @@ export type BitacoraRow = {
   vale_combustible: string | null;
   monto_combustible: number;
   comentarios: BitacoraComentariosJsonb;
+  evidencia_url: string[];
   created_at: string;
 
   ot_vehiculos?: {
