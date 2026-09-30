@@ -2,24 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import {
-  fechaCalendarioDesdePartes,
-  normalizarParteFechaAnio,
-  normalizarParteFechaDia,
-  normalizarParteFechaMes,
-  partesFechaCalendario,
-} from "../lib/zod";
+import { formatFechaManualGt, parseFechaManualGt } from "@/lib/fechas-gt";
+import { REGISTRO_PUBLICO_FIELD_CLASS } from "./modal-field-class";
 
-const parteInputClass =
-  "h-10 min-w-0 flex-1 rounded-lg border border-zinc-200/80 bg-transparent px-2 py-2 text-center text-sm tabular-nums text-foreground outline-none transition-colors focus-visible:border-zinc-400 focus-visible:ring-2 focus-visible:ring-zinc-400/25 dark:border-zinc-700 dark:focus-visible:border-zinc-500 dark:focus-visible:ring-zinc-500/30";
+const slotClass =
+  "bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground";
 
 export function FechaNacimientoCampos({
   value,
   onChange,
   required = false,
   diaId = "fecha-nac-dia",
-  mesId = "fecha-nac-mes",
-  anioId = "fecha-nac-anio",
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -27,92 +21,190 @@ export function FechaNacimientoCampos({
   diaId?: string;
   mesId?: string;
   anioId?: string;
+  className?: string;
 }) {
   const [dia, setDia] = useState("");
   const [mes, setMes] = useState("");
   const [anio, setAnio] = useState("");
+  const diaRef = useRef<HTMLInputElement>(null);
   const mesRef = useRef<HTMLInputElement>(null);
   const anioRef = useRef<HTMLInputElement>(null);
+  const enFoco = useRef(false);
 
   useEffect(() => {
-    const partes = partesFechaCalendario(value);
-    setDia(partes.dia);
-    setMes(partes.mes);
-    setAnio(partes.anio);
+    if (enFoco.current) return;
+    const formatted = formatFechaManualGt(value);
+    if (!formatted) {
+      if (!value) {
+        setDia("");
+        setMes("");
+        setAnio("");
+      }
+      return;
+    }
+    const [d, m, y] = formatted.split("/");
+    setDia(d ?? "");
+    setMes(m ?? "");
+    setAnio(y ?? "");
   }, [value]);
 
-  const emit = (nextDia: string, nextMes: string, nextAnio: string) => {
-    onChange(fechaCalendarioDesdePartes(nextDia, nextMes, nextAnio));
+  const emitir = (d: string, m: string, y: string) => {
+    if (!d && !m && !y) {
+      onChange("");
+      return;
+    }
+    if (d.length === 2 && m.length === 2 && y.length === 4) {
+      const parsed = parseFechaManualGt(`${d}/${m}/${y}`);
+      if (parsed) onChange(parsed);
+    }
   };
 
-  const handleDia = (raw: string) => {
-    const next = normalizarParteFechaDia(raw);
-    setDia(next);
-    emit(next, mes, anio);
-    if (next.length === 2) mesRef.current?.focus();
+  const soloDigitos = (raw: string, max: number) =>
+    raw.replace(/\D/g, "").slice(0, max);
+
+  const aplicarPegado = (texto: string) => {
+    const digits = texto.replace(/\D/g, "").slice(0, 8);
+    if (!digits) return;
+    const d = digits.slice(0, 2);
+    const m = digits.slice(2, 4);
+    const y = digits.slice(4, 8);
+    setDia(d);
+    setMes(m);
+    setAnio(y);
+    emitir(d, m, y);
+    if (y.length === 4) anioRef.current?.focus();
+    else if (m.length === 2) anioRef.current?.focus();
+    else if (d.length === 2) mesRef.current?.focus();
   };
 
-  const handleMes = (raw: string) => {
-    const next = normalizarParteFechaMes(raw);
-    setMes(next);
-    emit(dia, next, anio);
-    if (next.length === 2) anioRef.current?.focus();
+  const marcarFoco = () => {
+    enFoco.current = true;
   };
-
-  const handleAnio = (raw: string) => {
-    const next = normalizarParteFechaAnio(raw);
-    setAnio(next);
-    emit(dia, mes, next);
+  const soltarFoco = () => {
+    enFoco.current = false;
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div
+      className={cn(
+        REGISTRO_PUBLICO_FIELD_CLASS,
+        "items-center gap-1",
+        className,
+      )}
+    >
       <input
         id={diaId}
+        ref={diaRef}
         type="text"
         inputMode="numeric"
         autoComplete="bday-day"
         placeholder="DD"
-        value={dia}
-        onChange={(e) => handleDia(e.target.value)}
         maxLength={2}
         required={required}
         aria-label="Día de nacimiento"
-        className={cn(parteInputClass, "max-w-[4.5rem]")}
+        value={dia}
+        onFocus={marcarFoco}
+        onBlur={soltarFoco}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 2);
+          setDia(next);
+          emitir(next, mes, anio);
+          if (next.length === 2) mesRef.current?.focus();
+        }}
+        onKeyDown={(e) => {
+          if (
+            e.key === "ArrowRight" &&
+            (diaRef.current?.selectionStart ?? 0) >= dia.length
+          ) {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+        }}
+        className={cn(slotClass, "w-8")}
       />
-      <span className="shrink-0 text-sm font-semibold text-muted-foreground">
-        /
-      </span>
+      <span className="text-muted-foreground">/</span>
       <input
         ref={mesRef}
-        id={mesId}
         type="text"
         inputMode="numeric"
         autoComplete="bday-month"
         placeholder="MM"
-        value={mes}
-        onChange={(e) => handleMes(e.target.value)}
         maxLength={2}
-        required={required}
         aria-label="Mes de nacimiento"
-        className={cn(parteInputClass, "max-w-[4.5rem]")}
+        value={mes}
+        onFocus={marcarFoco}
+        onBlur={soltarFoco}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 2);
+          setMes(next);
+          emitir(dia, next, anio);
+          if (next.length === 2) anioRef.current?.focus();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" && mes === "") {
+            e.preventDefault();
+            diaRef.current?.focus();
+          }
+          if (
+            e.key === "ArrowLeft" &&
+            (mesRef.current?.selectionStart ?? 0) === 0
+          ) {
+            e.preventDefault();
+            diaRef.current?.focus();
+          }
+          if (
+            e.key === "ArrowRight" &&
+            (mesRef.current?.selectionStart ?? 0) >= mes.length
+          ) {
+            e.preventDefault();
+            anioRef.current?.focus();
+          }
+        }}
+        className={cn(slotClass, "w-8")}
       />
-      <span className="shrink-0 text-sm font-semibold text-muted-foreground">
-        /
-      </span>
+      <span className="text-muted-foreground">/</span>
       <input
         ref={anioRef}
-        id={anioId}
         type="text"
         inputMode="numeric"
         autoComplete="bday-year"
         placeholder="AAAA"
-        value={anio}
-        onChange={(e) => handleAnio(e.target.value)}
         maxLength={4}
-        required={required}
         aria-label="Año de nacimiento"
-        className={cn(parteInputClass, "max-w-[5.5rem]")}
+        value={anio}
+        onFocus={marcarFoco}
+        onBlur={soltarFoco}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 4);
+          setAnio(next);
+          emitir(dia, mes, next);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" && anio === "") {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+          if (
+            e.key === "ArrowLeft" &&
+            (anioRef.current?.selectionStart ?? 0) === 0
+          ) {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+        }}
+        className={cn(slotClass, "w-12")}
       />
     </div>
   );

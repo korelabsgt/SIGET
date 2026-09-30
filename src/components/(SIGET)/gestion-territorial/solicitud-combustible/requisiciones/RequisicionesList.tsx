@@ -18,8 +18,10 @@ import type { SolicitudCombustibleRow } from "../solicitudes/lib/zod";
 import {
   cantidadCuponesSolicitud,
   formatCuponesAsignados,
+  formatDenominacionCuponSolicitud,
   formatEntreganteNombre,
   formatFechaAprobacionCombustible,
+  formatMontoEntregaCombustible,
   formatSolicitanteNombre,
   formatVehiculoSolicitudCombustible,
 } from "../solicitudes/lib/helpers";
@@ -49,6 +51,12 @@ function RequisicionRowItem({
         {formatCuponesAsignados(row)}
       </td>
       <td className="px-4 py-3 align-middle text-sm tabular-nums">{cantidad > 0 ? cantidad : "—"}</td>
+      <td className="px-4 py-3 align-middle text-sm tabular-nums">
+        {formatDenominacionCuponSolicitud(row)}
+      </td>
+      <td className="px-4 py-3 align-middle text-sm tabular-nums font-semibold">
+        {formatMontoEntregaCombustible(row)}
+      </td>
       <td className={gvTableActionTdClass}>
         <GestionVehiculosActionCell>
           <GvSigetActionButton
@@ -96,6 +104,8 @@ export function RequisicionesList({
           { key: "entregante", label: "Entregado por" },
           { key: "cupones", label: "Cupones (del – al)" },
           { key: "cantidad", label: "Cantidad" },
+          { key: "denominacion", label: "Denominación" },
+          { key: "monto", label: "Monto entregado" },
           { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}
       />

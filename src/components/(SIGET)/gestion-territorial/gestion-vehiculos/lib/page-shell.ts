@@ -1,5 +1,14 @@
+export const GV_MODULO_PAGE_MOBILE_INSET_CLASS =
+  "mx-auto my-3 w-full max-md:max-w-[calc(100%-2rem)] md:my-4";
+
 export const GV_MODULO_PAGE_CLASS =
-  "relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col !p-0 my-3 md:my-4 max-md:max-w-[calc(100%-2rem)] xl:max-w-none xl:w-[90%]";
+  `relative flex min-h-0 max-w-6xl flex-1 flex-col !p-0 xl:max-w-none xl:w-[90%] ${GV_MODULO_PAGE_MOBILE_INSET_CLASS}`;
+
+export const GV_MODULO_SCROLL_OUTER_CLASS =
+  "relative flex min-h-[calc(100vh-4rem)] w-full flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0";
+
+export const GV_MODULO_SCROLL_INNER_CLASS =
+  "min-h-[calc(100vh-4rem)] flex flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden";
 
 export const GV_TABLE_AREA_CLASS = "flex min-h-0 w-full min-w-0 flex-1 flex-col";
 

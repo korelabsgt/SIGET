@@ -1,12 +1,27 @@
 export const FLOTA_MANAGE_ROLES = ["admin", "administrador-ot", "admin-ot"] as const;
 
 export function normalizeRoleSlug(role: string): string {
-  return role.trim().toLowerCase().replace(/[\s_]+/g, "-");
+  return role
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[\s_]+/g, "-");
 }
 
 export function isSuperRole(role: string | null | undefined): boolean {
   if (!role) return false;
   return normalizeRoleSlug(role) === "super";
+}
+
+export function roleFromAuthUser(user: {
+  user_metadata?: Record<string, unknown>;
+  role?: string;
+}): string {
+  const meta = user.user_metadata?.rol;
+  if (typeof meta === "string" && meta.trim()) return meta.trim();
+  if (user.role && user.role !== "authenticated") return user.role;
+  return "user";
 }
 
 export function isAdministradorOtRole(role: string | null | undefined): boolean {
@@ -40,6 +55,10 @@ export function canViewAlertasFlota(role: string | null | undefined): boolean {
   return canManageFlota(role);
 }
 
+export function canViewGvCampanaNotificaciones(role: string | null | undefined): boolean {
+  return canViewAlertasFlota(role);
+}
+
 export function canManageSolicitudesVehiculos(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;
@@ -66,11 +85,20 @@ export function canGestionarMisionSolicitud(
   return Boolean(userId && solicitudSolicitanteId === userId);
 }
 
-export function canAccessGestionTerritorial(role: string | null | undefined): boolean {
+export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;
+
   const slug = normalizeRoleSlug(role);
-  return slug === "admin" || isAdministradorOtRole(role);
+  if (slug === "admin" || isAdministradorOtRole(role)) return true;
+  if (slug === "user") return true;
+  if (slug === "taller" || slug === "mecanico") return true;
+
+  return false;
+}
+
+export function canAccessGestionTerritorial(role: string | null | undefined): boolean {
+  return canSeeFlotaYCombustible(role);
 }
 
 export function canViewAllSolicitudes(role: string | null | undefined): boolean {
@@ -98,7 +126,10 @@ export function canExportMantenimientoReporte(role: string | null | undefined): 
 }
 
 export function canViewAllFallasMantenimiento(role: string | null | undefined): boolean {
-  return canManageFlota(role);
+  if (!role) return false;
+  if (isSuperRole(role) || canManageFlota(role)) return true;
+  const slug = normalizeRoleSlug(role);
+  return slug === "taller" || slug === "mecanico";
 }
 
 export function canGestionarFallasMantenimiento(role: string | null | undefined): boolean {

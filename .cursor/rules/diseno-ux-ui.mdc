@@ -39,5 +39,6 @@ alwaysApply: true
 | `ui-graficos` | Donas, barras, anillos de progreso, KPIs |
 | `ui-animaciones-listas` | Filas/tarjetas que se agregan o quitan |
 | `ui-offline-banner` | Layouts sticky, estado offline/lento |
+| `ui-visor-pdf` | PDF/imagen pública: `/archivos/[token]`, proxy `/raw`, `ManualPdfMobileViewer` (sin iframe ni Storage) |
 
 Todos en `.cursor/skills/`.

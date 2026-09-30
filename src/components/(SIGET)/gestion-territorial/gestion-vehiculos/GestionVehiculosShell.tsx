@@ -10,11 +10,19 @@ import {
   GV_SUBMODULO_TITLES,
   type GvSubmoduloId,
 } from "./lib/tab-context";
+import { useRequireFlotaYCombustible } from "./lib/gv-permissions-hook";
 import { GvPageChromeProvider } from "./lib/gv-page-chrome";
-import { GV_PANEL_STACK_CLASS, GV_TABLE_AREA_CLASS } from "./lib/page-shell";
+import {
+  GV_MODULO_SCROLL_INNER_CLASS,
+  GV_MODULO_SCROLL_OUTER_CLASS,
+  GV_PANEL_STACK_CLASS,
+  GV_TABLE_AREA_CLASS,
+} from "./lib/page-shell";
 import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
 import { useGvDetailScrollToTop } from "./lib/scroll-detail-to-top";
 import { cn } from "@/lib/utils";
+import { GvDemoCleanupPortal } from "./lib/gv-demo-cleanup-tools";
+
 function PanelFallback() {
   return (
     <div className="flex min-h-[40vh] flex-1 items-center justify-center">
@@ -46,10 +54,8 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
   { id: "mantenimiento", Panel: Mantenimiento },
 ];
 
-const SCROLL_ROOT_CLASS =
-  "min-h-[calc(100vh-4rem)] flex flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden";
-
 function GestionVehiculosShellInner() {
+  const allowed = useRequireFlotaYCombustible();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -106,14 +112,14 @@ function GestionVehiculosShellInner() {
 
   useGvDetailScrollToTop(true, section);
 
+  if (!allowed) return null;
+
   return (
     <GvSectionProvider section={section} selectSection={selectSection}>
       <GvPageChromeProvider>
-        <div
-          data-gv-scroll-root
-          className="relative flex min-h-[calc(100vh-4rem)] w-full flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0"
-        >
-          <div data-gv-scroll-root className={SCROLL_ROOT_CLASS}>
+        <GvDemoCleanupPortal />
+        <div data-gv-scroll-root className={GV_MODULO_SCROLL_OUTER_CLASS}>
+          <div data-gv-scroll-root className={GV_MODULO_SCROLL_INNER_CLASS}>
             <div className={GV_TABLE_AREA_CLASS}>
               {PANELS.map(({ id, Panel }) =>
                 visited.has(id) ? (

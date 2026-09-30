@@ -110,6 +110,7 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
   const [enviado, setEnviado] = useState(false);
   const [dpi, setDpi] = useState("");
   const [participanteEncontrado, setParticipanteEncontrado] = useState(false);
+  const [yaAsistio, setYaAsistio] = useState(false);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -145,12 +146,20 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
       toast.warn("Ingresa un DPI válido de 13 dígitos.");
       return;
     }
-    const participante = await buscar.mutateAsync(dpiValor);
+    const res = await buscar.mutateAsync({
+      actividadId: actividad.id,
+      dpi: dpiValor,
+    });
     limpiarDatosPersonales(setters);
-    if (participante) {
-      aplicarParticipante(participante, setters);
+    setYaAsistio(res.yaAsistio);
+    if (res.participante) {
+      aplicarParticipante(res.participante, setters);
       setParticipanteEncontrado(true);
-      toast.success("Participante encontrado. Revisa tus datos.");
+      if (res.yaAsistio) {
+        toast.info("Ya marcaste asistencia. Puedes modificar algún dato si lo deseas.");
+      } else {
+        toast.success("Participante encontrado. Revisa tus datos.");
+      }
     } else {
       setParticipanteEncontrado(false);
       toast.info("DPI no registrado. Completa tus datos.");
@@ -160,17 +169,25 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
 
   const handleSeleccionarDpi = async (sugerencia: DpiSugerencia) => {
     setDpi(sugerencia.dpi);
-    const participante = await buscar.mutateAsync(sugerencia.dpi);
+    const res = await buscar.mutateAsync({
+      actividadId: actividad.id,
+      dpi: sugerencia.dpi,
+    });
     limpiarDatosPersonales(setters);
-    if (participante) {
-      aplicarParticipante(participante, setters);
+    setYaAsistio(res.yaAsistio);
+    if (res.participante) {
+      aplicarParticipante(res.participante, setters);
       setParticipanteEncontrado(true);
     } else {
       setNombre(sugerencia.nombre);
       setParticipanteEncontrado(true);
     }
     setPaso("formulario");
-    toast.success("Datos cargados. Revisa y confirma.");
+    if (res.yaAsistio) {
+      toast.info("Ya marcaste asistencia. Puedes modificar algún dato si lo deseas.");
+    } else {
+      toast.success("Datos cargados. Revisa y confirma.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,7 +211,11 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
     const res = await registrar.mutateAsync(parsed.data);
     if (res.success) {
       setEnviado(true);
-      toast.success("Asistencia registrada correctamente.");
+      toast.success(
+        yaAsistio
+          ? "Tus datos se actualizaron."
+          : "Asistencia registrada correctamente.",
+      );
     } else {
       const mensaje = actionErrorMessage(
         res,
@@ -212,7 +233,9 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
           ¡Registro exitoso!
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Tu asistencia a «{actividad.nombre}» ha sido registrada.
+          {yaAsistio
+            ? `Tus datos de «${actividad.nombre}» se actualizaron.`
+            : `Tu asistencia a «${actividad.nombre}» ha sido registrada.`}
         </p>
       </div>
     );
@@ -320,12 +343,17 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
                 </button>
               </div>
 
-              {participanteEncontrado && (
+              {yaAsistio ? (
+                <p className="rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                  Ya marcaste asistencia. Puedes modificar algún dato si lo
+                  deseas.
+                </p>
+              ) : participanteEncontrado ? (
                 <p className="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                   Datos cargados desde registros anteriores. Puedes
                   actualizarlos.
                 </p>
-              )}
+              ) : null}
 
               <div className="space-y-2">
                 <FieldLabel>Nombre completo</FieldLabel>
@@ -398,11 +426,13 @@ export function RegistroPublico({ actividad }: { actividad: ActividadRecord }) {
               disabled={registrar.isPending || !fechaNacimiento}
               className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-0 bg-emerald-200 text-[10px] font-bold uppercase tracking-widest text-emerald-900 transition-colors hover:bg-emerald-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-800/70 dark:text-emerald-50 dark:hover:bg-emerald-700/80"
             >
-              {registrar.isPending ? (
+                {registrar.isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Enviando…
                 </>
+              ) : yaAsistio ? (
+                "Actualizar datos"
               ) : (
                 "Registrar asistencia"
               )}

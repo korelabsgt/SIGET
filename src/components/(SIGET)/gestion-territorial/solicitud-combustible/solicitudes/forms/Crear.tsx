@@ -26,7 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useVehiculos } from "../../../gestion-vehiculos/flota/lib/hooks";
-import { formatVehiculoOpcion } from "../../../gestion-vehiculos/flota/lib/helpers";
+import {
+  formatVehiculoOpcion,
+  listarVehiculosCatalogoFlota,
+} from "../../../gestion-vehiculos/flota/lib/helpers";
 import { useSolicitudes } from "../../../gestion-vehiculos/solicitudes/lib/hooks";
 
 import {
@@ -85,7 +88,7 @@ export function CrearSolicitudCombustible({
   const vehiculoFijadoPorMision = misionSeleccionada?.vehiculo_id ?? null;
 
   const vehiculosEnSelector = useMemo(() => {
-    const lista = vehiculos.filter((v) => v.id);
+    const lista = listarVehiculosCatalogoFlota(vehiculos);
     if (vehiculoFijadoPorMision) {
       return lista.filter((v) => v.id === vehiculoFijadoPorMision);
     }

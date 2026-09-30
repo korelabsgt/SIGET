@@ -7,11 +7,62 @@ import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-veh
 import { canAprobarRechazarSolicitudes, canManageSolicitudesVehiculos, canViewAllSolicitudes, isSuperRole } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 import { formatEstadoLabel } from "./helpers";
+import {
+  findConflictoDiaVehiculo,
+  validarFechasMisionNoAnterioresAHoyGt,
+  type SolicitudCalendarioRef,
+} from "./calendario-reservas";
+import { formatFechaCalendarioGt, formatFechaHoraGt } from "@/lib/fechas-gt";
 import { type SolicitudInput, solicitudInputSchema, type SolicitudRow } from "./zod";
 
 const TABLE = "ot_solicitudes";
 const REVALIDATE_ROUTE = GV_BASE_ROUTE;
 const FLOTA_ROUTE = GV_BASE_ROUTE;
+const ESTADOS_CALENDARIO = ["PENDIENTE", "APROBADA", "EN_MISION"] as const;
+
+async function fetchSolicitudesCalendario(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  vehiculoId?: string,
+): Promise<SolicitudCalendarioRef[]> {
+  let query = supabase
+    .from(TABLE)
+    .select("id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada")
+    .in("estado", [...ESTADOS_CALENDARIO]);
+
+  if (vehiculoId) {
+    query = query.eq("vehiculo_id", vehiculoId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SolicitudCalendarioRef[];
+}
+
+function mensajeConflictoDiaVehiculo(
+  dia: string,
+  estado?: SolicitudCalendarioRef["estado"],
+  bloqueo?: Pick<SolicitudCalendarioRef, "fecha_inicio" | "fecha_fin_estimada">,
+): string {
+  const etiqueta = formatFechaCalendarioGt(dia, {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const rangoBloqueo = bloqueo
+    ? ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)}, retorno ${formatFechaHoraGt(bloqueo.fecha_fin_estimada)})`
+    : "";
+
+  if (estado === "APROBADA") {
+    return `Ese vehículo ya tiene una misión aprobada el ${etiqueta}${rangoBloqueo}. Solo una reserva por vehículo y día.`;
+  }
+  if (estado === "EN_MISION") {
+    return `Ese vehículo ya está en misión el ${etiqueta}${rangoBloqueo}. Solo una reserva por vehículo y día.`;
+  }
+  if (estado === "PENDIENTE") {
+    return `Ese vehículo ya tiene otra solicitud pendiente el ${etiqueta}${rangoBloqueo}. Revise Pendientes o elija otro vehículo.`;
+  }
+  return `Ese vehículo ya tiene una solicitud o misión el ${etiqueta}${rangoBloqueo}. Solo una reserva por vehículo y día.`;
+}
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -69,6 +120,14 @@ export async function createSolicitud(input: SolicitudInput) {
 
     const { vehiculo_id, ...rest } = parsed;
 
+    const fechasHoy = validarFechasMisionNoAnterioresAHoyGt(
+      rest.fecha_inicio,
+      rest.fecha_fin_estimada,
+    );
+    if (!fechasHoy.ok) {
+      return { success: false, error: fechasHoy.message };
+    }
+
     const supabase = await createClient();
 
     if (vehiculo_id) {
@@ -84,10 +143,26 @@ export async function createSolicitud(input: SolicitudInput) {
       if (!vehiculo) {
         return { success: false, error: "El vehículo seleccionado no existe." };
       }
-      if (vehiculo.estado !== "LIBRE") {
+      if (vehiculo.estado === "EN_MANTENIMIENTO") {
         return {
           success: false,
-          error: "El vehículo seleccionado ya no está disponible. Elija otro o deje sin preferencia.",
+          error: "El vehículo está en mantenimiento. Elija otro o deje sin preferencia.",
+        };
+      }
+
+      const calendario = await fetchSolicitudesCalendario(supabase, vehiculo_id);
+      const conflicto = findConflictoDiaVehiculo(
+        {
+          vehiculo_id,
+          fecha_inicio: rest.fecha_inicio,
+          fecha_fin_estimada: rest.fecha_fin_estimada,
+        },
+        calendario,
+      );
+      if (conflicto) {
+        return {
+          success: false,
+          error: mensajeConflictoDiaVehiculo(conflicto.dia, conflicto.estado, conflicto),
         };
       }
     }
@@ -113,16 +188,26 @@ export async function createSolicitud(input: SolicitudInput) {
     if (error) {
       console.error("Error DB createSolicitud:", error);
       if (error.code === "23P01" || error.message?.includes("no_empalmes")) {
-         return { success: false, error: "El rango de fechas coincide con otra reserva confirmada para este vehículo." };
+        return {
+          success: false,
+          error: "Ese vehículo ya tiene otra reserva en uno de los días seleccionados.",
+        };
       }
       return { success: false, error: error.message };
     }
 
+    if (vehiculo_id) {
+      const admin = createAdminClient();
+      await sincronizarEstadoFlotaVehiculo(admin, vehiculo_id);
+    }
+
     revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(FLOTA_ROUTE);
     return { success: true, data };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error en createSolicitud:", err);
-    return { success: false, error: err.message || "Error desconocido" };
+    const message = err instanceof Error ? err.message : "Error desconocido";
+    return { success: false, error: message };
   }
 }
 
@@ -165,7 +250,7 @@ export async function cambiarEstadoSolicitud(
 
     const { data: actual, error: actualError } = await supabase
       .from(TABLE)
-      .select("id, solicitante_id, vehiculo_id, estado")
+      .select("id, solicitante_id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada")
       .eq("id", id)
       .maybeSingle();
 
@@ -216,15 +301,28 @@ export async function cambiarEstadoSolicitud(
         return { success: false, error: "No se pudo verificar el vehículo asignado." };
       }
 
-      const yaAsignadoAEsta = actual.vehiculo_id === vehiculoAsignado;
-      const disponible =
-        vehiculo.estado === "LIBRE" ||
-        (yaAsignadoAEsta && vehiculo.estado === "RESERVADO");
-
-      if (!disponible) {
+      if (vehiculo.estado === "EN_MANTENIMIENTO") {
         return {
           success: false,
-          error: "El vehículo ya no está disponible. Elija otro.",
+          error: "El vehículo está en mantenimiento. Elija otro.",
+        };
+      }
+
+      const calendario = await fetchSolicitudesCalendario(supabase, vehiculoAsignado);
+      const conflicto = findConflictoDiaVehiculo(
+        {
+          id: actual.id,
+          vehiculo_id: vehiculoAsignado,
+          fecha_inicio: actual.fecha_inicio,
+          fecha_fin_estimada: actual.fecha_fin_estimada,
+        },
+        calendario,
+        { incluirPendiente: false },
+      );
+      if (conflicto) {
+        return {
+          success: false,
+          error: mensajeConflictoDiaVehiculo(conflicto.dia, conflicto.estado, conflicto),
         };
       }
     }
@@ -258,7 +356,7 @@ export async function cambiarEstadoSolicitud(
       if (error.code === "23P01" || error.message?.includes("no_empalmes")) {
         return {
           success: false,
-          error: "Error de empalme: El vehículo ya tiene una misión confirmada en esas fechas.",
+          error: "Ese vehículo ya tiene otra reserva en uno de los días seleccionados.",
         };
       }
       if (error.code === "23503") {

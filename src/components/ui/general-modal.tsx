@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Ban, Check, Save, Trash, Trash2, X } from "lucide";
@@ -123,45 +123,184 @@ export function ModalFechaInput({
   required?: boolean;
   className?: string;
 }) {
-  const [inputValue, setInputValue] = useState("");
+  const [dia, setDia] = useState("");
+  const [mes, setMes] = useState("");
+  const [anio, setAnio] = useState("");
+  const diaRef = useRef<HTMLInputElement>(null);
+  const mesRef = useRef<HTMLInputElement>(null);
+  const anioRef = useRef<HTMLInputElement>(null);
+  const enFoco = useRef(false);
 
   useEffect(() => {
-    setInputValue(formatFechaManualGt(value));
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let digits = e.target.value.replace(/\D/g, "");
-    if (digits.length > 8) digits = digits.slice(0, 8);
-
-    let formatted = digits;
-    if (digits.length > 2 && digits.length <= 4) {
-      formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    } else if (digits.length > 4) {
-      formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    }
-
-    setInputValue(formatted);
-
-    if (formatted.length === 10) {
-      const parsed = parseFechaManualGt(formatted);
-      if (parsed) onChange(parsed);
+    if (enFoco.current) return;
+    const formatted = formatFechaManualGt(value);
+    if (!formatted) {
+      if (!value) {
+        setDia("");
+        setMes("");
+        setAnio("");
+      }
       return;
     }
+    const [d, m, y] = formatted.split("/");
+    setDia(d ?? "");
+    setMes(m ?? "");
+    setAnio(y ?? "");
+  }, [value]);
 
-    if (formatted === "") onChange("");
+  const emitir = (d: string, m: string, y: string) => {
+    if (!d && !m && !y) {
+      onChange("");
+      return;
+    }
+    if (d.length === 2 && m.length === 2 && y.length === 4) {
+      const parsed = parseFechaManualGt(`${d}/${m}/${y}`);
+      if (parsed) onChange(parsed);
+    }
+  };
+
+  const soloDigitos = (raw: string, max: number) =>
+    raw.replace(/\D/g, "").slice(0, max);
+
+  const aplicarPegado = (texto: string) => {
+    const digits = texto.replace(/\D/g, "").slice(0, 8);
+    if (!digits) return;
+    const d = digits.slice(0, 2);
+    const m = digits.slice(2, 4);
+    const y = digits.slice(4, 8);
+    setDia(d);
+    setMes(m);
+    setAnio(y);
+    emitir(d, m, y);
+    if (y.length === 4) anioRef.current?.focus();
+    else if (m.length === 2) anioRef.current?.focus();
+    else if (d.length === 2) mesRef.current?.focus();
   };
 
   return (
-    <ModalInput
-      id={id}
-      type="text"
-      inputMode="numeric"
-      placeholder="DD/MM/AAAA"
-      value={inputValue}
-      onChange={handleChange}
-      required={required}
-      className={className}
-    />
+    <div
+      className={cn(
+        modalInputBaseClass,
+        modalFieldClass,
+        "items-center gap-1 px-3",
+        className,
+      )}
+    >
+      <input
+        id={id}
+        ref={diaRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="DD"
+        maxLength={2}
+        required={required}
+        aria-label="Día"
+        value={dia}
+        onFocus={() => {
+          enFoco.current = true;
+        }}
+        onBlur={() => {
+          enFoco.current = false;
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 2);
+          setDia(next);
+          emitir(next, mes, anio);
+          if (next.length === 2) mesRef.current?.focus();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" && (diaRef.current?.selectionStart ?? 0) >= dia.length) {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+        }}
+        className="w-8 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+      />
+      <span className="text-muted-foreground">/</span>
+      <input
+        ref={mesRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="MM"
+        maxLength={2}
+        aria-label="Mes"
+        value={mes}
+        onFocus={() => {
+          enFoco.current = true;
+        }}
+        onBlur={() => {
+          enFoco.current = false;
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 2);
+          setMes(next);
+          emitir(dia, next, anio);
+          if (next.length === 2) anioRef.current?.focus();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" && mes === "") {
+            e.preventDefault();
+            diaRef.current?.focus();
+          }
+          if (e.key === "ArrowLeft" && (mesRef.current?.selectionStart ?? 0) === 0) {
+            e.preventDefault();
+            diaRef.current?.focus();
+          }
+          if (e.key === "ArrowRight" && (mesRef.current?.selectionStart ?? 0) >= mes.length) {
+            e.preventDefault();
+            anioRef.current?.focus();
+          }
+        }}
+        className="w-8 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+      />
+      <span className="text-muted-foreground">/</span>
+      <input
+        ref={anioRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="AAAA"
+        maxLength={4}
+        aria-label="Año"
+        value={anio}
+        onFocus={() => {
+          enFoco.current = true;
+        }}
+        onBlur={() => {
+          enFoco.current = false;
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          aplicarPegado(e.clipboardData.getData("text"));
+        }}
+        onChange={(e) => {
+          const next = soloDigitos(e.target.value, 4);
+          setAnio(next);
+          emitir(dia, mes, next);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" && anio === "") {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+          if (e.key === "ArrowLeft" && (anioRef.current?.selectionStart ?? 0) === 0) {
+            e.preventDefault();
+            mesRef.current?.focus();
+          }
+        }}
+        className="w-12 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+      />
+    </div>
   );
 }
 

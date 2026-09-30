@@ -11,6 +11,7 @@ import {
   fotosVehiculo,
   imagenUrlParaDb,
   MIN_FOTOS_VEHICULO,
+  listarVehiculosCatalogoFlota,
   normalizeVehiculoRow,
   separarFotosVehiculo,
 } from "./helpers";
@@ -20,7 +21,6 @@ import {
   VEHICULOS_STORAGE_BUCKET,
 } from "../../lib/storage";
 import { canManageFlota, isSuperRole } from "../../lib/permissions";
-import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ot_vehiculos";
@@ -68,7 +68,8 @@ export async function getVehiculos(): Promise<VehiculoRow[]> {
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  const rows = (data ?? []).map((row) => normalizeVehiculoRow(row as VehiculoRow));
+  return listarVehiculosCatalogoFlota(rows);
 }
 
 export async function getVehiculo(id: string): Promise<VehiculoRow | null> {
@@ -137,18 +138,18 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
 
   const { data, error } = await supabase
     .from(TABLE)
-    .insert([payload])
+    .insert([
+      {
+        ...payload,
+        km_referencia_servicio: payload.kilometraje_actual,
+      },
+    ])
     .select("*")
     .single();
 
   if (error) throw new Error(mapImagenesDbError(error.message));
 
   const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
-  await aplicarMantenimientoForzadoPorKm(supabase, {
-    vehiculoId: vehiculo.id ?? "",
-    kmActual: vehiculo.kilometraje_actual,
-    reportadoPor: user.id,
-  });
 
   revalidatePath(REVALIDATE_ROUTE);
   return vehiculo;
@@ -186,11 +187,6 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
   if (error) throw new Error(mapImagenesDbError(error.message));
 
   const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
-  await aplicarMantenimientoForzadoPorKm(supabase, {
-    vehiculoId: id,
-    kmActual: vehiculo.kilometraje_actual,
-    reportadoPor: user.id,
-  });
 
   revalidatePath(REVALIDATE_ROUTE);
   return vehiculo;

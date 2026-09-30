@@ -5,7 +5,8 @@ import { MantenimientoPanel } from "./MantenimientoPanel";
 import { MantenimientoNotificaciones } from "./MantenimientoNotificaciones";
 import { MantenimientoStatsCards } from "./MantenimientoStatsCards";
 import { Crear } from "./forms/Crear";
-import { Loader2 } from "lucide-react";
+import { VerEditar } from "./forms/VerEditar";
+import { Loader2, Wrench } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "react-toastify";
 import {
@@ -18,7 +19,13 @@ import {
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
-import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
+import {
+  GestionVehiculosTableEmpty,
+  GestionVehiculosTableShell,
+  GvTableKpiSlot,
+  GV_TABLE_BODY_CENTER_CLASS,
+  gvTableShellVisibleRows,
+} from "../lib/table-ui";
 import {
   GV_FILTRO_FIELD_CLASS,
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
@@ -45,6 +52,7 @@ import {
   canExportMantenimientoReporte,
   canGestionarFallasMantenimiento,
   canManageMantenimiento,
+  canViewGvCampanaNotificaciones,
   canViewAllFallasMantenimiento,
 } from "../lib/permissions";
 import { type FallaRow } from "./lib/zod";
@@ -77,7 +85,13 @@ export function Mantenimiento() {
   const canExport = canExportMantenimientoReporte(gvRole);
   const canGestionar = canGestionarFallasMantenimiento(gvRole);
   const canViewAll = canViewAllFallasMantenimiento(gvRole);
-  const { data: fallas = [], isLoading } = useFallasMantenimiento();
+  const puedeVerCampana = canViewGvCampanaNotificaciones(gvRole);
+  const {
+    data: fallas = [],
+    isLoading,
+    isError,
+    error: fallasError,
+  } = useFallasMantenimiento();
   const { data: mecanicos = [] } = useMecanicos();
   const { data: vehiculosFlota = [] } = useVehiculos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
@@ -85,6 +99,10 @@ export function Mantenimiento() {
   const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
   const [isExporting, setIsExporting] = useState(false);
   const [detailFalla, setDetailFalla] = useState<FallaRow | null>(null);
+  const [fallaAccion, setFallaAccion] = useState<{
+    falla: FallaRow;
+    modo: "atender" | "solventar";
+  } | null>(null);
 
   const vehiculosVinculados = useMemo(
     () => extractVehiculosVinculadosFallas(fallas),
@@ -94,7 +112,11 @@ export function Mantenimiento() {
   const vehiculosParaFiltro = canViewAll ? vehiculosFlota : vehiculosVinculados;
 
   const fallasDelPeriodo = useMemo(
-    () => fallas.filter((f) => registroEnPeriodoCalendario(f.created_at, periodoFilter)),
+    () =>
+      fallas.filter((f) => {
+        if (f.estado !== "SOLVENTADA") return true;
+        return registroEnPeriodoCalendario(f.created_at, periodoFilter);
+      }),
     [fallas, periodoFilter],
   );
 
@@ -220,7 +242,21 @@ export function Mantenimiento() {
   return (
     <>
       <GvHeaderExtras panelId="mantenimiento">
-        {!isLoading ? <MantenimientoNotificaciones fallas={fallas} /> : null}
+        {!isLoading && puedeVerCampana ? (
+          <MantenimientoNotificaciones
+            fallas={fallas}
+            onAbrirFalla={(falla) => {
+              if (canGestionar) {
+                setFallaAccion({
+                  falla,
+                  modo: falla.estado === "EN_REPARACION" ? "solventar" : "atender",
+                });
+                return;
+              }
+              setDetailFalla(falla);
+            }}
+          />
+        ) : null}
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="mantenimiento">
       <GestionVehiculosTableShell
@@ -309,6 +345,16 @@ export function Mantenimiento() {
             <div className={GV_TABLE_BODY_CENTER_CLASS}>
               <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
             </div>
+          ) : isError ? (
+            <GestionVehiculosTableEmpty
+              icon={<Wrench className="size-10" />}
+              title="No se pudieron cargar las averías"
+              description={
+                fallasError instanceof Error
+                  ? fallasError.message
+                  : "Revise la conexión o permisos en Supabase."
+              }
+            />
           ) : (
             <MantenimientoPanel
               fallas={fallasPaginadas}
@@ -321,6 +367,16 @@ export function Mantenimiento() {
           )}
         </GestionVehiculosTableShell>
       </GvTableSectionMotion>
+
+      {fallaAccion ? (
+        <VerEditar
+          open
+          onClose={() => setFallaAccion(null)}
+          modo={fallaAccion.modo}
+          falla={fallaAccion.falla}
+          mecanicos={mecanicos}
+        />
+      ) : null}
     </>
   );
 }

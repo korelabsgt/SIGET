@@ -24,7 +24,7 @@ const REVALIDATE_ROUTE = COMBUSTIBLE_BASE_ROUTE;
 
 const SELECT_QUERY_BASE = `
   *,
-  vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo),
+  vehiculo:ot_vehiculos!vehiculo_id(id, placa, marca, modelo, anio),
   solicitante:profiles!solicitante_id(id, nombre, email),
   entregante:profiles!entregante_id(id, nombre, email)
 `;

@@ -6,9 +6,12 @@ import { es } from "date-fns/locale";
 import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import type { SolicitudCombustibleRow } from "../../solicitudes/lib/zod";
 import {
+  REQUISICION_COMBUSTIBLE_ENTREGADO_POR_CARGO,
   cantidadCuponesSolicitud,
   formatEntreganteNombre,
   formatSolicitanteNombre,
+  montoTotalEntregaCombustible,
+  denominacionCuponSolicitud,
 } from "../../solicitudes/lib/helpers";
 
 const COLUMN_COUNT = 10;
@@ -328,12 +331,15 @@ function buildRequisicionSheet(
   const cantidad = cantidadCuponesSolicitud(row);
   const cuponDel = row.cupon_del ?? "";
   const cuponAl = row.cupon_al ?? "";
+  const denominacion = denominacionCuponSolicitud(row);
+  const montoTotal = montoTotalEntregaCombustible(row);
 
   sheet.getCell(17, 4).value = cantidad > 0 ? cantidad : "";
-  sheet.getCell(17, 5).value = "";
-  mergeSet(sheet, 17, 6, 7, "", {
-    alignment: { horizontal: "center", vertical: "middle" },
-  });
+  sheet.getCell(17, 5).value = denominacion ?? "";
+  sheet.mergeCells(17, 6, 17, 7);
+  const totalCell = sheet.getCell(17, 6);
+  totalCell.value = montoTotal ?? "";
+  totalCell.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getCell(17, 8).value = cuponDel;
   mergeSet(sheet, 17, 9, 10, cuponAl === "" ? "" : String(cuponAl), {
     alignment: { horizontal: "center", vertical: "middle" },
@@ -345,10 +351,11 @@ function buildRequisicionSheet(
     font: { bold: true, size: 10 },
     alignment: { horizontal: "right", vertical: "middle" },
   });
-  mergeSet(sheet, 20, 6, 7, "", {
-    font: { bold: true, size: 10 },
-    alignment: { horizontal: "center", vertical: "middle" },
-  });
+  sheet.mergeCells(20, 6, 20, 7);
+  const granTotalCell = sheet.getCell(20, 6);
+  granTotalCell.value = montoTotal ?? "";
+  granTotalCell.font = { bold: true, size: 10 };
+  granTotalCell.alignment = { horizontal: "center", vertical: "middle" };
 
   mergeSet(sheet, 21, 1, 10, `Lugar y Fecha: ${fechaLugarEsquipulas(row)}`, {
     font: { size: 10 },
@@ -368,7 +375,7 @@ function buildRequisicionSheet(
     font: { bold: true, size: 10 },
     alignment: { horizontal: "center", vertical: "middle" },
   });
-  mergeSet(sheet, 26, 6, 10, "Asistente Financiera OT", {
+  mergeSet(sheet, 26, 6, 10, REQUISICION_COMBUSTIBLE_ENTREGADO_POR_CARGO, {
     font: { size: 9 },
     alignment: { horizontal: "center", vertical: "middle" },
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Car, CarFront, CirclePlus, Loader2, Plus } from "lucide";
 import { toast } from "react-toastify";
 
@@ -30,10 +30,14 @@ import { GvExportReporteButton } from "../../gestion-vehiculos/lib/gv-export-ui"
 import { GvMonthPicker } from "../../gestion-vehiculos/lib/gv-month-picker";
 import { useGvTablePagination } from "../../gestion-vehiculos/lib/table-pagination";
 import { useVehiculos } from "../../gestion-vehiculos/flota/lib/hooks";
-import { formatVehiculoOpcion } from "../../gestion-vehiculos/flota/lib/helpers";
+import {
+  formatVehiculoOpcion,
+  listarVehiculosCatalogoFlota,
+} from "../../gestion-vehiculos/flota/lib/helpers";
 import { cn } from "@/lib/utils";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../../gestion-vehiculos/lib/gv-permissions-hook";
+import { useGvClientMounted } from "../../gestion-vehiculos/lib/use-gv-client-mounted";
 import {
   canAprobarRechazarSolicitudCombustible,
   canExportCombustibleExcel,
@@ -71,11 +75,16 @@ const filtroItemClass =
   "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
 
 export function SolicitudesCombustible() {
+  const filtrosMontados = useGvClientMounted();
   const gvRole = useGvPermissionRole();
   const canResolver = canAprobarRechazarSolicitudCombustible(gvRole);
   const canExport = canExportCombustibleExcel(gvRole);
   const { data: solicitudes = [], isLoading } = useSolicitudesCombustible();
   const { data: vehiculosFlota = [] } = useVehiculos();
+  const vehiculosCatalogoFlota = useMemo(
+    () => listarVehiculosCatalogoFlota(vehiculosFlota),
+    [vehiculosFlota],
+  );
 
   const [tabActiva, setTabActiva] = useState<TabSolicitudCombustible>("TODAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
@@ -86,6 +95,13 @@ export function SolicitudesCombustible() {
   const [accion, setAccion] = useState<"APROBAR" | "RECHAZAR" | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportingAll, setExportingAll] = useState(false);
+
+  useEffect(() => {
+    if (vehiculoFilter === TODOS_VEHICULOS_REQUISICION) return;
+    if (!vehiculosCatalogoFlota.some((v) => v.id === vehiculoFilter)) {
+      setVehiculoFilter(TODOS_VEHICULOS_REQUISICION);
+    }
+  }, [vehiculoFilter, vehiculosCatalogoFlota]);
 
   const requisicionesAprobadas = useMemo(
     () => filtrarRequisicionesCombustible(solicitudes, vehiculoFilter, periodoFilter),
@@ -165,7 +181,7 @@ export function SolicitudesCombustible() {
 
       const vehiculoSeleccionado =
         vehiculoFilter !== TODOS_VEHICULOS_REQUISICION
-          ? vehiculosFlota.find((v) => v.id === vehiculoFilter)
+          ? vehiculosCatalogoFlota.find((v) => v.id === vehiculoFilter)
           : undefined;
       const filenameSuffix = vehiculoSeleccionado?.placa?.trim() || undefined;
 
@@ -199,7 +215,13 @@ export function SolicitudesCombustible() {
     setPage(1);
   };
 
-  const vehiculoSelect = (
+  const vehiculoFiltroLabel = useMemo(() => {
+    if (vehiculoFilter === TODOS_VEHICULOS_REQUISICION) return "Todos los vehículos";
+    const vehiculo = vehiculosCatalogoFlota.find((v) => v.id === vehiculoFilter);
+    return vehiculo ? formatVehiculoOpcion(vehiculo) : "Todos los vehículos";
+  }, [vehiculoFilter, vehiculosCatalogoFlota]);
+
+  const vehiculoSelect = filtrosMontados ? (
     <Select value={vehiculoFilter} onValueChange={handleVehiculoChange}>
       <SelectTrigger className={cn(filtroTriggerClass, "gap-2")} data-morph-hover-scope>
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
@@ -220,23 +242,34 @@ export function SolicitudesCombustible() {
         >
           Todos los vehículos
         </SelectItem>
-        {vehiculosFlota
-          .filter((v) => v.id)
-          .map((v) => {
-            const label = formatVehiculoOpcion(v);
-            return (
-              <SelectItem
-                key={v.id}
-                value={v.id as string}
-                textValue={label}
-                className={filtroItemClass}
-              >
-                {label}
-              </SelectItem>
-            );
-          })}
+        {vehiculosCatalogoFlota.map((v) => {
+          const label = formatVehiculoOpcion(v);
+          return (
+            <SelectItem
+              key={v.id}
+              value={v.id as string}
+              textValue={label}
+              className={filtroItemClass}
+            >
+              {label}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
+  ) : (
+    <div
+      className={cn(filtroTriggerClass, "flex items-center gap-2")}
+      aria-hidden
+    >
+      <GvMorphIcon
+        icon={Car}
+        hoverIcon={CarFront}
+        size={16}
+        className="shrink-0 text-celeste-trifinio"
+      />
+      <span className="min-w-0 truncate">{vehiculoFiltroLabel}</span>
+    </div>
   );
 
   return (

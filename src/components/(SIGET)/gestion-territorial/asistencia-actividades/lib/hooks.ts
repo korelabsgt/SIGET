@@ -8,23 +8,38 @@ import {
   deleteRegistro,
   getActividad,
   getActividades,
-  getParticipantePorDpi,
+  getParticipanteParaRegistroPublico,
   getRegistrosActividad,
   buscarDpisRegistrados,
   registrarAsistencia,
   updateActividad,
+  guardarGpsActividad,
+  setActividadActiva,
   updateRegistro,
   getUsuariosParaMinuta,
+  getUsuariosParaAsignar,
   getElaboroMinuta,
   getMinuta as getMinutaAction,
   guardarMinuta as guardarMinutaAction,
+  getArchivosActividad,
+  crearCarpetaArchivo,
+  registrarArchivo,
+  editarArchivoNodo,
+  eliminarArchivoNodo,
+  asegurarTokenArchivosActividad,
+  asegurarTokenArchivoNodo,
+  urlArchivoNodo,
 } from "./actions";
 import type {
   ActividadFormValues,
+  GpsActividadValues,
   RegistroPublicoValues,
   RegistroEditValues,
   ActividadRecord,
   MinutaGuardarValues,
+  CarpetaArchivoValues,
+  RegistrarArchivoValues,
+  EditarArchivoNodoValues,
 } from "./zod";
 import type { MinutaEstado, MinutaRecord } from "./minuta";
 
@@ -82,6 +97,48 @@ export function useEditarActividad() {
   });
 }
 
+export function useGuardarGpsActividad() {
+  const invalidate = useInvalidateActividades();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: GpsActividadValues }) =>
+      guardarGpsActividad(id, values),
+    onSuccess: (_data, vars) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: [...ACTIVIDADES_KEY, vars.id] });
+    },
+  });
+}
+
+export function useSetActividadActiva() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, activo }: { id: string; activo: boolean }) =>
+      setActividadActiva(id, activo),
+    onSuccess: (_data, vars) => {
+      qc.setQueriesData(
+        { queryKey: ACTIVIDADES_KEY },
+        (prev: unknown) => {
+          if (Array.isArray(prev)) {
+            return prev.map((act: ActividadRecord) =>
+              act.id === vars.id ? { ...act, activo: vars.activo } : act,
+            );
+          }
+          if (
+            prev &&
+            typeof prev === "object" &&
+            "id" in prev &&
+            (prev as ActividadRecord).id === vars.id
+          ) {
+            return { ...(prev as ActividadRecord), activo: vars.activo };
+          }
+          return prev;
+        },
+      );
+    },
+  });
+}
+
 export function useEliminarActividad() {
   const invalidate = useInvalidateActividades();
   return useMutation({
@@ -92,7 +149,13 @@ export function useEliminarActividad() {
 
 export function useBuscarParticipante() {
   return useMutation({
-    mutationFn: (dpi: string) => getParticipantePorDpi(dpi),
+    mutationFn: ({
+      actividadId,
+      dpi,
+    }: {
+      actividadId: string;
+      dpi: string;
+    }) => getParticipanteParaRegistroPublico(actividadId, dpi),
   });
 }
 
@@ -131,6 +194,15 @@ export function useEditarRegistro(actividadId: string) {
       qc.invalidateQueries({ queryKey: ["asist-registros", actividadId] });
       qc.invalidateQueries({ queryKey: ACTIVIDADES_KEY });
     },
+  });
+}
+
+export function useUsuariosParaAsignar(enabled = true) {
+  return useQuery({
+    queryKey: ["asist-usuarios-asignar"],
+    queryFn: getUsuariosParaAsignar,
+    enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -297,4 +369,101 @@ export function useMinutaBorrador(actividad: ActividadRecord | undefined) {
     guardarMinuta,
     guardando: guardar.isPending,
   };
+}
+
+const ARCHIVOS_KEY = ["asist-archivos"];
+
+export function useArchivosActividad(actividadId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...ARCHIVOS_KEY, actividadId],
+    queryFn: () => getArchivosActividad(actividadId),
+    enabled: enabled && !!actividadId,
+  });
+}
+
+function useInvalidateArchivos(actividadId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: [...ARCHIVOS_KEY, actividadId] });
+    qc.invalidateQueries({ queryKey: ACTIVIDADES_KEY });
+  };
+}
+
+export function useCrearCarpetaArchivo(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: (values: CarpetaArchivoValues) => crearCarpetaArchivo(values),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRegistrarArchivo(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: (values: RegistrarArchivoValues) => registrarArchivo(values),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEditarArchivoNodo(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: (values: EditarArchivoNodoValues) => editarArchivoNodo(values),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEliminarArchivoNodo(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: (id: string) => eliminarArchivoNodo(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAsegurarTokenArchivosActividad(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: () => asegurarTokenArchivosActividad(actividadId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAsegurarTokenArchivoNodo(actividadId: string) {
+  const invalidate = useInvalidateArchivos(actividadId);
+  return useMutation({
+    mutationFn: (id: string) => asegurarTokenArchivoNodo(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUrlArchivoNodo() {
+  return useMutation({
+    mutationFn: (id: string) => urlArchivoNodo(id),
+  });
+}
+
+export function leerPosicionActual(): Promise<{
+  lat: number;
+  lng: number;
+  precision_m: number | null;
+}> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject(new Error("unsupported"));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          precision_m: Number.isFinite(pos.coords.accuracy)
+            ? pos.coords.accuracy
+            : null,
+        }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  });
 }

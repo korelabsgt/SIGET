@@ -15,8 +15,8 @@ import {
 import { createPortal } from "react-dom";
 
 import { GvBackToTerritorial } from "./gv-back-to-territorial";
+import { GvModuloPageFrame } from "./gv-modulo-page-frame";
 import { GvSectionSelect } from "./gv-section-select";
-import { GV_MODULO_PAGE_CLASS } from "./page-shell";
 import { useGvSection, type GvSubmoduloId } from "./tab-context";
 
 type GvPageChromeDispatch = {
@@ -59,8 +59,7 @@ function GvPageChromeLayout({
   headerExtrasContainerRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div className={GV_MODULO_PAGE_CLASS}>
-      <div className="pointer-events-none fixed inset-0 z-[-1] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-30 dark:bg-[radial-gradient(oklch(50%_0_0)_1px,transparent_1px)]" />
+    <GvModuloPageFrame>
       {!hideChrome ? (
         <div className="mb-6 flex shrink-0 items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -69,14 +68,17 @@ function GvPageChromeLayout({
               Gestión de vehículos
             </h1>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <div ref={headerExtrasContainerRef} className="flex shrink-0 items-center gap-2" />
-            <GvSectionSelect />
+          <div className="flex shrink-0 flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2">
+            <div
+              ref={headerExtrasContainerRef}
+              className="flex shrink-0 items-center gap-2 lg:order-2"
+            />
+            <GvSectionSelect className="lg:order-1" />
           </div>
         </div>
       ) : null}
       {children}
-    </div>
+    </GvModuloPageFrame>
   );
 }
 

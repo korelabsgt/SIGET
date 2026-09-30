@@ -9,6 +9,7 @@ import { formatFechaActividad } from "./lib/zod";
 import {
   minutaTieneContenido,
   resumenAcuerdos,
+  resumenActividades,
   htmlATexto,
   type MinutaRecord,
 } from "./lib/minuta";
@@ -65,6 +66,14 @@ export function Minuta({
   const existe = listo && minuta !== null && minutaTieneContenido(minuta);
   const acuerdosResumen = minuta ? resumenAcuerdos(minuta) : [];
   const totalAcuerdos = minuta?.acuerdos.length ?? 0;
+  const actividadesResumen = minuta ? resumenActividades(minuta) : [];
+  const totalActividades = minuta
+    ? minuta.actividadesRealizadas.filter(
+        (bloque) =>
+          bloque.titulo.trim().length > 0 ||
+          bloque.items.some((item) => htmlATexto(item).length > 0),
+      ).length
+    : 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -136,6 +145,29 @@ export function Minuta({
                 <p className="line-clamp-3 text-xs leading-relaxed text-foreground">
                   {htmlATexto(minuta!.introduccion)}
                 </p>
+              </div>
+            ) : null}
+
+            {totalActividades > 0 ? (
+              <div>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Actividades realizadas ({totalActividades})
+                </p>
+                <ul className="space-y-1.5">
+                  {actividadesResumen.map((linea, i) => (
+                    <li
+                      key={i}
+                      className="flex gap-2 text-xs text-foreground before:shrink-0 before:font-bold before:text-[#2c5f9b] before:content-['•'] dark:before:text-[#6f9fd4]"
+                    >
+                      <span className="line-clamp-2">{linea}</span>
+                    </li>
+                  ))}
+                  {totalActividades > actividadesResumen.length ? (
+                    <li className="text-xs text-muted-foreground">
+                      +{totalActividades - actividadesResumen.length} actividades más
+                    </li>
+                  ) : null}
+                </ul>
               </div>
             ) : null}
 

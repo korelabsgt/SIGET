@@ -253,6 +253,25 @@ export function saveVistaMinuta(actividadId: string, abierta: boolean): void {
   }
 }
 
+export function resumenActividades(
+  minuta: MinutaRecord,
+  limite = 3,
+): string[] {
+  return minuta.actividadesRealizadas
+    .filter(
+      (bloque) =>
+        bloque.titulo.trim().length > 0 ||
+        bloque.items.some((item) => htmlATexto(item).length > 0),
+    )
+    .slice(0, limite)
+    .map(
+      (bloque) =>
+        bloque.titulo.trim() ||
+        htmlATexto(bloque.items.find((item) => htmlATexto(item).length > 0) ?? "") ||
+        "Sin título",
+    );
+}
+
 export function resumenAcuerdos(minuta: MinutaRecord, limite = 3): string[] {
   return minuta.acuerdos
     .filter(

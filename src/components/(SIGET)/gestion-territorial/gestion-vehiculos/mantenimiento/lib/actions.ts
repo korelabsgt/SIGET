@@ -19,7 +19,10 @@ import {
   canGestionarFallasMantenimiento,
   canViewAllFallasMantenimiento,
 } from "../../lib/permissions";
+import { FALLAS_MANTENIMIENTO_SELECT } from "./fallas-query";
+import { esFallaServicioKmProgramado, getKmReferenciaServicio } from "../../flota/lib/helpers";
 import { vehiculoDisponibleParaReporteFalla, evidenciasFalla, normalizeFallaRow } from "./helpers";
+import { roleFromAuthUser } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
 const TABLE = "ot_fallas_mantenimiento";
@@ -34,8 +37,7 @@ async function requireAuth() {
 
   if (!user) throw new Error("No autenticado.");
 
-  const role =
-    (user.user_metadata?.rol as string | undefined) || user.role || "user";
+  const role = roleFromAuthUser(user);
 
   return { supabase, user, role };
 }
@@ -45,12 +47,7 @@ export async function getFallasMantenimiento(): Promise<FallaRow[]> {
 
   let query = supabase
     .from(TABLE)
-    .select(`
-      *,
-      vehiculo:ot_vehiculos(placa, marca, modelo),
-      reportador:profiles!ot_fallas_mantenimiento_reportado_por_fkey(nombre),
-      mecanico:profiles!ot_fallas_mantenimiento_mecanico_id_fkey(nombre)
-    `)
+    .select(FALLAS_MANTENIMIENTO_SELECT)
     .order("created_at", { ascending: false });
 
   if (!canViewAllFallasMantenimiento(role)) {
@@ -212,7 +209,7 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
 
     const { data: falla, error: fetchError } = await supabase
       .from(TABLE)
-      .select("id, vehiculo_id, vehiculo:ot_vehiculos(kilometraje_actual)")
+      .select("id, vehiculo_id, descripcion, vehiculo:ot_vehiculos(kilometraje_actual, km_referencia_servicio)")
       .eq("id", parsed.data.falla_id)
       .maybeSingle();
 
@@ -234,15 +231,25 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
       throw new Error("No se pudo marcar la avería como solventada.");
     }
 
-    await sincronizarEstadoFlotaVehiculo(supabase, falla.vehiculo_id);
-
     const vehiculoRel = falla.vehiculo as
-      | { kilometraje_actual: number }
-      | { kilometraje_actual: number }[]
+      | { kilometraje_actual: number; km_referencia_servicio?: number | null }
+      | { kilometraje_actual: number; km_referencia_servicio?: number | null }[]
       | null;
-    const kmActual = Array.isArray(vehiculoRel)
-      ? vehiculoRel[0]?.kilometraje_actual
-      : vehiculoRel?.kilometraje_actual;
+    const vehiculoRow = Array.isArray(vehiculoRel) ? vehiculoRel[0] : vehiculoRel;
+    const kmActual = vehiculoRow?.kilometraje_actual;
+
+    if (kmActual != null && esFallaServicioKmProgramado(falla.descripcion)) {
+      const { error: refError } = await supabase
+        .from("ot_vehiculos")
+        .update({ km_referencia_servicio: kmActual })
+        .eq("id", falla.vehiculo_id);
+
+      if (refError) {
+        throw new Error("No se pudo actualizar la referencia del último servicio.");
+      }
+    }
+
+    await sincronizarEstadoFlotaVehiculo(supabase, falla.vehiculo_id);
 
     if (kmActual != null) {
       await aplicarMantenimientoForzadoPorKm(supabase, {

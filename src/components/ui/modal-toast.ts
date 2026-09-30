@@ -7,10 +7,14 @@ export const MODAL_ACTION_ERRORS: Record<string, string> = {
   FORBIDDEN: "No tienes permisos para esta acción.",
   INVALID_INPUT: "Revisa los datos del formulario.",
   DUPLICATE: "Este DPI ya está registrado en esta actividad.",
+  DUPLICATE_NAME: "Ya existe una actividad con ese nombre.",
   NOT_FOUND: "La actividad no está disponible.",
   DB_ERROR: "No se pudo guardar. Intenta de nuevo.",
   SAVE_FAILED: "No se pudo guardar. Intenta de nuevo.",
   DELETE_FAILED: "No se pudo eliminar.",
+  STORAGE_ERROR: "No se pudo guardar el archivo.",
+  DUPLICATE_FILE: "Ya existe un archivo o carpeta con ese nombre.",
+  LIMIT_FILES: "Máximo 5 archivos en esta pestaña.",
   HAS_CHILDREN:
     "Primero elimina o reubica las dependencias hijas y los puestos de esta unidad.",
   FIRST_PUESTO_JEFE_REQUIRED:
