@@ -7,12 +7,9 @@ import { cn } from "@/lib/utils";
 
 export default function ConditionalFooter() {
   const pathname = usePathname();
-<<<<<<< HEAD
   if (pathname === "/") return null;
   if (pathname === "/paz-hidrica-ja") return null;
-=======
-  if (pathname === "/" || pathname.startsWith("/archivos")) return null;
->>>>>>> main
+  if (pathname.startsWith("/archivos")) return null;
 
   const isDashboard = pathname === "/siget";
 
