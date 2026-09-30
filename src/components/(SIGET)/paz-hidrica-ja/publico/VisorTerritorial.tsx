@@ -22,7 +22,10 @@ import {
 import { fichaPublica } from "../lib/publico-mock";
 import { formatoQ } from "../lib/helpers";
 import { JaSelect } from "../lib/ui";
-import type { ProyectoRecord, SesionRecord } from "../lib/zod";
+import { JA_MAP_VISTA_DEFAULT, type JaMapVista } from "../lib/map-tiles";
+import { JaMapBasemapSwitches } from "../JaMapBasemapSwitches";
+import { JaMapLeyenda } from "../JaMapLeyenda";
+import type { IncidenteRecord, ProyectoRecord, SesionRecord } from "../lib/zod";
 import { PubMarco } from "./ui";
 import { VisorDetallePanel } from "./VisorDetallePanel";
 
@@ -41,18 +44,22 @@ const JaMapaPublico = dynamic(
 export function VisorTerritorial({
   proyectos,
   sesiones,
+  incidentes,
 }: {
   proyectos: ProyectoRecord[];
   sesiones: SesionRecord[];
+  incidentes: IncidenteRecord[];
 }) {
   const [muni, setMuni] = useState<Municipio | "todos">("todos");
   const [micro, setMicro] = useState<Microcuenca | "todas">("todas");
   const [piloto, setPiloto] = useState<ProyectoRecord | null>(null);
   const [capaRecarga, setCapaRecarga] = useState(true);
   const [capaNacimientos, setCapaNacimientos] = useState(true);
+  const [capaAlertas, setCapaAlertas] = useState(true);
   const [capaProyectos, setCapaProyectos] = useState(true);
   const [capaDialogo, setCapaDialogo] = useState(true);
   const [panelAmpliado, setPanelAmpliado] = useState(false);
+  const [vistaMapa, setVistaMapa] = useState<JaMapVista>(JA_MAP_VISTA_DEFAULT);
 
   const microsOpcion = useMemo(() => {
     if (muni === "todos") return MICROCUENCAS;
@@ -71,6 +78,10 @@ export function VisorTerritorial({
   const sesionesMapa = useMemo(
     () => sesiones.filter((s) => coincideMuni(s.municipio)),
     [sesiones, muni],
+  );
+  const incidentesMapa = useMemo(
+    () => incidentes.filter((i) => coincideMuni(i.municipio)),
+    [incidentes, muni],
   );
   const proyectosPanel =
     micro === "todas" ? [] : proyectosMapa.filter((p) => p.microcuenca === micro);
@@ -133,12 +144,21 @@ export function VisorTerritorial({
               className="w-auto shrink-0"
             />
             <SigetActionButton
-              label="Nacimientos"
+              label="Alertas"
+              accentColor={capaAlertas ? sigetAccent.activa : sigetAccent.inactiva}
+              morphFrom={capaAlertas ? Eye : EyeOff}
+              morphTo={capaAlertas ? EyeOff : Eye}
+              onClick={() => setCapaAlertas((v) => !v)}
+              ariaLabel="Alternar capa de incidentes"
+              className="w-auto shrink-0"
+            />
+            <SigetActionButton
+              label="Manantial"
               accentColor={capaNacimientos ? sigetAccent.activa : sigetAccent.inactiva}
               morphFrom={capaNacimientos ? Eye : EyeOff}
               morphTo={capaNacimientos ? EyeOff : Eye}
               onClick={() => setCapaNacimientos((v) => !v)}
-              ariaLabel="Alternar capa de nacimientos"
+              ariaLabel="Alternar capa de manantiales (nacimientos de agua)"
               className="w-auto shrink-0"
             />
             <SigetActionButton
@@ -160,24 +180,33 @@ export function VisorTerritorial({
               className="w-auto shrink-0"
             />
           </div>
-          <p className="px-5 pb-3 text-xs font-medium text-zinc-500">
+          <div className="flex justify-center px-5 pb-2">
+            <JaMapBasemapSwitches
+              vista={vistaMapa}
+              onVistaChange={setVistaMapa}
+            />
+          </div>
+          <p className="px-5 pb-3 text-center text-xs font-medium text-zinc-500">
             Clic en una microcuenca para abrir el panel. Sin denuncias ni nombres.
           </p>
         </PubMarco>
       </div>
 
       <div className="w-full px-3 md:px-4">
-        <div className="relative">
+        <div className="relative mx-auto w-[85%]">
           <div className="w-full">
             <JaMapaPublico
               micro={micro}
               muni={muni}
               proyectos={proyectosMapa}
               sesiones={sesionesMapa}
+              incidentes={incidentesMapa}
               capaRecarga={capaRecarga}
               capaNacimientos={capaNacimientos}
               capaProyectos={capaProyectos}
               capaDialogo={capaDialogo}
+              capaAlertas={capaAlertas}
+              vista={vistaMapa}
               layoutTick={0}
               onSelectMicro={setMicro}
               onSelectProyecto={setPiloto}
@@ -198,12 +227,7 @@ export function VisorTerritorial({
               />
             ) : null}
           </AnimatePresence>
-          <div className="pointer-events-none absolute bottom-5 left-5 z-1 max-w-[min(calc(100%-1.5rem),18rem)] rounded-2xl border border-zinc-200/80 bg-white px-3 py-2 text-[11px] font-medium text-zinc-600 opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            <p className="font-semibold text-zinc-900 dark:text-white">Capas</p>
-            <p>Círculos verdes: microcuencas. Clic para ver detalle.</p>
-            <p>Línea punteada: recarga. Puntos verdes: nacimientos.</p>
-            <p>Cuadros dorados: pilotos. Triángulos: diálogo.</p>
-          </div>
+          <JaMapLeyenda variante="publico" />
         </div>
       </div>
 

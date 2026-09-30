@@ -100,6 +100,23 @@ export const POLIGONO_CUENCA: LatLng[] = [
   [14.86, -89.52],
 ];
 
+function suavizarPoligonoCerrado(puntos: LatLng[], pasadas: number): LatLng[] {
+  let actual = puntos;
+  for (let n = 0; n < pasadas; n++) {
+    const siguiente: LatLng[] = [];
+    for (let i = 0; i < actual.length; i++) {
+      const a = actual[i];
+      const b = actual[(i + 1) % actual.length];
+      siguiente.push([0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]]);
+      siguiente.push([0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]]);
+    }
+    actual = siguiente;
+  }
+  return actual;
+}
+
+export const POLIGONO_CUENCA_SUAVE = suavizarPoligonoCerrado(POLIGONO_CUENCA, 2);
+
 export const COLOR_ALERTA: Record<Criticidad, string> = {
   alerta_verde: "#2DD4A8",
   alerta_amarilla: "#F5B942",

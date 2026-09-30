@@ -3,49 +3,30 @@
 import { useEffect, useMemo } from "react";
 import {
   Circle,
-  CircleMarker,
   MapContainer,
   Marker,
-  Polygon,
-  TileLayer,
   Tooltip,
   useMap,
 } from "react-leaflet";
-import L from "leaflet";
 import { useTheme } from "next-themes";
-import { MICROCUENCAS, type Microcuenca, type Municipio } from "./lib/catalogos";
+import { MICROCUENCAS, CRITICIDAD_META, type Microcuenca, type Municipio } from "./lib/catalogos";
 import {
   CENTRO_CUENCA,
+  COLOR_ALERTA,
   MICROCUENCA_COORDS,
   MUNICIPIO_COORDS,
   NACIMIENTOS_PROTEGIDOS,
-  POLIGONO_CUENCA,
   ZOOM_CUENCA,
   ZOOM_DETALLE,
   ZONAS_RECARGA,
   desplazarPunto,
 } from "./lib/geo";
-import type { ProyectoRecord, SesionRecord } from "./lib/zod";
+import { JaMapBasemapLayers } from "./JaMapBasemapLayers";
+import { JaMapConIconos, JaMapCuencaPoligonos, JaMapMicroCirculos } from "./JaMapAmbito";
+import { JA_MAP_VISTA_DEFAULT, type JaMapVista } from "./lib/map-tiles";
+import type { IncidenteRecord, ProyectoRecord, SesionRecord } from "./lib/zod";
 import "leaflet/dist/leaflet.css";
 import "./ja-leaflet.css";
-
-function iconoCuadro(color: string) {
-  return L.divIcon({
-    className: "ja-map-icon",
-    html: `<span style="display:block;width:13px;height:13px;background:${color};border:2px solid #fff;box-sizing:border-box"></span>`,
-    iconSize: [13, 13],
-    iconAnchor: [6, 6],
-  });
-}
-
-function iconoTriangulo(color: string) {
-  return L.divIcon({
-    className: "ja-map-icon",
-    html: `<span style="display:block;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid ${color}"></span>`,
-    iconSize: [14, 13],
-    iconAnchor: [7, 13],
-  });
-}
 
 function AjustarVistaPublica({
   muni,
@@ -83,10 +64,13 @@ export function JaMapaPublico({
   muni,
   proyectos,
   sesiones,
+  incidentes,
   capaRecarga,
   capaNacimientos,
   capaProyectos,
   capaDialogo,
+  capaAlertas,
+  vista = JA_MAP_VISTA_DEFAULT,
   layoutTick,
   onSelectMicro,
   onSelectProyecto,
@@ -95,18 +79,34 @@ export function JaMapaPublico({
   muni: Municipio | "todos";
   proyectos: ProyectoRecord[];
   sesiones: SesionRecord[];
+  incidentes: IncidenteRecord[];
   capaRecarga: boolean;
   capaNacimientos: boolean;
   capaProyectos: boolean;
   capaDialogo: boolean;
+  capaAlertas: boolean;
+  vista?: JaMapVista;
   layoutTick: number;
   onSelectMicro: (microcuenca: Microcuenca) => void;
   onSelectProyecto: (proyecto: ProyectoRecord) => void;
 }) {
   const { resolvedTheme } = useTheme();
   const oscuro = resolvedTheme === "dark";
-  const iconoPiloto = useMemo(() => iconoCuadro("#C59B27"), []);
-  const iconoDialogo = useMemo(() => iconoTriangulo("#003882"), []);
+
+  const puntosAlerta = useMemo(() => {
+    const cuentas = { ...Object.fromEntries(MICROCUENCAS.map((n) => [n, 0])) } as Record<
+      Microcuenca,
+      number
+    >;
+    return incidentes.map((row) => {
+      const i = cuentas[row.microcuenca] ?? 0;
+      cuentas[row.microcuenca] = i + 1;
+      return {
+        row,
+        posicion: desplazarPunto(MICROCUENCA_COORDS[row.microcuenca].centro, i, 0),
+      };
+    });
+  }, [incidentes]);
 
   const puntosProyecto = useMemo(() => {
     const cuentas = { ...Object.fromEntries(MICROCUENCAS.map((n) => [n, 0])) } as Record<
@@ -148,32 +148,8 @@ export function JaMapaPublico({
         attributionControl
         className="h-full w-full"
       >
-        <TileLayer
-          key={oscuro ? "dark" : "topo"}
-          attribution={
-            oscuro
-              ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; CARTO'
-              : "Tiles &copy; Esri &mdash; fuente: Esri, USGS, NOAA"
-          }
-          url={
-            oscuro
-              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
-          }
-        />
-
-        <Polygon
-          positions={POLIGONO_CUENCA}
-          pathOptions={{
-            color: "#003882",
-            weight: 2,
-            fillColor: "#003882",
-            fillOpacity: oscuro ? 0.12 : 0.08,
-            dashArray: "6 5",
-          }}
-        >
-          <Tooltip>Cuenca del Río Grande</Tooltip>
-        </Polygon>
+        <JaMapBasemapLayers oscuro={oscuro} vista={vista} />
+        <JaMapCuencaPoligonos vista={vista} oscuro={oscuro} />
 
         {capaRecarga
           ? ZONAS_RECARGA.map((zona) => (
@@ -194,44 +170,40 @@ export function JaMapaPublico({
             ))
           : null}
 
-        {MICROCUENCAS.map((nombre) => {
-          const geo = MICROCUENCA_COORDS[nombre];
-          const seleccionada = micro === nombre;
-          return (
-            <Circle
-              key={nombre}
-              center={geo.centro}
-              radius={geo.radio}
-              eventHandlers={{
-                click: () => onSelectMicro(nombre),
-              }}
-              pathOptions={{
-                color: seleccionada ? "#003882" : "#388E3C",
-                weight: seleccionada ? 3 : 2,
-                fillColor: "#1B5E20",
-                fillOpacity: seleccionada ? 0.28 : 0.14,
-              }}
-            >
-              <Tooltip>{nombre}</Tooltip>
-            </Circle>
-          );
-        })}
+        <JaMapMicroCirculos
+          vista={vista}
+          seleccionada={micro === "todas" ? null : micro}
+          onSelectMicro={onSelectMicro}
+        />
+
+        <JaMapConIconos>
+          {(iconos) => (
+            <>
+        {capaAlertas
+          ? puntosAlerta.map(({ row, posicion }) => (
+              <Marker
+                key={row.id}
+                position={posicion}
+                icon={iconos.incidente(COLOR_ALERTA[row.criticidad])}
+                zIndexOffset={410}
+              >
+                <Tooltip>
+                  Incidente · {CRITICIDAD_META[row.criticidad].label} · {row.microcuenca}
+                </Tooltip>
+              </Marker>
+            ))
+          : null}
 
         {capaNacimientos
           ? NACIMIENTOS_PROTEGIDOS.map((nac) => (
-              <CircleMarker
+              <Marker
                 key={nac.id}
-                center={nac.posicion}
-                radius={6}
-                pathOptions={{
-                  color: "#ffffff",
-                  weight: 2,
-                  fillColor: "#1B5E20",
-                  fillOpacity: 1,
-                }}
+                position={nac.posicion}
+                icon={iconos.manantial}
+                zIndexOffset={400}
               >
                 <Tooltip>{nac.nombre}</Tooltip>
-              </CircleMarker>
+              </Marker>
             ))
           : null}
 
@@ -240,7 +212,8 @@ export function JaMapaPublico({
               <Marker
                 key={row.id}
                 position={posicion}
-                icon={iconoPiloto}
+                icon={iconos.piloto}
+                zIndexOffset={420}
                 eventHandlers={{
                   click: () => onSelectProyecto(row),
                 }}
@@ -254,13 +227,21 @@ export function JaMapaPublico({
 
         {capaDialogo
           ? puntosDialogo.map(({ row, posicion }) => (
-              <Marker key={row.id} position={posicion} icon={iconoDialogo}>
+              <Marker
+                key={row.id}
+                position={posicion}
+                icon={iconos.dialogo}
+                zIndexOffset={430}
+              >
                 <Tooltip>
                   {row.titulo} · {row.microcuenca}
                 </Tooltip>
               </Marker>
             ))
           : null}
+            </>
+          )}
+        </JaMapConIconos>
 
         <AjustarVistaPublica muni={muni} micro={micro} layoutTick={layoutTick} />
       </MapContainer>

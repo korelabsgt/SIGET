@@ -140,7 +140,11 @@ export function PortalPublicoJa() {
               transition={{ duration: 0.22 }}
             >
               {seccion === "visor" ? (
-                <VisorTerritorial proyectos={state.proyectos} sesiones={state.sesiones} />
+                <VisorTerritorial
+                  proyectos={state.proyectos}
+                  sesiones={state.sesiones}
+                  incidentes={state.incidentes}
+                />
               ) : null}
               {seccion === "canal" ? <CanalCiudadano /> : null}
               {seccion === "bitacora" ? <BitacoraPublica acuerdos={state.acuerdos} /> : null}

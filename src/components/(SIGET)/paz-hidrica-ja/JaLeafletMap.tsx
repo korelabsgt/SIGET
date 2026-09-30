@@ -2,17 +2,12 @@
 
 import { useEffect, useMemo } from "react";
 import {
-  Circle,
-  CircleMarker,
   MapContainer,
   Marker,
-  Polygon,
   Popup,
-  TileLayer,
   Tooltip,
   useMap,
 } from "react-leaflet";
-import L from "leaflet";
 import { useTheme } from "next-themes";
 import { CRITICIDAD_META, MICROCUENCAS, type Microcuenca, type Municipio } from "./lib/catalogos";
 import {
@@ -20,34 +15,16 @@ import {
   COLOR_ALERTA,
   MICROCUENCA_COORDS,
   MUNICIPIO_COORDS,
-  POLIGONO_CUENCA,
   ZOOM_CUENCA,
   ZOOM_DETALLE,
   desplazarPunto,
 } from "./lib/geo";
+import { JaMapBasemapLayers } from "./JaMapBasemapLayers";
+import { JaMapConIconos, JaMapCuencaPoligonos, JaMapMicroCirculos } from "./JaMapAmbito";
+import { JA_MAP_VISTA_DEFAULT, type JaMapVista } from "./lib/map-tiles";
 import type { IncidenteRecord, ProyectoRecord, SesionRecord } from "./lib/zod";
 import "leaflet/dist/leaflet.css";
 import "./ja-leaflet.css";
-
-function iconoCuadro(color: string) {
-  return L.divIcon({
-    className: "ja-map-icon",
-    html: `<span style="display:block;width:13px;height:13px;background:${color};border:2px solid #fff;box-sizing:border-box"></span>`,
-    iconSize: [13, 13],
-    iconAnchor: [6, 6],
-    popupAnchor: [0, -8],
-  });
-}
-
-function iconoTriangulo(color: string) {
-  return L.divIcon({
-    className: "ja-map-icon",
-    html: `<span style="display:block;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:13px solid ${color}"></span>`,
-    iconSize: [14, 13],
-    iconAnchor: [7, 13],
-    popupAnchor: [0, -12],
-  });
-}
 
 function AjustarVista({
   muni,
@@ -87,6 +64,7 @@ export function JaLeafletMap({
   capaAlertas,
   capaProyectos,
   capaDialogo,
+  vista = JA_MAP_VISTA_DEFAULT,
   onSelectMicro,
 }: {
   microSeleccionada: Microcuenca | null;
@@ -97,12 +75,11 @@ export function JaLeafletMap({
   capaAlertas: boolean;
   capaProyectos: boolean;
   capaDialogo: boolean;
+  vista?: JaMapVista;
   onSelectMicro: (microcuenca: Microcuenca) => void;
 }) {
   const { resolvedTheme } = useTheme();
   const oscuro = resolvedTheme === "dark";
-  const iconoPiloto = useMemo(() => iconoCuadro("#C59B27"), []);
-  const iconoDialogo = useMemo(() => iconoTriangulo("#003882"), []);
 
   const puntosAlerta = useMemo(() => {
     const cuentas = { ...Object.fromEntries(MICROCUENCAS.map((n) => [n, 0])) } as Record<
@@ -159,68 +136,24 @@ export function JaLeafletMap({
         attributionControl
         className="h-full w-full"
       >
-        <TileLayer
-          key={oscuro ? "dark" : "topo"}
-          attribution={
-            oscuro
-              ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; CARTO'
-              : "Tiles &copy; Esri &mdash; fuente: Esri, USGS, NOAA"
-          }
-          url={
-            oscuro
-              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
-          }
+        <JaMapBasemapLayers oscuro={oscuro} vista={vista} />
+        <JaMapCuencaPoligonos vista={vista} oscuro={oscuro} />
+        <JaMapMicroCirculos
+          vista={vista}
+          seleccionada={microSeleccionada}
+          onSelectMicro={onSelectMicro}
         />
 
-        <Polygon
-          positions={POLIGONO_CUENCA}
-          pathOptions={{
-            color: "#003882",
-            weight: 2,
-            fillColor: "#003882",
-            fillOpacity: oscuro ? 0.12 : 0.08,
-            dashArray: "6 5",
-          }}
-        >
-          <Tooltip>Cuenca del Río Grande</Tooltip>
-        </Polygon>
-
-        {MICROCUENCAS.map((nombre) => {
-          const geo = MICROCUENCA_COORDS[nombre];
-          const seleccionada = microSeleccionada === nombre;
-          return (
-            <Circle
-              key={nombre}
-              center={geo.centro}
-              radius={geo.radio}
-              eventHandlers={{
-                click: () => onSelectMicro(nombre),
-              }}
-              pathOptions={{
-                color: seleccionada ? "#1B5E20" : "#388E3C",
-                weight: seleccionada ? 3 : 2.5,
-                fillColor: "#1B5E20",
-                fillOpacity: seleccionada ? 0.32 : 0.2,
-              }}
-            >
-              <Tooltip>{nombre}</Tooltip>
-            </Circle>
-          );
-        })}
-
+        <JaMapConIconos>
+          {(iconos) => (
+            <>
         {capaAlertas
           ? puntosAlerta.map(({ row, posicion }) => (
-              <CircleMarker
+              <Marker
                 key={row.id}
-                center={posicion}
-                radius={8}
-                pathOptions={{
-                  color: "#ffffff",
-                  weight: 2,
-                  fillColor: COLOR_ALERTA[row.criticidad],
-                  fillOpacity: 1,
-                }}
+                position={posicion}
+                icon={iconos.incidente(COLOR_ALERTA[row.criticidad])}
+                zIndexOffset={400}
               >
                 <Popup>
                   <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
@@ -232,7 +165,7 @@ export function JaLeafletMap({
                   </p>
                   <p className="mt-1 text-xs">{row.tipologia}</p>
                 </Popup>
-              </CircleMarker>
+              </Marker>
             ))
           : null}
 
@@ -241,7 +174,8 @@ export function JaLeafletMap({
               <Marker
                 key={row.id}
                 position={posicion}
-                icon={iconoPiloto}
+                icon={iconos.piloto}
+                zIndexOffset={420}
               >
                 <Popup>
                   <p className="text-[10px] font-black uppercase tracking-wider text-[#C59B27]">
@@ -262,7 +196,8 @@ export function JaLeafletMap({
               <Marker
                 key={row.id}
                 position={posicion}
-                icon={iconoDialogo}
+                icon={iconos.dialogo}
+                zIndexOffset={430}
               >
                 <Popup>
                   <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
@@ -276,6 +211,9 @@ export function JaLeafletMap({
               </Marker>
             ))
           : null}
+            </>
+          )}
+        </JaMapConIconos>
 
         <AjustarVista muni={muni} micro={microSeleccionada} />
       </MapContainer>

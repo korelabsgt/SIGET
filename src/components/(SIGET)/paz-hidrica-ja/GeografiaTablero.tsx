@@ -21,6 +21,7 @@ import {
 import { exportarEvidencias, exportarModuloPazHidricaJa } from "./lib/exportar";
 import { COLOR_ALERTA } from "./lib/geo";
 import { porcentaje, totalPoblacion } from "./lib/helpers";
+import { JA_MAP_VISTA_DEFAULT, type JaMapVista } from "./lib/map-tiles";
 import { puede } from "./lib/permisos";
 import {
   JaBarras,
@@ -33,6 +34,8 @@ import {
   JaTh,
   SemaforoBadge,
 } from "./lib/ui";
+import { JaMapBasemapSwitches } from "./JaMapBasemapSwitches";
+import { JaMapLeyenda } from "./JaMapLeyenda";
 import { JaMapDetallePanel } from "./JaMapDetallePanel";
 import type { JaStoreState, RolJaPersistido } from "./lib/zod";
 
@@ -66,6 +69,7 @@ export function GeografiaTablero({
   const [capaAlertas, setCapaAlertas] = useState(true);
   const [capaProyectos, setCapaProyectos] = useState(true);
   const [capaDialogo, setCapaDialogo] = useState(true);
+  const [vistaMapa, setVistaMapa] = useState<JaMapVista>(JA_MAP_VISTA_DEFAULT);
   const [panelAmpliado, setPanelAmpliado] = useState(false);
 
   const coincide = (_microcuenca: Microcuenca, municipio: Municipio) => {
@@ -196,8 +200,17 @@ export function GeografiaTablero({
         />
       </div>
 
-      <JaPanel title={`Visor geoespacial · ${AMBITO_CUENCA} · ${kpis.total} incidentes`} flush>
-        <div className="relative p-3 md:p-4">
+      <JaPanel
+        title={`Visor geoespacial · ${AMBITO_CUENCA} · ${kpis.total} incidentes`}
+        action={
+          <JaMapBasemapSwitches
+            vista={vistaMapa}
+            onVistaChange={setVistaMapa}
+          />
+        }
+        flush
+      >
+        <div className="relative mx-auto w-[85%] p-3 md:p-4">
           <div className="w-full">
             <JaLeafletMap
               microSeleccionada={micro !== "todas" ? micro : null}
@@ -208,6 +221,7 @@ export function GeografiaTablero({
               capaAlertas={capaAlertas}
               capaProyectos={capaProyectos}
               capaDialogo={capaDialogo}
+              vista={vistaMapa}
               onSelectMicro={(nombre) => setMicro(nombre)}
             />
           </div>
@@ -227,13 +241,7 @@ export function GeografiaTablero({
               />
             ) : null}
           </AnimatePresence>
-          <div className="pointer-events-none absolute bottom-7 left-7 z-1 max-w-[min(calc(100%-1.5rem),18rem)] rounded-2xl border border-zinc-200/80 bg-white px-3 py-2 text-[11px] font-medium text-zinc-600 opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            <p className="font-semibold text-zinc-900 dark:text-white">
-              Capas
-            </p>
-            <p>Círculos verdes: microcuencas. Clic para ver detalle.</p>
-            <p>Puntos: incidentes. Cuadros dorados: pilotos. Triángulos: diálogo.</p>
-          </div>
+          <JaMapLeyenda variante="interno" />
         </div>
       </JaPanel>
 
