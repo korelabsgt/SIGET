@@ -1,3 +1,5 @@
+import { fechaCalendarioGt, normalizarFechaCalendario } from "@/lib/fechas-gt";
+
 export const VEHICULOS_STORAGE_BUCKET = "vehiculos";
 export const VEHICULOS_SIGNED_URL_TTL_SEC = 3600;
 
@@ -10,6 +12,67 @@ export function rutaStorageVehiculos(carpeta: string, nombreArchivo: string): st
   const carpetaLimpia = carpeta.replace(/^\/+|\/+$/g, "");
   const archivo = nombreArchivo.replace(/^\/+/, "");
   return `${carpetaLimpia}/${archivo}`;
+}
+
+export function segmentoCarpetaPlacaVehiculo(placa: string): string {
+  return (
+    placa
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "vehiculo"
+  );
+}
+
+export function rutaStorageFotoFlotaVehiculo(placa: string, nombreArchivo: string): string {
+  const segmento = segmentoCarpetaPlacaVehiculo(placa);
+  return rutaStorageVehiculos(`${VEHICULOS_STORAGE_CARPETA_FLOTA}/${segmento}`, nombreArchivo);
+}
+
+export function segmentoFechaCarpetaStorageVehiculos(fecha: string | Date = new Date()): string {
+  if (fecha instanceof Date) return fechaCalendarioGt(fecha);
+  const normalizada = normalizarFechaCalendario(fecha);
+  return normalizada || fechaCalendarioGt();
+}
+
+function rutaStorageEvidenciaPorVehiculoYFecha(
+  carpetaRaiz: string,
+  placa: string,
+  nombreArchivo: string,
+  fecha: string | Date = new Date(),
+): string {
+  const segmentoPlaca = segmentoCarpetaPlacaVehiculo(placa);
+  const segmentoFecha = segmentoFechaCarpetaStorageVehiculos(fecha);
+  return rutaStorageVehiculos(
+    `${carpetaRaiz}/${segmentoPlaca}/${segmentoFecha}`,
+    nombreArchivo,
+  );
+}
+
+export function rutaStorageEvidenciaFallaVehiculo(
+  placa: string,
+  nombreArchivo: string,
+  fecha: string | Date = new Date(),
+): string {
+  return rutaStorageEvidenciaPorVehiculoYFecha(
+    VEHICULOS_STORAGE_CARPETA_FALLAS,
+    placa,
+    nombreArchivo,
+    fecha,
+  );
+}
+
+export function rutaStorageReciboBitacoraVehiculo(
+  placa: string,
+  nombreArchivo: string,
+  fecha: string | Date = new Date(),
+): string {
+  return rutaStorageEvidenciaPorVehiculoYFecha(
+    VEHICULOS_STORAGE_CARPETA_RECIBOS,
+    placa,
+    nombreArchivo,
+    fecha,
+  );
 }
 
 export function isLocalImageSrc(value: string): boolean {

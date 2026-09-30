@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { GvTableMorphRow } from "./gv-table-morph-row";
 
@@ -107,16 +107,18 @@ export function GvMobileRecordFooter({
 export function GvMobileRecordBadge({
   children,
   className,
+  ...props
 }: {
   children: ReactNode;
   className?: string;
-}) {
+} & ComponentProps<"span">) {
   return (
     <span
       className={cn(
         "inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
         className,
       )}
+      {...props}
     >
       {children}
     </span>

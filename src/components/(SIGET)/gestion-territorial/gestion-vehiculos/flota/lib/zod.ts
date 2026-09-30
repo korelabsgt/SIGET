@@ -13,15 +13,18 @@ const fechaManualOpcional = z
   .nullable()
   .optional()
   .superRefine((val, ctx) => {
-    if (!val?.trim()) return;
-    if (!fechaManualToTimestamptz(val)) {
+    if (val == null || !String(val).trim()) return;
+    if (!fechaManualToTimestamptz(String(val))) {
       ctx.addIssue({
         code: "custom",
         message: "Fecha inválida. Escriba DD/MM/AAAA",
       });
     }
   })
-  .transform((val) => (val?.trim() ? fechaManualToTimestamptz(val) : null));
+  .transform((val) => {
+    if (val == null || !String(val).trim()) return null;
+    return fechaManualToTimestamptz(String(val));
+  });
 
 export const vehiculoSchema = z.object({
   id: z.string().uuid().optional(),

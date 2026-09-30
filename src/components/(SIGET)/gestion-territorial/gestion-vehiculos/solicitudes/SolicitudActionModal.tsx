@@ -49,7 +49,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
-import { cambiarEstadoSolicitud } from "./lib/actions";
+import { cambiarEstadoSolicitud, cancelarMisionAprobadaSolicitud } from "./lib/actions";
 
 import { ESTADOS_SOLICITUD, rechazoSolicitudComentarioSchema, type SolicitudRow } from "./lib/zod";
 
@@ -63,7 +63,7 @@ import type { VehiculoRow } from "../flota/lib/zod";
 
 
 
-type ActionType = "APROBAR" | "RECHAZAR";
+type ActionType = "APROBAR" | "RECHAZAR" | "CANCELAR";
 
 
 
@@ -151,6 +151,33 @@ const ACTION_META: Record<
 
   },
 
+  CANCELAR: {
+
+    title: "Cancelar misión",
+
+    description:
+      "La solicitud quedará cerrada y el vehículo liberado. Solo aplica si la misión no se ha iniciado.",
+
+    confirmLabel: "Aceptar",
+
+    confirmAriaLabel: "Aceptar cancelación de la misión",
+
+    icon: Ban,
+
+    accentBar: "bg-red-500",
+
+    iconWrap: "bg-red-100 dark:bg-red-950",
+
+    iconColor: "text-red-600 dark:text-red-400",
+
+    confirmAccent: sigetAccent.quitar,
+
+    confirmMorphFrom: Ban,
+
+    confirmMorphTo: XCircle,
+
+  },
+
 };
 
 
@@ -215,7 +242,7 @@ export function SolicitudActionModal({
   }, [cargarLibres, solicitud?.vehiculo_id, loadingVehiculos]);
 
   useEffect(() => {
-    if (!open || actionType !== "RECHAZAR") {
+    if (!open || (actionType !== "RECHAZAR" && actionType !== "CANCELAR")) {
       setComentarioRechazo("");
     }
   }, [open, actionType]);
@@ -276,7 +303,14 @@ export function SolicitudActionModal({
 
   const meta = actionType ? ACTION_META[actionType] : null;
 
-  const solicitudNoPendiente = solicitud != null && solicitud.estado !== "PENDIENTE";
+  const solicitudEstadoInvalido =
+    solicitud != null &&
+    (actionType === "CANCELAR"
+      ? solicitud.estado !== "APROBADA"
+      : solicitud.estado !== "PENDIENTE");
+
+  const solicitudNoPendiente =
+    actionType !== "CANCELAR" && solicitud != null && solicitud.estado !== "PENDIENTE";
 
 
 
@@ -284,7 +318,43 @@ export function SolicitudActionModal({
 
     if (!solicitud || !actionType || submitInFlightRef.current || isPending) return;
 
+    if (actionType === "CANCELAR") {
+      if (solicitud.estado !== "APROBADA") {
+        toast.warn(
+          `Esta solicitud ya no está aprobada (${formatEstadoLabel(solicitud.estado).toLowerCase()}).`,
+        );
+        onSaved();
+        onOpenChange(false);
+        return;
+      }
 
+      const parsed = rechazoSolicitudComentarioSchema.safeParse(comentarioRechazo);
+      if (!parsed.success) {
+        toast.error(
+          parsed.error.issues[0]?.message ?? "Indique el motivo de la cancelación.",
+        );
+        return;
+      }
+
+      submitInFlightRef.current = true;
+      startTransition(async () => {
+        try {
+          const res = await cancelarMisionAprobadaSolicitud(solicitud.id, {
+            comentarios: parsed.data,
+          });
+          if (!res.success) {
+            toast.error(res.error || "No se pudo cancelar la misión.");
+            return;
+          }
+          toast.success("Misión cancelada.");
+          onSaved();
+          onOpenChange(false);
+        } finally {
+          submitInFlightRef.current = false;
+        }
+      });
+      return;
+    }
 
     if (solicitud.estado !== "PENDIENTE") {
 
@@ -379,11 +449,11 @@ export function SolicitudActionModal({
 
     submitInFlightRef.current ||
 
-    solicitudNoPendiente ||
+    solicitudEstadoInvalido ||
 
     (actionType === "APROBAR" &&
       (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo)) ||
-    (actionType === "RECHAZAR" && !comentarioRechazoValido);
+    ((actionType === "RECHAZAR" || actionType === "CANCELAR") && !comentarioRechazoValido);
 
 
 
@@ -431,7 +501,7 @@ export function SolicitudActionModal({
 
           >
 
-          {solicitudNoPendiente ? (
+          {solicitudEstadoInvalido ? (
 
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
 
@@ -443,7 +513,10 @@ export function SolicitudActionModal({
 
               </span>
 
-              . Actualice la lista; solo las pendientes pueden aprobarse o rechazarse.
+              .{" "}
+              {actionType === "CANCELAR"
+                ? "Solo puede cancelar misiones aprobadas que no se han iniciado."
+                : "Actualice la lista; solo las pendientes pueden aprobarse o rechazarse."}
 
             </div>
 
@@ -603,28 +676,35 @@ export function SolicitudActionModal({
 
 
 
-          {actionType === "RECHAZAR" && !solicitudNoPendiente ? (
+          {(actionType === "RECHAZAR" || actionType === "CANCELAR") && !solicitudEstadoInvalido ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
                 <p className="text-sm leading-relaxed text-red-800 dark:text-red-300">
-                  Esta acción no se puede deshacer. El solicitante deberá crear una nueva solicitud
-                  si aún necesita el vehículo.
+                  {actionType === "CANCELAR"
+                    ? "El vehículo quedará libre y la solicitud pasará al historial como cerrada."
+                    : "Esta acción no se puede deshacer. El solicitante deberá crear una nueva solicitud si aún necesita el vehículo."}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="comentario_rechazo_solicitud">Motivo del rechazo</Label>
+                <Label htmlFor="comentario_rechazo_solicitud">
+                  {actionType === "CANCELAR" ? "Motivo de la cancelación" : "Motivo del rechazo"}
+                </Label>
                 <Textarea
                   id="comentario_rechazo_solicitud"
                   rows={4}
                   value={comentarioRechazo}
                   onChange={(e) => setComentarioRechazo(e.target.value)}
-                  placeholder="Explique por qué no se aprueba la solicitud…"
+                  placeholder={
+                    actionType === "CANCELAR"
+                      ? "Explique por qué se cancela la misión aprobada…"
+                      : "Explique por qué no se aprueba la solicitud…"
+                  }
                   className="resize-none bg-white dark:bg-zinc-950"
                 />
                 {!comentarioRechazoValido && comentarioRechazo.trim().length > 0 ? (
                   <p className="text-xs text-red-500">
-                    Escriba al menos 5 caracteres explicando el rechazo.
+                    Escriba al menos 5 caracteres.
                   </p>
                 ) : null}
               </div>

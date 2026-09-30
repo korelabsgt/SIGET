@@ -9,6 +9,7 @@ export function VehiculosCards({
   onExportExcel,
   exportingVehiculoId = null,
   onDelete,
+  onVerReserva,
   canManage,
   canDelete,
 }: {
@@ -18,6 +19,7 @@ export function VehiculosCards({
   onExportExcel: (vehiculo: VehiculoRow) => void;
   exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => void;
+  onVerReserva: (vehiculo: VehiculoRow) => void;
   canManage: boolean;
   canDelete: boolean;
 }) {
@@ -32,6 +34,9 @@ export function VehiculosCards({
           onExportExcel={() => onExportExcel(vehiculo)}
           exporting={exportingVehiculoId === (vehiculo.id ?? vehiculo.placa)}
           onDelete={() => onDelete(vehiculo)}
+          onVerReserva={
+            vehiculo.estado === "RESERVADO" ? () => onVerReserva(vehiculo) : undefined
+          }
           canManage={canManage}
           canDelete={canDelete}
         />

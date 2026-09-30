@@ -23,6 +23,7 @@ import {
   mensajeBloqueoNuevaSolicitudVehiculo,
 } from "../../lib/bitacora-pendiente-bloqueo";
 import {
+  COMENTARIO_PREFIJO_MISION_CANCELADA,
   COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
   formatEstadoLabel,
   horaInicioSolicitudPasada,
@@ -573,6 +574,78 @@ export async function cambiarEstadoSolicitud(
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "No se pudo actualizar el estado de la solicitud.";
+    return { success: false, error: message };
+  }
+}
+
+export async function cancelarMisionAprobadaSolicitud(
+  id: string,
+  payload: { comentarios: string },
+) {
+  try {
+    const { role } = await requireAuth();
+    if (!canAprobarRechazarSolicitudes(role)) {
+      return { success: false, error: "No tienes permisos para realizar esta acción." };
+    }
+
+    const parsedComentario = rechazoSolicitudComentarioSchema.safeParse(payload.comentarios);
+    if (!parsedComentario.success) {
+      return {
+        success: false,
+        error:
+          parsedComentario.error.issues[0]?.message ??
+          "Debe indicar el motivo de la cancelación.",
+      };
+    }
+
+    const supabase = await createClient();
+    const { data: actual, error: actualError } = await supabase
+      .from(TABLE)
+      .select("id, estado, vehiculo_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (actualError || !actual) {
+      return { success: false, error: "No se encontró la solicitud." };
+    }
+
+    if (actual.estado !== "APROBADA") {
+      return {
+        success: false,
+        error:
+          "Solo puede cancelar misiones aprobadas que aún no se han iniciado. Actualice la lista.",
+      };
+    }
+
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from(TABLE)
+      .update({
+        estado: "RECHAZADA",
+        comentarios: `${COMENTARIO_PREFIJO_MISION_CANCELADA} ${parsedComentario.data}`,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error cancelarMisionAprobadaSolicitud:", error);
+      return { success: false, error: "No se pudo cancelar la misión." };
+    }
+
+    if (actual.vehiculo_id) {
+      await sincronizarEstadoFlotaVehiculo(admin, actual.vehiculo_id);
+    }
+    if (data.vehiculo_id && data.vehiculo_id !== actual.vehiculo_id) {
+      await sincronizarEstadoFlotaVehiculo(admin, data.vehiculo_id);
+    }
+
+    revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(FLOTA_ROUTE);
+    return { success: true, data };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "No se pudo cancelar la misión.";
     return { success: false, error: message };
   }
 }

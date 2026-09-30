@@ -1,4 +1,4 @@
-export const GV_TABLE_DEFAULT_VISIBLE_ROWS = 10;
+export const GV_TABLE_DEFAULT_VISIBLE_ROWS = 15;
 
 export const GV_TABLE_MIN_WIDTH = 980;
 

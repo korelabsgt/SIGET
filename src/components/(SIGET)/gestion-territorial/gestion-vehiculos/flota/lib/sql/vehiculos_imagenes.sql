@@ -1,3 +1,3 @@
 -- imagen_url es text[]: array de rutas Storage, p. ej.
--- '{flota/MI-1536_uuid1.jpg,flota/MI-1536_uuid2.jpg}'
+-- '{flota/MI-1536/uuid1.jpg,flota/MI-1536/uuid2.jpg}'
 -- La app escribe y lee ese array en helpers.ts (imagenUrlParaDb / fotosVehiculo).

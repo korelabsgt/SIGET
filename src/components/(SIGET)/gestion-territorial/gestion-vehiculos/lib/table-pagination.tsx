@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export const GV_PAGE_SIZE_OPTIONS = [10, 15, 25, 50] as const;
-export const GV_DEFAULT_PAGE_SIZE = 10;
+export const GV_PAGE_SIZE_OPTIONS = [15, 30, 45] as const;
+export const GV_DEFAULT_PAGE_SIZE = 15;
 
 export function useGvTablePagination<T>(items: T[], resetKey?: string) {
   const [page, setPage] = useState(1);

@@ -3,7 +3,6 @@
 import { Loader2, Plus, UploadCloud, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-toastify";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   CIRCULACION_PATH_MARKER,
@@ -12,11 +11,12 @@ import {
   type TipoFotoVehiculo,
 } from "../lib/helpers";
 import { canManageFlota } from "../../lib/permissions";
+import { rutaStorageFotoFlotaVehiculo } from "../../lib/storage";
+import { esTipoImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
 import {
-  esTipoImagenVehiculo,
-  IMAGEN_VEHICULO_ACCEPT_ATTR,
-  IMAGEN_VEHICULO_CAPTURE_ATTR,
-} from "../../lib/imagen-vehiculo-compress";
+  ImagenVehiculoEscritorioFileInput,
+  ImagenVehiculoFuentePicker,
+} from "../../lib/imagen-vehiculo-fuente-picker";
 
 function filtrarArchivosValidos(seleccionados: File[]): File[] {
   const validos: File[] = [];
@@ -49,11 +49,8 @@ export function ImagenVehiculoDropzone({
   const remaining = max - previews.length;
   const canAdd = remaining > 0 && !disabled;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files ?? []);
-    e.target.value = "";
+  const applySelectedFiles = (selected: File[]) => {
     if (selected.length === 0) return;
-
     const valid = filtrarArchivosValidos(selected);
     if (valid.length === 0) return;
     onAddFiles(valid.slice(0, Math.max(0, remaining)));
@@ -111,42 +108,41 @@ export function ImagenVehiculoDropzone({
             })}
           </AnimatePresence>
           {canAdd ? (
-            <label className="relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl bg-sky-100 text-celeste-trifinio hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900">
-              <Plus className="size-5" />
-              <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">
-                Añadir
-              </span>
-              <Input
-                type="file"
-                accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-                capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
-                multiple
+            <>
+              <ImagenVehiculoFuentePicker
+                compact
                 disabled={disabled}
-                className="absolute inset-0 size-full cursor-pointer opacity-0"
-                onChange={handleFileChange}
+                onFiles={applySelectedFiles}
               />
-            </label>
+              <label className="relative hidden h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl bg-sky-100 text-celeste-trifinio hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900 lg:flex">
+                <Plus className="size-5" />
+                <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">
+                  Añadir
+                </span>
+                <ImagenVehiculoEscritorioFileInput disabled={disabled} onFiles={applySelectedFiles} />
+              </label>
+            </>
           ) : null}
         </div>
       ) : (
-        <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
-          <Input
-            type="file"
-            accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-            capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
-            multiple
-            disabled={disabled}
-            className="absolute inset-0 size-full cursor-pointer opacity-0"
-            onChange={handleFileChange}
-          />
+        <div className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors lg:cursor-pointer lg:hover:bg-muted/50">
+          <ImagenVehiculoEscritorioFileInput disabled={disabled} onFiles={applySelectedFiles} />
           <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950/60">
             <UploadCloud className="size-5" />
           </div>
-          <p className="text-sm font-medium">Haz clic o arrastra imágenes aquí</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="text-sm font-medium lg:pointer-events-none">
+            <span className="lg:hidden">Elige cómo agregar fotografías</span>
+            <span className="hidden lg:inline">Haz clic o arrastra imágenes aquí</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground lg:pointer-events-none">
             JPG, PNG o WEBP (se optimizan a máx. 200 KB). Mínimo {MIN_FOTOS_VEHICULO}, máximo{" "}
             {max}.
           </p>
+          <ImagenVehiculoFuentePicker
+            disabled={disabled}
+            className="mt-4 max-w-sm"
+            onFiles={applySelectedFiles}
+          />
         </div>
       )}
     </div>
@@ -173,11 +169,7 @@ export function TarjetaCirculacionCampo({
   const prefersReducedMotion = useReducedMotion();
   const tieneImagen = preview.length > 0 || loading;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (selected.length === 0) return;
-
+  const applyTarjetaFile = (selected: File[]) => {
     const valid = filtrarArchivosValidos(selected);
     if (valid.length === 0 || !valid[0]) return;
     onSelectFile(valid[0]);
@@ -239,30 +231,36 @@ export function TarjetaCirculacionCampo({
             para poder subir la tarjeta de circulación.
           </motion.p>
         ) : (
-          <motion.label
+          <motion.div
             key="subir"
             layout={!prefersReducedMotion}
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-center transition-colors hover:bg-muted/50"
+            className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-center transition-colors lg:cursor-pointer lg:hover:bg-muted/50"
           >
-            <Input
-              type="file"
-              accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-              capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
+            <ImagenVehiculoEscritorioFileInput
+              multiple={false}
               disabled={disabled}
-              className="absolute inset-0 size-full cursor-pointer opacity-0"
-              onChange={handleFileChange}
+              onFiles={applyTarjetaFile}
             />
             <div className="mb-2 flex size-9 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950/60">
               <UploadCloud className="size-4" />
             </div>
-            <p className="text-sm font-medium">Subir tarjeta de circulación</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-sm font-medium lg:pointer-events-none">
+              <span className="lg:hidden">Fotografía de la tarjeta</span>
+              <span className="hidden lg:inline">Subir tarjeta de circulación</span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground lg:pointer-events-none">
               JPG, PNG o WEBP (se optimiza a máx. 200 KB).
             </p>
-          </motion.label>
+            <ImagenVehiculoFuentePicker
+              multiple={false}
+              disabled={disabled}
+              className="mt-3 max-w-sm"
+              onFiles={applyTarjetaFile}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -309,14 +307,11 @@ export async function uploadImagenVehiculo(
     throw new Error("No tienes permisos para subir fotografías de la flota.");
   }
 
-  const placaSegment =
-    placa
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "vehiculo";
-  const separador = tipo === "circulacion" ? CIRCULACION_PATH_MARKER : "_";
-  const filePath = `flota/${placaSegment}${separador}${crypto.randomUUID()}.jpg`;
+  const nombreArchivo =
+    tipo === "circulacion"
+      ? `${crypto.randomUUID()}${CIRCULACION_PATH_MARKER}.jpg`
+      : `${crypto.randomUUID()}.jpg`;
+  const filePath = rutaStorageFotoFlotaVehiculo(placa, nombreArchivo);
 
   const { error: uploadError } = await supabase.storage
     .from("vehiculos")

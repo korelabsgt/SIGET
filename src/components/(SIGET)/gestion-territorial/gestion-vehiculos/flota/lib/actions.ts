@@ -16,6 +16,14 @@ import {
   separarFotosVehiculo,
 } from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
+import type { ZodError } from "zod";
+
+function mensajeErrorValidacionVehiculo(error: ZodError): string {
+  const partes = error.issues
+    .map((issue) => issue.message)
+    .filter((msg) => msg.trim().length > 0);
+  return partes.length > 0 ? partes.join(" ") : "Datos inválidos.";
+}
 import {
   normalizeVehiculoStoragePath,
   VEHICULOS_STORAGE_BUCKET,
@@ -121,7 +129,7 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error("Datos inválidos: " + parsed.error.message);
+    throw new Error(mensajeErrorValidacionVehiculo(parsed.error));
   }
 
   const payload = payloadConFotos(parsed.data, { requiereCirculacion: true });
@@ -160,7 +168,7 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   const parsed = vehiculoInputSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error("Datos inválidos: " + parsed.error.message);
+    throw new Error(mensajeErrorValidacionVehiculo(parsed.error));
   }
 
   const placa = parsed.data.placa.trim().toUpperCase();
@@ -177,9 +185,26 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
     throw new Error(`La placa ${parsed.data.placa} ya está registrada por otro vehículo.`);
   }
 
+  const { data: vehiculoActual, error: fetchActualError } = await supabase
+    .from(TABLE)
+    .select("kilometraje_actual")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchActualError || !vehiculoActual) {
+    throw new Error("No se encontró el vehículo a actualizar.");
+  }
+
+  const kmNuevo = payload.kilometraje_actual;
+  const kmAnterior = vehiculoActual.kilometraje_actual ?? 0;
+  const reiniciarCicloServicioKm = kmNuevo !== kmAnterior;
+
   const { data, error } = await supabase
     .from(TABLE)
-    .update(payload)
+    .update({
+      ...payload,
+      ...(reiniciarCicloServicioKm ? { km_referencia_servicio: kmNuevo } : {}),
+    })
     .eq("id", id)
     .select("*")
     .single();

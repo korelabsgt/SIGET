@@ -1,7 +1,7 @@
 -- Bucket único de gestión vehicular. Carpetas por prefijo de ruta:
---   flota/   — fotos de unidad y tarjeta de circulación
---   fallas/  — evidencia de averías (mantenimiento)
---   recibos/ — recibo o evidencia fotográfica de bitácora de viaje
+--   flota/{placa}/ — fotos de unidad y tarjeta de circulación por vehículo
+--   fallas/{placa}/{YYYY-MM-DD}/ — evidencia de averías (mantenimiento)
+--   recibos/{placa}/{YYYY-MM-DD}/ — recibo de combustible en bitácora
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('vehiculos', 'vehiculos', true)
 ON CONFLICT (id) DO UPDATE SET public = true;

@@ -182,7 +182,10 @@ export function fechaManualToTimestamptz(
   value: string | null | undefined,
 ): string | null {
   if (!value?.trim()) return null;
-  const iso = parseFechaManualGt(value.trim());
+  const t = value.trim();
+  const desdeCalendario = normalizarFechaCalendario(t);
+  if (desdeCalendario) return `${desdeCalendario}T12:00:00.000Z`;
+  const iso = parseFechaManualGt(t);
   return iso ? `${iso}T12:00:00.000Z` : null;
 }
 

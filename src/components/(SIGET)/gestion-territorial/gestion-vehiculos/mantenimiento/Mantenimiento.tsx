@@ -24,7 +24,6 @@ import {
   GestionVehiculosTableShell,
   GvTableKpiSlot,
   GV_TABLE_BODY_CENTER_CLASS,
-  gvTableShellVisibleRows,
 } from "../lib/table-ui";
 import {
   GV_FILTRO_FIELD_CLASS,
@@ -152,7 +151,6 @@ export function Mantenimiento() {
     setPageSize,
   } = useGvTablePagination(fallasFiltradas, paginacionKey);
 
-  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
 
   useGvPanelChrome("mantenimiento");
 
@@ -260,7 +258,7 @@ export function Mantenimiento() {
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="mantenimiento">
       <GestionVehiculosTableShell
-        visibleRows={tableVisibleRows}
+        visibleRows={null}
         kpiSlot={
           canManage ? (
             <GvTableKpiSlot>

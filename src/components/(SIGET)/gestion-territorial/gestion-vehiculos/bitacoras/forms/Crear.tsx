@@ -33,15 +33,17 @@ import { toast } from "react-toastify";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import {
-  rutaStorageVehiculos,
+  rutaStorageReciboBitacoraVehiculo,
   VEHICULOS_STORAGE_BUCKET,
-  VEHICULOS_STORAGE_CARPETA_RECIBOS,
 } from "../../lib/storage";
 import {
   comprimirImagenVehiculo,
   IMAGEN_VEHICULO_ACCEPT_ATTR,
-  IMAGEN_VEHICULO_CAPTURE_ATTR,
 } from "../../lib/imagen-vehiculo-compress";
+import {
+  ImagenVehiculoEscritorioFileInput,
+  ImagenVehiculoFuentePicker,
+} from "../../lib/imagen-vehiculo-fuente-picker";
 import { BITACORA_RECIBO_PENDIENTE } from "../lib/helpers";
 import { GvMorphIcon } from "../../lib/morph-icon";
 import { useUser } from "@/components/(base)/providers/UserProvider";
@@ -167,15 +169,19 @@ export function Crear({
     setValue("evidencia_url", [], { shouldValidate: true });
   };
 
-  const handleEvidenciaFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = event.target.files?.[0];
-    event.target.value = "";
-    if (!selected) return;
+  const applyEvidenciaFile = (selected: File) => {
     if (evidenciaPreviewUrl) URL.revokeObjectURL(evidenciaPreviewUrl);
     setEvidenciaPathSubido(null);
     setEvidenciaFile(selected);
     setEvidenciaPreviewUrl(URL.createObjectURL(selected));
     setValue("evidencia_url", [BITACORA_RECIBO_PENDIENTE], { shouldValidate: true });
+  };
+
+  const handleEvidenciaFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0];
+    event.target.value = "";
+    if (!selected) return;
+    applyEvidenciaFile(selected);
   };
 
   const selectedMisionId = watch("solicitud_id");
@@ -377,8 +383,10 @@ export function Crear({
 
       if (evidenciaFile && !evidenciaPathSubido) {
         const compressed = await comprimirImagenVehiculo(evidenciaFile);
-        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.jpg`;
-        const filePath = rutaStorageVehiculos(VEHICULOS_STORAGE_CARPETA_RECIBOS, fileName);
+        const placa =
+          vehiculos.find((v) => v.id === data.vehiculo_id)?.placa ?? data.vehiculo_id;
+        const fileName = `${crypto.randomUUID()}.jpg`;
+        const filePath = rutaStorageReciboBitacoraVehiculo(placa, fileName);
         const supabase = createClient();
 
         const { error: uploadError } = await supabase.storage
@@ -699,13 +707,20 @@ export function Crear({
                         className="max-h-52 w-full object-contain"
                       />
                     </div>
-                    <div className="flex items-center justify-end gap-2 border-t border-border/80 bg-white/90 px-3 py-2.5 backdrop-blur-sm dark:bg-zinc-900/90">
-                      <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-sky-100 px-3 py-1.5 text-xs font-bold text-[#2c5f9b] transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:text-[#6f9fd4] dark:hover:bg-sky-900">
+                    <div className="flex flex-col gap-2 border-t border-border/80 bg-white/90 px-3 py-2.5 backdrop-blur-sm dark:bg-zinc-900/90 sm:flex-row sm:items-center sm:justify-end">
+                      <ImagenVehiculoFuentePicker
+                        multiple={false}
+                        className="w-full sm:max-w-xs"
+                        onFiles={(files) => {
+                          const file = files[0];
+                          if (file) applyEvidenciaFile(file);
+                        }}
+                      />
+                      <label className="relative hidden cursor-pointer items-center gap-1.5 rounded-lg bg-sky-100 px-3 py-1.5 text-xs font-bold text-[#2c5f9b] transition-colors hover:bg-sky-200 dark:bg-sky-950 dark:text-[#6f9fd4] dark:hover:bg-sky-900 lg:inline-flex">
                         Cambiar
                         <input
                           type="file"
                           accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-                          capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
                           className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                           aria-label="Cambiar recibo de combustible"
                           onChange={handleEvidenciaFileChange}
@@ -722,30 +737,38 @@ export function Crear({
                     </div>
                   </div>
                 ) : (
-                  <label
+                  <div
                     className={cn(
-                      "relative flex min-h-[11rem] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300/90 bg-gradient-to-b from-sky-50/80 to-zinc-50/40 px-6 py-8 text-center transition-colors hover:border-[#2c5f9b]/50 hover:from-sky-100/90 hover:to-sky-50/50 dark:border-zinc-600 dark:from-sky-950/25 dark:to-zinc-950/40 dark:hover:border-[#6f9fd4]/50 dark:hover:from-sky-950/40",
+                      "relative flex min-h-[11rem] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300/90 bg-gradient-to-b from-sky-50/80 to-zinc-50/40 px-6 py-8 text-center transition-colors lg:cursor-pointer lg:hover:border-[#2c5f9b]/50 lg:hover:from-sky-100/90 lg:hover:to-sky-50/50 dark:border-zinc-600 dark:from-sky-950/25 dark:to-zinc-950/40 dark:lg:hover:border-[#6f9fd4]/50 dark:lg:hover:from-sky-950/40",
                       modalFieldClass,
                     )}
                   >
+                    <ImagenVehiculoEscritorioFileInput
+                      multiple={false}
+                      onFiles={(files) => {
+                        const file = files[0];
+                        if (file) applyEvidenciaFile(file);
+                      }}
+                    />
                     <div className="pointer-events-none mb-4 flex size-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-sky-200/80 dark:bg-zinc-900 dark:ring-sky-900/60">
                       <UploadCloud className="size-7 text-[#2c5f9b] dark:text-[#6f9fd4]" />
                     </div>
                     <p className="pointer-events-none text-base font-bold text-[#2c5f9b] dark:text-[#6f9fd4]">
-                      Tomar foto o subir recibo
+                      <span className="lg:hidden">Recibo de combustible</span>
+                      <span className="hidden lg:inline">Tomar foto o subir recibo</span>
                     </p>
                     <p className="pointer-events-none mt-2 max-w-xs text-sm text-muted-foreground">
-                      En celular se abre la cámara o la galería; en computadora, elige un archivo
+                      En celular usa cámara o galería; en computadora, elige un archivo
                     </p>
-                    <input
-                      type="file"
-                      accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-                      capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
-                      className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-                      aria-label="Tomar foto o subir recibo de combustible"
-                      onChange={handleEvidenciaFileChange}
+                    <ImagenVehiculoFuentePicker
+                      multiple={false}
+                      className="mt-4 max-w-sm"
+                      onFiles={(files) => {
+                        const file = files[0];
+                        if (file) applyEvidenciaFile(file);
+                      }}
                     />
-                  </label>
+                  </div>
                 )}
               </ModalField>
               ) : null}

@@ -11,6 +11,7 @@ import { confirmDestructivo } from "@/lib/confirm-destructivo";
 import { VehiculosPanel } from "./VehiculosPanel";
 import { FlotaNotificaciones } from "./FlotaNotificaciones";
 import { VehiculoGaleriaModal } from "./VehiculoGaleriaModal";
+import { ReservaVehiculoModal } from "./ReservaVehiculoModal";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import { useEliminarVehiculo, useVehiculos } from "./lib/hooks";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
 import { cn } from "@/lib/utils";
 import { GV_FILTRO_FIELD_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_SEARCH_INPUT_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS, GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS } from "../lib/gv-header-ui";
-import { GestionVehiculosTableEmpty, GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
+import { GestionVehiculosTableEmpty, GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS } from "../lib/table-ui";
 import { useGvTablePagination } from "../lib/table-pagination";
 import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -73,6 +74,7 @@ export function Flota() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehiculo, setEditingVehiculo] = useState<VehiculoRow | null>(null);
   const [galeriaVehiculo, setGaleriaVehiculo] = useState<VehiculoRow | null>(null);
+  const [reservaVehiculo, setReservaVehiculo] = useState<VehiculoRow | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportingVehiculoId, setExportingVehiculoId] = useState<string | null>(null);
 
@@ -107,8 +109,6 @@ export function Flota() {
     setPageSize,
     rowOffset,
   } = useGvTablePagination(vehiculosFiltrados, paginacionKey);
-
-  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
 
   const handleEdit = (v: VehiculoRow) => {
     setEditingVehiculo(v);
@@ -199,7 +199,7 @@ export function Flota() {
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell
-          visibleRows={tableVisibleRows}
+          visibleRows={null}
           pagination={{
             pageSafe,
             totalPages,
@@ -304,6 +304,7 @@ export function Flota() {
               rowOffset={rowOffset}
               onEdit={handleEdit}
               onOpenGaleria={setGaleriaVehiculo}
+              onVerReserva={setReservaVehiculo}
               onExportExcel={(vehiculo) => void handleExportVehiculo(vehiculo)}
               exportingVehiculoId={exportingVehiculoId}
               onDelete={handleDelete}
@@ -318,6 +319,12 @@ export function Flota() {
         open={galeriaVehiculo !== null}
         onClose={() => setGaleriaVehiculo(null)}
         vehiculo={galeriaVehiculo}
+      />
+
+      <ReservaVehiculoModal
+        open={reservaVehiculo !== null}
+        onClose={() => setReservaVehiculo(null)}
+        vehiculo={reservaVehiculo}
       />
 
       {isModalOpen && editingVehiculo ? (

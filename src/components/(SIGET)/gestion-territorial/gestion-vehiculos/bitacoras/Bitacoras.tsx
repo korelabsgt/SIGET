@@ -19,7 +19,7 @@ import { computeMetricasBitacorasMes, extractVehiculosVinculadosBitacoras, forma
 import { normalizarMesCalendario } from "@/lib/fechas-gt";
 import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
-import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
+import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -155,8 +155,6 @@ export function Bitacoras() {
     setPageSize,
   } = useGvTablePagination(bitacorasFiltradas, paginacionKey);
 
-  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
-
   useGvPanelChrome("bitacoras");
 
   return (
@@ -168,7 +166,7 @@ export function Bitacoras() {
       />
       <GvTableSectionMotion panelId="bitacoras">
       <GestionVehiculosTableShell
-        visibleRows={tableVisibleRows}
+        visibleRows={null}
         kpiSlot={
           puedeVerMetricas ? (
             <GvTableKpiSlot>

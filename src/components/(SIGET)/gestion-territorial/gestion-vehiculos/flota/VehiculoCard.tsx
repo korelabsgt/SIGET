@@ -56,6 +56,7 @@ export function VehiculoCard({
   onExportExcel,
   exporting = false,
   onDelete,
+  onVerReserva,
   canManage,
   canDelete,
 }: {
@@ -65,6 +66,7 @@ export function VehiculoCard({
   onExportExcel: () => void;
   exporting?: boolean;
   onDelete: () => void;
+  onVerReserva?: () => void;
   canManage: boolean;
   canDelete: boolean;
 }) {
@@ -94,9 +96,29 @@ export function VehiculoCard({
           </div>
         }
         badge={
-          <GvMobileRecordBadge className={estadoVehiculoBadgeClass(vehiculo.estado)}>
-            {formatEstadoVehiculoLabel(vehiculo.estado)}
-          </GvMobileRecordBadge>
+          vehiculo.estado === "RESERVADO" && onVerReserva ? (
+            <GvMobileRecordBadge
+              role="button"
+              tabIndex={0}
+              onClick={onVerReserva}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                onVerReserva();
+              }}
+              className={cn(
+                estadoVehiculoBadgeClass(vehiculo.estado),
+                "cursor-pointer transition-opacity hover:opacity-90",
+              )}
+              aria-label="Ver reserva"
+            >
+              {formatEstadoVehiculoLabel(vehiculo.estado)}
+            </GvMobileRecordBadge>
+          ) : (
+            <GvMobileRecordBadge className={estadoVehiculoBadgeClass(vehiculo.estado)}>
+              {formatEstadoVehiculoLabel(vehiculo.estado)}
+            </GvMobileRecordBadge>
+          )
         }
       />
 

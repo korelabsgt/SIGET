@@ -4,6 +4,16 @@ import { type SolicitudRow } from "./zod";
 export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
   "Rechazada automáticamente: venció la fecha y hora de salida programadas sin respuesta.";
 
+export const COMENTARIO_PREFIJO_MISION_CANCELADA = "Misión cancelada:";
+
+export function esSolicitudMisionCancelada(
+  solicitud: Pick<SolicitudRow, "estado" | "comentarios">,
+): boolean {
+  if (solicitud.estado !== "RECHAZADA") return false;
+  const texto = solicitud.comentarios?.trim() ?? "";
+  return texto.startsWith(COMENTARIO_PREFIJO_MISION_CANCELADA);
+}
+
 export function estadoBadgeClass(estado: SolicitudRow["estado"]) {
   if (estado === "PENDIENTE") return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400";
   if (estado === "APROBADA") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400";

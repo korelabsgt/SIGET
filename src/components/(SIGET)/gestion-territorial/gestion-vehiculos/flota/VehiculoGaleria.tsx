@@ -1,21 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Car, CarFront, Loader2, Plus, Trash, Trash2 } from "lucide";
-import { toast } from "react-toastify";
-import { confirmDestructivo } from "@/lib/confirm-destructivo";
+import { Car, CarFront, Loader2, Plus } from "lucide";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GV_DETALLE_NESTED_CLASS } from "../lib/detalle-ui";
-import { useGvPermissionRole } from "../lib/gv-permissions-hook";
-import { canDeleteVehiculoFotos } from "../lib/permissions";
 import { type VehiculoRow } from "./lib/zod";
 import {
   combinarFotosVehiculo,
   esFotoTarjetaCirculacion,
-  MIN_FOTOS_VEHICULO,
   separarFotosVehiculo,
 } from "./lib/helpers";
-import { useQuitarImagenVehiculo } from "./lib/hooks";
 import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
@@ -33,8 +27,6 @@ export function VehiculoGaleria({
   canManage?: boolean;
   className?: string;
 }) {
-  const gvRole = useGvPermissionRole();
-  const canDeleteFoto = canDeleteVehiculoFotos(gvRole);
   const tituloVehiculo = `${vehiculo.marca} ${vehiculo.modelo}`;
   const { unidad, tarjetaCirculacion } = separarFotosVehiculo(vehiculo);
   const fotos = combinarFotosVehiculo(unidad, tarjetaCirculacion);
@@ -50,8 +42,6 @@ export function VehiculoGaleria({
   const [indice, setIndice] = useState(0);
   const fotoActiva = fotosConSrc[indice] ?? fotosConSrc[0] ?? null;
   const mostrarFoto = Boolean(fotoActiva) && !fotoRota && !firmandoFotos;
-  const quitarImagen = useQuitarImagenVehiculo();
-
   useEffect(() => {
     setFotoRota(false);
     setIndice(0);
@@ -60,30 +50,6 @@ export function VehiculoGaleria({
   useEffect(() => {
     if (indice >= fotosConSrc.length) setIndice(0);
   }, [fotosConSrc.length, indice]);
-
-  const handleQuitarFoto = async (path: string) => {
-    if (!canDeleteFoto) return;
-    if (!vehiculo.id) return;
-    const esTarjeta = esFotoTarjetaCirculacion(path);
-    if (!esTarjeta && unidad.length <= MIN_FOTOS_VEHICULO) {
-      toast.warn("Debes conservar al menos una fotografía del vehículo.");
-      return;
-    }
-    const res = await confirmDestructivo({
-      title: esTarjeta ? "¿Eliminar tarjeta de circulación?" : "¿Eliminar fotografía?",
-      text: "Se quitará de la galería y del almacenamiento.",
-      confirmButtonText: "Sí, eliminar",
-    });
-    if (!res.isConfirmed) return;
-    try {
-      await quitarImagen.mutateAsync({ id: vehiculo.id, path });
-      toast.success("Fotografía eliminada.");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "No se pudo eliminar la fotografía.",
-      );
-    }
-  };
 
   return (
     <div className={cn(GV_DETALLE_NESTED_CLASS, className)} data-morph-hover-scope>
@@ -155,19 +121,6 @@ export function VehiculoGaleria({
               <span className="absolute bottom-2 left-2 z-10 rounded-full bg-celeste-trifinio px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                 Tarjeta de circulación
               </span>
-            ) : null}
-            {canDeleteFoto ? (
-              <button
-                type="button"
-                disabled={quitarImagen.isPending}
-                onClick={() => {
-                  if (fotoActiva?.path) void handleQuitarFoto(fotoActiva.path);
-                }}
-                className="absolute left-2 top-2 z-10 inline-flex size-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-red-100 text-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
-                aria-label="Eliminar fotografía"
-              >
-                <GvMorphIcon icon={Trash2} hoverIcon={Trash} size={16} />
-              </button>
             ) : null}
           </>
         ) : (

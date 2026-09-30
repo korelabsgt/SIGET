@@ -22,7 +22,10 @@ export function SolicitudDetalleModal({
   onClose: () => void;
   solicitud: SolicitudRow | null;
   misionPendiente?: boolean;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
+  onAction: (
+    solicitud: SolicitudRow,
+    action: "APROBAR" | "RECHAZAR" | "INICIAR" | "CANCELAR",
+  ) => void;
 }) {
   const { user } = useUserContext();
   const gvRole = useGvPermissionRole();

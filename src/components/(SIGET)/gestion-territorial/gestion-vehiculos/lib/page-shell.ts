@@ -1,18 +1,20 @@
 export const GV_MODULO_PAGE_MOBILE_INSET_CLASS =
-  "mx-auto my-3 w-full max-md:max-w-[calc(100%-2rem)] md:my-4";
+  "mx-auto w-full max-md:max-w-[calc(100%-2rem)] px-1.5 py-3 lg:min-h-0 lg:overflow-hidden";
 
 export const GV_MODULO_PAGE_CLASS =
   `relative flex min-h-0 max-w-6xl flex-1 flex-col !p-0 xl:max-w-none xl:w-[90%] ${GV_MODULO_PAGE_MOBILE_INSET_CLASS}`;
 
 export const GV_MODULO_SCROLL_OUTER_CLASS =
-  "relative flex min-h-[calc(100vh-4rem)] w-full flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0";
+  "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden";
 
 export const GV_MODULO_SCROLL_INNER_CLASS =
-  "min-h-[calc(100vh-4rem)] flex flex-1 flex-col overflow-y-auto lg:h-full lg:min-h-0 lg:overflow-hidden";
+  "flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden";
 
-export const GV_TABLE_AREA_CLASS = "flex min-h-0 w-full min-w-0 flex-1 flex-col";
+export const GV_TABLE_AREA_CLASS =
+  "flex min-h-0 w-full min-w-0 flex-1 flex-col lg:basis-0";
 
-export const GV_PANEL_STACK_CLASS = "flex min-h-0 w-full flex-1 flex-col";
+export const GV_PANEL_STACK_CLASS =
+  "flex min-h-0 w-full flex-1 flex-col lg:basis-0";
 
 export const GV_PANEL_KPI_STACK_CLASS =
   "flex min-h-0 w-full flex-1 flex-col gap-1.5 lg:gap-3";

@@ -89,11 +89,11 @@ export function GestionVehiculosTableShell({
   const bodyBlock = (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col",
+        "flex min-h-0 flex-1 flex-col overflow-hidden lg:basis-0",
         applySizing && "min-h-[var(--gv-table-body-min-h)]",
       )}
     >
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:basis-0">{children}</div>
     </div>
   );
 
@@ -110,8 +110,8 @@ export function GestionVehiculosTableShell({
       style={shellStyle}
     >
       {hasToolbar ? (
-        <div className="flex min-h-0 flex-1 flex-col bg-celeste-trifinio pt-1">
-          <div className={cn(GV_TABLE_SHELL_INNER_CLASS, "h-full flex-1 rounded-t-2xl")}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-celeste-trifinio pt-1">
+          <div className={cn(GV_TABLE_SHELL_INNER_CLASS, "min-h-0 flex-1 overflow-hidden rounded-t-2xl")}>
             {kpiBlock}
             {toolbarBlock}
             {bodyBlock}
@@ -135,7 +135,11 @@ export function GestionVehiculosTableScroll({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={cn("overflow-x-auto", className)}>{children}</div>;
+  return (
+    <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
+      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+    </div>
+  );
 }
 
 export function GestionVehiculosTable({
@@ -146,14 +150,16 @@ export function GestionVehiculosTable({
   children: ReactNode;
 }) {
   return (
-    <GestionVehiculosTableScroll>
-      <table
-        className="w-full text-left text-sm"
-        style={{ minWidth }}
-      >
-        {children}
-      </table>
-    </GestionVehiculosTableScroll>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <GestionVehiculosTableScroll>
+        <table
+          className="w-full text-left text-sm"
+          style={{ minWidth }}
+        >
+          {children}
+        </table>
+      </GestionVehiculosTableScroll>
+    </div>
   );
 }
 

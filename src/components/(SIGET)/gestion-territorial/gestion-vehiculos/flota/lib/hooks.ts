@@ -3,11 +3,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
-import { fetchVehiculos } from "../../lib/client-db";
+import { fetchReservasVehiculoHoy, fetchVehiculos } from "../../lib/client-db";
 import { createVehiculo, deleteVehiculo, removeVehiculoImagen, updateVehiculo } from "./actions";
 import type { VehiculoInput } from "./zod";
 
 export const VEHICULOS_KEY = ["ter-vehiculos"];
+export const RESERVAS_VEHICULO_HOY_KEY = ["ter-reservas-vehiculo-hoy"] as const;
+
+export function useReservasVehiculoHoy(vehiculoId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: [...RESERVAS_VEHICULO_HOY_KEY, vehiculoId],
+    queryFn: () => fetchReservasVehiculoHoy(vehiculoId as string),
+    enabled: enabled && Boolean(vehiculoId?.trim()),
+    ...GV_QUERY_OPTIONS,
+  });
+}
 
 export function useVehiculos() {
   return useQuery({

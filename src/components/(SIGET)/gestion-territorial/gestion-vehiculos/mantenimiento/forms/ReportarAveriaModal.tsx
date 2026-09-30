@@ -37,11 +37,15 @@ import {
 } from "../../lib/gv-modal-shell";
 import { FallaMantenimientoSchema, type FallaMantenimientoFormData } from "../lib/zod";
 import { useCrearFalla, useVehiculosParaFallas } from "../lib/hooks";
+import { comprimirImagenVehiculo } from "../../lib/imagen-vehiculo-compress";
 import {
-  comprimirImagenVehiculo,
-  IMAGEN_VEHICULO_ACCEPT_ATTR,
-  IMAGEN_VEHICULO_CAPTURE_ATTR,
-} from "../../lib/imagen-vehiculo-compress";
+  rutaStorageEvidenciaFallaVehiculo,
+  VEHICULOS_STORAGE_BUCKET,
+} from "../../lib/storage";
+import {
+  ImagenVehiculoEscritorioFileInput,
+  ImagenVehiculoFuentePicker,
+} from "../../lib/imagen-vehiculo-fuente-picker";
 
 export type VehiculoAveriaFijo = {
   id: string;
@@ -118,15 +122,11 @@ export function ReportarAveriaModal({
     });
   }, [open, vehiculoIdInicial, vehiculoFijo, form]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    e.target.value = "";
-    if (selectedFile) {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setUploadedEvidenciaPath(null);
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
-    }
+  const applyEvidenciaFile = (selectedFile: File) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setUploadedEvidenciaPath(null);
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
   };
 
   const handleClose = () => {
@@ -148,11 +148,15 @@ export function ReportarAveriaModal({
       if (file && !uploadedEvidenciaPath) {
         const supabase = createClient();
         const compressed = await comprimirImagenVehiculo(file);
-        const fileName = `${data.vehiculo_id}_${crypto.randomUUID()}.jpg`;
-        const filePath = `fallas/${fileName}`;
+        const placa =
+          (vehiculoFijo?.id === data.vehiculo_id ? vehiculoFijo.placa : null) ??
+          vehiculos.find((v) => v.id === data.vehiculo_id)?.placa ??
+          data.vehiculo_id;
+        const fileName = `${crypto.randomUUID()}.jpg`;
+        const filePath = rutaStorageEvidenciaFallaVehiculo(placa, fileName);
 
         const { error: uploadError } = await supabase.storage
-          .from("vehiculos")
+          .from(VEHICULOS_STORAGE_BUCKET)
           .upload(filePath, compressed, {
             upsert: false,
             contentType: "image/jpeg",
@@ -323,19 +327,29 @@ export function ReportarAveriaModal({
                     </Button>
                   </div>
                 ) : (
-                  <div className="relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/50">
-                    <input
-                      type="file"
-                      accept={IMAGEN_VEHICULO_ACCEPT_ATTR}
-                      capture={IMAGEN_VEHICULO_CAPTURE_ATTR}
-                      className="absolute inset-0 size-full cursor-pointer opacity-0"
-                      aria-label="Subir evidencia fotográfica"
-                      onChange={handleFileChange}
+                  <div className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors lg:cursor-pointer lg:hover:bg-muted/50">
+                    <ImagenVehiculoEscritorioFileInput
+                      multiple={false}
+                      onFiles={(files) => {
+                        const selected = files[0];
+                        if (selected) applyEvidenciaFile(selected);
+                      }}
                     />
                     <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30">
                       <UploadCloud className="size-5" />
                     </div>
-                    <p className="mt-3 text-sm font-medium">Haz clic o arrastra una imagen aquí</p>
+                    <p className="mt-3 text-sm font-medium lg:pointer-events-none">
+                      <span className="lg:hidden">Evidencia fotográfica</span>
+                      <span className="hidden lg:inline">Haz clic o arrastra una imagen aquí</span>
+                    </p>
+                    <ImagenVehiculoFuentePicker
+                      multiple={false}
+                      className="mt-4 max-w-sm"
+                      onFiles={(files) => {
+                        const selected = files[0];
+                        if (selected) applyEvidenciaFile(selected);
+                      }}
+                    />
                   </div>
                 )}
               </div>

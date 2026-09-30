@@ -17,6 +17,7 @@ import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { type SolicitudRow } from "./lib/zod";
 import {
+  esSolicitudMisionCancelada,
   estadoBadgeClass,
   formatDuracionMision,
   formatEstadoLabel,
@@ -37,7 +38,9 @@ function BloqueMotivoRechazo({
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/80 dark:bg-red-950/30">
       <p className="text-[10px] font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
-        Motivo del rechazo
+        {esSolicitudMisionCancelada(solicitud)
+          ? "Motivo de la cancelación"
+          : "Motivo del rechazo"}
       </p>
       <p
         className={cn(
@@ -207,13 +210,27 @@ function AccionesSolicitud({
   puedeControlMision: boolean;
   puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
+  onAction: (
+    solicitud: SolicitudRow,
+    action: "APROBAR" | "RECHAZAR" | "INICIAR" | "CANCELAR",
+  ) => void;
   anchoCompleto?: boolean;
 }) {
   const btnBase = cn(
     "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-0 text-[11px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
     anchoCompleto ? "h-12 w-full" : "h-9 px-4",
   );
+
+  const btnCancelarMision = canAprobarRechazar ? (
+    <button
+      type="button"
+      onClick={() => onAction(solicitud, "CANCELAR")}
+      className={cn(btnBase, "bg-red-600 dark:bg-red-700", anchoCompleto && "w-full")}
+    >
+      <X size={16} strokeWidth={2.5} />
+      Cancelar misión
+    </button>
+  ) : null;
 
   if (canAprobarRechazar && solicitud.estado === "PENDIENTE") {
     return (
@@ -238,9 +255,23 @@ function AccionesSolicitud({
     );
   }
 
-  if (puedeControlMision && solicitud.estado === "APROBADA") {
-    if (!puedeIniciarPorHorario) {
-      return (
+  if (solicitud.estado === "APROBADA") {
+    const iniciarMision =
+      puedeControlMision && puedeIniciarPorHorario ? (
+        <button
+          type="button"
+          disabled={misionPendiente}
+          onClick={() => onAction(solicitud, "INICIAR")}
+          className={cn(btnBase, "bg-sky-600 dark:bg-sky-700", anchoCompleto && "w-full")}
+        >
+          {misionPendiente ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play size={16} strokeWidth={2.5} />
+          )}
+          Iniciar misión
+        </button>
+      ) : puedeControlMision ? (
         <p
           className={cn(
             "rounded-xl bg-amber-50 px-4 py-3 text-xs font-medium leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
@@ -250,23 +281,15 @@ function AccionesSolicitud({
           Podrá iniciar la misión a partir del{" "}
           <span className="font-bold">{formatFechaHoraGv(solicitud.fecha_inicio)}</span>.
         </p>
-      );
-    }
+      ) : null;
+
+    if (!iniciarMision && !btnCancelarMision) return null;
 
     return (
-      <button
-        type="button"
-        disabled={misionPendiente}
-        onClick={() => onAction(solicitud, "INICIAR")}
-        className={cn(btnBase, "bg-sky-600 dark:bg-sky-700", anchoCompleto && "col-span-2")}
-      >
-        {misionPendiente ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Play size={16} strokeWidth={2.5} />
-        )}
-        Iniciar misión
-      </button>
+      <div className={cn(anchoCompleto && "grid grid-cols-1 gap-3 sm:grid-cols-2")}>
+        {iniciarMision}
+        {btnCancelarMision}
+      </div>
     );
   }
 
@@ -301,7 +324,10 @@ function ContenidoDetalle({
   puedeControlMision: boolean;
   puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
+  onAction: (
+    solicitud: SolicitudRow,
+    action: "APROBAR" | "RECHAZAR" | "INICIAR" | "CANCELAR",
+  ) => void;
   embedded: boolean;
   onClose?: () => void;
 }) {
@@ -321,8 +347,8 @@ function ContenidoDetalle({
   );
   const tieneAcciones =
     (canAprobarRechazar && solicitud.estado === "PENDIENTE") ||
-    (puedeControlMision &&
-      (solicitud.estado === "APROBADA" || solicitud.estado === "EN_MISION"));
+    solicitud.estado === "APROBADA" ||
+    (puedeControlMision && solicitud.estado === "EN_MISION");
 
   if (embedded) {
     return (
@@ -463,7 +489,10 @@ export function SolicitudDetalleView({
   embedded?: boolean;
   onBack?: () => void;
   onClose?: () => void;
-  onAction: (solicitud: SolicitudRow, action: "APROBAR" | "RECHAZAR" | "INICIAR") => void;
+  onAction: (
+    solicitud: SolicitudRow,
+    action: "APROBAR" | "RECHAZAR" | "INICIAR" | "CANCELAR",
+  ) => void;
 }) {
   if (embedded) {
     return (

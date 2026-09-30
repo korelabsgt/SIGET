@@ -16,7 +16,7 @@ import { Crear } from "./forms/Crear";
 
 import { SolicitudActionModal } from "./SolicitudActionModal";
 
-import { GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS, gvTableShellVisibleRows } from "../lib/table-ui";
+import { GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS } from "../lib/table-ui";
 
 import { useGvTablePagination } from "../lib/table-pagination";
 
@@ -65,7 +65,7 @@ const TABS = ["TODAS", "PENDIENTES", "ACTIVAS", "HISTORIAL"] as const;
 
 type TabSolicitud = (typeof TABS)[number];
 
-type AccionSolicitud = "APROBAR" | "RECHAZAR" | "INICIAR";
+type AccionSolicitud = "APROBAR" | "RECHAZAR" | "INICIAR" | "CANCELAR";
 
 
 
@@ -112,7 +112,9 @@ export function Solicitudes() {
 
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudRow | null>(null);
 
-  const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | null>(null);
+  const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR" | "CANCELAR" | null>(
+    null,
+  );
 
   const [misionPendiente, setMisionPendiente] = useState(false);
 
@@ -160,11 +162,19 @@ export function Solicitudes() {
 
 
 
-    if (action === "APROBAR" || action === "RECHAZAR") {
+    if (action === "APROBAR" || action === "RECHAZAR" || action === "CANCELAR") {
 
       const fresh = solicitudes.find((item) => item.id === solicitud.id) ?? solicitud;
 
-      if (fresh.estado !== "PENDIENTE") {
+      if (action === "CANCELAR") {
+        if (fresh.estado !== "APROBADA") {
+          toast.warn(
+            `Esta solicitud ya no está aprobada (${formatEstadoLabel(fresh.estado).toLowerCase()}).`,
+          );
+          invalidate();
+          return;
+        }
+      } else if (fresh.estado !== "PENDIENTE") {
 
         toast.warn(
 
@@ -248,10 +258,6 @@ export function Solicitudes() {
 
 
 
-  const tableVisibleRows = gvTableShellVisibleRows(pageSize);
-
-
-
   useGvPanelChrome("solicitudes");
 
 
@@ -278,7 +284,7 @@ export function Solicitudes() {
 
         <GestionVehiculosTableShell
 
-          visibleRows={tableVisibleRows}
+          visibleRows={null}
 
           pagination={{
 

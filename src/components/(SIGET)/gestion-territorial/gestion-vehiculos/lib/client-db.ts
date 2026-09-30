@@ -17,6 +17,13 @@ import { normalizeFallaRow } from "../mantenimiento/lib/helpers";
 import { canViewAllFallasMantenimiento, roleFromAuthUser } from "./permissions";
 import type { SolicitudRow } from "../solicitudes/lib/zod";
 import { canViewAllBitacoras, canViewAllSolicitudes } from "./permissions";
+import { fechaCalendarioGt } from "@/lib/fechas-gt";
+import {
+  nombreSolicitanteReserva,
+  ordenarReservasVehiculoHoy,
+  solicitudReservaActivaEnDia,
+  type ReservaVehiculoDetalle,
+} from "../flota/lib/reserva-vehiculo";
 
 function db() {
   return createClient();
@@ -46,6 +53,53 @@ export async function fetchVehiculosDisponibles(): Promise<VehiculoRow[]> {
   return listarVehiculosCatalogoFlota(rows).filter((vehiculo) =>
     esVehiculoSeleccionableParaSolicitud(vehiculo),
   );
+}
+
+export async function fetchReservasVehiculoHoy(
+  vehiculoId: string,
+): Promise<ReservaVehiculoDetalle[]> {
+  const id = vehiculoId.trim();
+  if (!id) return [];
+
+  const client = db();
+  const { data, error } = await client
+    .from("ot_solicitudes")
+    .select(
+      `
+        id,
+        estado,
+        vehiculo_id,
+        fecha_inicio,
+        fecha_fin_estimada,
+        solicitante:profiles!solicitante_id(nombre, email)
+      `,
+    )
+    .eq("vehiculo_id", id)
+    .in("estado", ["PENDIENTE", "APROBADA", "EN_MISION"]);
+
+  if (error) throw new Error(error.message);
+
+  const hoy = fechaCalendarioGt();
+  const filas = (data ?? []) as Array<
+    Pick<
+      SolicitudRow,
+      "id" | "estado" | "vehiculo_id" | "fecha_inicio" | "fecha_fin_estimada"
+    > & {
+      solicitante?: { nombre?: string | null; email?: string | null } | null;
+    }
+  >;
+
+  const reservas = filas
+    .filter((row) => solicitudReservaActivaEnDia(row, id, hoy))
+    .map((row) => ({
+      id: row.id,
+      estado: row.estado,
+      solicitanteNombre: nombreSolicitanteReserva(row.solicitante),
+      fechaInicio: row.fecha_inicio,
+      fechaFinEstimada: row.fecha_fin_estimada,
+    }));
+
+  return ordenarReservasVehiculoHoy(reservas);
 }
 
 export async function fetchSolicitudes(): Promise<SolicitudRow[]> {
