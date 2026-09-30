@@ -10,6 +10,7 @@ import {
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import {
   canAprobarRechazarSolicitudes,
+  canElegirSolicitanteAlCrearSolicitudVehiculo,
   canIniciarMisionSolicitud,
   canManageSolicitudesVehiculos,
   canViewAllSolicitudes,
@@ -203,14 +204,15 @@ export async function getSolicitudes(): Promise<SolicitudRow[]> {
 
 export async function createSolicitud(input: SolicitudInput) {
   try {
-    const { user } = await requireAuth();
+    const { user, role } = await requireAuth();
 
     const parsed = solicitudInputSchema.parse(input);
 
-    const { vehiculo_id, piloto_modo, piloto_id, ...rest } = parsed;
+    const { vehiculo_id, piloto_modo, piloto_id, solicitante_id, ...rest } = parsed;
 
-    const pilotoUuid =
-      piloto_modo === "otro" && piloto_id?.trim() ? piloto_id.trim() : user.id;
+    const puedeElegirSolicitante = canElegirSolicitanteAlCrearSolicitudVehiculo(role);
+    const solicitanteIdSolicitado = solicitante_id?.trim() || user.id;
+    const solicitanteId = puedeElegirSolicitante ? solicitanteIdSolicitado : user.id;
 
     const fechasHoy = validarFechasMisionNoAnterioresAHoyGt(
       rest.fecha_inicio,
@@ -222,7 +224,26 @@ export async function createSolicitud(input: SolicitudInput) {
 
     const supabase = await createClient();
 
-    const bloqueos = await fetchBitacoraPendienteBloqueos(supabase, user.id);
+    if (puedeElegirSolicitante) {
+      const { data: perfilSolicitante, error: solicitanteError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", solicitanteId)
+        .eq("activo", true)
+        .maybeSingle();
+
+      if (solicitanteError || !perfilSolicitante) {
+        return {
+          success: false,
+          error: "El solicitante debe ser un usuario activo registrado en el sistema.",
+        };
+      }
+    }
+
+    const pilotoUuid =
+      piloto_modo === "otro" && piloto_id?.trim() ? piloto_id.trim() : solicitanteId;
+
+    const bloqueos = await fetchBitacoraPendienteBloqueos(supabase, solicitanteId);
     if (bloqueos.vehiculo) {
       return {
         success: false,
@@ -286,7 +307,7 @@ export async function createSolicitud(input: SolicitudInput) {
       .from(TABLE)
       .insert([
         {
-          solicitante_id: user.id,
+          solicitante_id: solicitanteId,
           vehiculo_id: vehiculo_id || null,
           fecha_inicio: rest.fecha_inicio,
           fecha_fin_estimada: rest.fecha_fin_estimada,
@@ -553,6 +574,30 @@ export async function cambiarEstadoSolicitud(
     const message =
       err instanceof Error ? err.message : "No se pudo actualizar el estado de la solicitud.";
     return { success: false, error: message };
+  }
+}
+
+export async function fetchProfileBasico(profileId: string) {
+  try {
+    const { supabase } = await requireAuth();
+    const id = profileId.trim();
+    if (!id) return null;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nombre, email")
+      .eq("id", id)
+      .eq("activo", true)
+      .maybeSingle();
+
+    if (error || !data?.id) return null;
+    return {
+      id: data.id,
+      nombre: data.nombre ?? "",
+      email: data.email ?? "",
+    };
+  } catch {
+    return null;
   }
 }
 

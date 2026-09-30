@@ -66,6 +66,14 @@ export function canManageSolicitudesVehiculos(role: string | null | undefined): 
   return slug === "admin" || isAdministradorOtRole(role);
 }
 
+export function canElegirSolicitanteAlCrearSolicitudVehiculo(
+  role: string | null | undefined,
+): boolean {
+  if (!role) return false;
+  if (isSuperRole(role)) return true;
+  return normalizeRoleSlug(role) === "admin";
+}
+
 export function canAprobarRechazarSolicitudes(role: string | null | undefined): boolean {
   return canManageSolicitudesVehiculos(role);
 }

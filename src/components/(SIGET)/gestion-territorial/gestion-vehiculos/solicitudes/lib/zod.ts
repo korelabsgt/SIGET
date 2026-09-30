@@ -37,6 +37,7 @@ export const solicitudInputSchema = z
     vehiculo_id: z.string().uuid("Vehículo inválido").optional().nullable().or(z.literal("")),
     piloto_modo: z.enum(PILOTO_MODO),
     piloto_id: z.string().optional(),
+    solicitante_id: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -59,6 +60,17 @@ export const solicitudInputSchema = z
         code: "custom",
         message: fechas.message,
         path: [fechas.path],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    const id = data.solicitante_id?.trim() ?? "";
+    if (!id) return;
+    if (!z.string().uuid().safeParse(id).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Solicitante inválido",
+        path: ["solicitante_id"],
       });
     }
   })

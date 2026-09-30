@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/select";
 import { PasajerosSelect } from "../PasajerosSelect";
 import { PilotoSelect } from "../PilotoSelect";
-import { useUser } from "@/components/(base)/providers/UserProvider";
+import { useUser, useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useQuery } from "@tanstack/react-query";
+import { canElegirSolicitanteAlCrearSolicitudVehiculo } from "../../lib/permissions";
+import { getBitacoraPendienteBloqueosParaUsuario } from "../../lib/bitacora-pendiente-actions";
+import { GV_QUERY_OPTIONS } from "../../lib/query";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -32,7 +36,6 @@ import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
 import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
 import { GvFechaHoraPickerInput } from "../../lib/gv-fecha-input";
-import { useBitacoraPendienteBloqueos } from "../../lib/bitacora-pendiente-hooks";
 import {
   mensajeBloqueoNuevaSolicitudVehiculo,
 } from "../../lib/bitacora-pendiente-bloqueo";
@@ -56,8 +59,12 @@ export function Crear({
 }) {
   const crear = useCrearSolicitud();
   const user = useUser();
-  const { data: bloqueos } = useBitacoraPendienteBloqueos();
-  const bloqueoVehiculo = bloqueos?.vehiculo ?? null;
+  const { effectiveRole } = useUserContext();
+  const puedeElegirSolicitante = canElegirSolicitanteAlCrearSolicitudVehiculo(effectiveRole);
+  const nombreUsuarioActual =
+    (typeof user?.user_metadata?.nombre === "string" ? user.user_metadata.nombre.trim() : "") ||
+    user?.email ||
+    "Usted";
   const { data: vehiculosBase = [], isLoading: loadingVehiculos } = useVehiculosParaSolicitud(open);
 
   const {
@@ -78,11 +85,22 @@ export function Crear({
       vehiculo_id: "",
       piloto_modo: "solicitante",
       piloto_id: "",
+      solicitante_id: user?.id ?? "",
     },
   });
 
   const pilotoModo = watch("piloto_modo");
+  const solicitanteId = watch("solicitante_id") || user?.id || "";
+  const solicitanteEsUsuarioActual = Boolean(user?.id && solicitanteId === user.id);
   const fechaInicioManual = watch("fecha_inicio");
+
+  const { data: bloqueos } = useQuery({
+    queryKey: ["gv-bitacora-pendiente-bloqueos", solicitanteId],
+    queryFn: () => getBitacoraPendienteBloqueosParaUsuario(solicitanteId),
+    enabled: open && Boolean(solicitanteId),
+    ...GV_QUERY_OPTIONS,
+  });
+  const bloqueoVehiculo = bloqueos?.vehiculo ?? null;
 
   useEffect(() => {
     if (open) {
@@ -95,13 +113,17 @@ export function Crear({
         vehiculo_id: "",
         piloto_modo: "solicitante",
         piloto_id: "",
+        solicitante_id: user?.id ?? "",
       });
     }
-  }, [open, reset]);
+  }, [open, reset, user?.id]);
 
   const onSubmit = async (data: SolicitudInput) => {
     try {
-      const res = await crear.mutateAsync(data);
+      const res = await crear.mutateAsync({
+        ...data,
+        solicitante_id: data.solicitante_id?.trim() || user?.id || "",
+      });
       if (!res.success) {
         toast.error(res.error || "Error al crear la solicitud");
         return;
@@ -131,6 +153,36 @@ export function Crear({
               mensaje={mensajeBloqueoNuevaSolicitudVehiculo(bloqueoVehiculo)}
             />
           ) : null}
+
+          <div className="space-y-1.5">
+            <Label>Solicitante</Label>
+            <p className="text-xs text-muted-foreground">
+              Usuario al que se asigna la solicitud de vehículo.
+            </p>
+            {puedeElegirSolicitante ? (
+              <Controller
+                control={control}
+                name="solicitante_id"
+                render={({ field }) => (
+                  <PilotoSelect
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            ) : (
+              <Input
+                readOnly
+                disabled
+                value={nombreUsuarioActual}
+                className="bg-zinc-100 dark:bg-zinc-900"
+              />
+            )}
+            {errors.solicitante_id ? (
+              <p className="text-xs text-red-500">{errors.solicitante_id.message}</p>
+            ) : null}
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
@@ -168,7 +220,9 @@ export function Crear({
           <div className="space-y-2">
             <Label>Piloto del vehículo</Label>
             <p className="text-xs text-muted-foreground">
-              Puede ser quien solicita o buscar otro usuario registrado.
+              {solicitanteEsUsuarioActual
+                ? "Puede ser quien solicita o buscar otro usuario registrado."
+                : "Puede ser el solicitante o buscar otro usuario registrado."}
             </p>
             <Controller
               control={control}
@@ -182,7 +236,7 @@ export function Crear({
                       checked={field.value === "solicitante"}
                       onChange={() => field.onChange("solicitante")}
                     />
-                    <span>Yo conduzco</span>
+                    <span>{solicitanteEsUsuarioActual ? "Yo conduzco" : "El solicitante conduce"}</span>
                   </label>
                   <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input

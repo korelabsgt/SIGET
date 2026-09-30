@@ -6,7 +6,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { searchProfiles } from "./lib/actions";
+import { fetchProfileBasico, searchProfiles } from "./lib/actions";
 
 type ProfileOption = { id: string; nombre: string; email: string };
 
@@ -40,7 +40,17 @@ export function PilotoSelect({
       return;
     }
     if (selected?.id === value) return;
-    setSelected((prev) => (prev?.id === value ? prev : null));
+
+    let cancelled = false;
+    void fetchProfileBasico(value).then((profile) => {
+      if (cancelled || !profile) return;
+      setSelected(profile);
+      setQuery(etiquetaUsuario(profile));
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [value, selected?.id]);
 
   React.useEffect(() => {
