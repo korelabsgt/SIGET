@@ -68,6 +68,7 @@ export async function fetchReservasVehiculoHoy(
       `
         id,
         estado,
+        destino,
         vehiculo_id,
         fecha_inicio,
         fecha_fin_estimada,
@@ -83,7 +84,7 @@ export async function fetchReservasVehiculoHoy(
   const filas = (data ?? []) as Array<
     Pick<
       SolicitudRow,
-      "id" | "estado" | "vehiculo_id" | "fecha_inicio" | "fecha_fin_estimada"
+      "id" | "estado" | "destino" | "vehiculo_id" | "fecha_inicio" | "fecha_fin_estimada"
     > & {
       solicitante?: { nombre?: string | null; email?: string | null } | null;
     }
@@ -94,6 +95,7 @@ export async function fetchReservasVehiculoHoy(
     .map((row) => ({
       id: row.id,
       estado: row.estado,
+      destino: row.destino?.trim() || "Sin destino",
       solicitanteNombre: nombreSolicitanteReserva(row.solicitante),
       fechaInicio: row.fecha_inicio,
       fechaFinEstimada: row.fecha_fin_estimada,

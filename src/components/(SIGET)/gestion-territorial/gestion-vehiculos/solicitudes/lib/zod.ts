@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { parseFechaHoraManualToIso } from "../../lib/fechas-input";
-import { validarFechasMisionNoAnterioresAHoyGt } from "./calendario-reservas";
+import {
+  esMinutoCuartoSolicitud,
+  validarFechasMisionNoAnterioresAHoyGt,
+} from "./calendario-reservas";
+import { partesFechaHoraGt } from "@/lib/fechas-gt";
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",
@@ -16,10 +20,19 @@ const fechaHoraManual = (requerido: string) =>
     .trim()
     .min(1, requerido)
     .superRefine((val, ctx) => {
-      if (!parseFechaHoraManualToIso(val)) {
+      const iso = parseFechaHoraManualToIso(val);
+      if (!iso) {
         ctx.addIssue({
           code: "custom",
           message: "Fecha inválida. Escriba DD/MM/AAAA HH:mm",
+        });
+        return;
+      }
+      const { minute } = partesFechaHoraGt(new Date(iso));
+      if (!esMinutoCuartoSolicitud(minute)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Los minutos deben ser 00, 15, 30 o 45",
         });
       }
     })

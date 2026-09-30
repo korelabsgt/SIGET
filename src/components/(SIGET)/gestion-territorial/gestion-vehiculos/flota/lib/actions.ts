@@ -5,7 +5,9 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import {
   combinarFotosVehiculo,
-  esFotoTarjetaCirculacion,
+  esFotoSeguroVehiculo,
+  MAX_FOTOS_CIRCULACION,
+  MAX_FOTOS_SEGURO,
   estadoVehiculoConReservaFija,
   fotosUnidadVehiculo,
   fotosVehiculo,
@@ -17,6 +19,11 @@ import {
 } from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
 import type { ZodError } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  normalizeVehiculoStoragePath,
+  VEHICULOS_STORAGE_BUCKET,
+} from "../../lib/storage";
 
 function mensajeErrorValidacionVehiculo(error: ZodError): string {
   const partes = error.issues
@@ -24,10 +31,6 @@ function mensajeErrorValidacionVehiculo(error: ZodError): string {
     .filter((msg) => msg.trim().length > 0);
   return partes.length > 0 ? partes.join(" ") : "Datos inválidos.";
 }
-import {
-  normalizeVehiculoStoragePath,
-  VEHICULOS_STORAGE_BUCKET,
-} from "../../lib/storage";
 import { canManageFlota, isSuperRole } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
@@ -97,22 +100,34 @@ function payloadConFotos(
   { requiereCirculacion = false }: { requiereCirculacion?: boolean } = {},
 ) {
   const fotos = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
-  const { unidad, tarjetaCirculacion } = separarFotosVehiculo({ imagen_url: fotos });
+  const { unidad, tarjetasCirculacion, fotoSeguro } = separarFotosVehiculo({
+    imagen_url: fotos,
+  });
 
   if (unidad.length < MIN_FOTOS_VEHICULO) {
     throw new Error("Debes subir al menos una fotografía del vehículo.");
   }
-  if (fotos.filter(esFotoTarjetaCirculacion).length > 1) {
-    throw new Error("Solo puedes guardar una fotografía de la tarjeta de circulación.");
+  if (tarjetasCirculacion.length > MAX_FOTOS_CIRCULACION) {
+    throw new Error(`Puedes guardar hasta ${MAX_FOTOS_CIRCULACION} fotografías de circulación.`);
   }
-  if (requiereCirculacion && !tarjetaCirculacion) {
-    throw new Error("Debes subir la fotografía de la tarjeta de circulación.");
+  if (fotos.filter(esFotoSeguroVehiculo).length > MAX_FOTOS_SEGURO) {
+    throw new Error("Solo puedes guardar una fotografía del seguro.");
   }
+  if (requiereCirculacion && tarjetasCirculacion.length < 1) {
+    throw new Error("Debes subir al menos una fotografía de la tarjeta de circulación.");
+  }
+
+  const estado = estadoVehiculoConReservaFija(data.placa, data.estado);
+  const reservaUsuarioId =
+    estado === "RESERVA_INDIVIDUAL" ? data.reserva_usuario_id ?? null : null;
 
   return {
     ...data,
-    estado: estadoVehiculoConReservaFija(data.placa, data.estado),
-    imagen_url: imagenUrlParaDb(combinarFotosVehiculo(unidad, tarjetaCirculacion)),
+    estado,
+    reserva_usuario_id: reservaUsuarioId,
+    imagen_url: imagenUrlParaDb(
+      combinarFotosVehiculo(unidad, tarjetasCirculacion, fotoSeguro),
+    ),
   };
 }
 
@@ -124,6 +139,57 @@ function mapImagenesDbError(message: string) {
   return message;
 }
 
+function mapVehiculoDbError(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("reserva_usuario_id") &&
+    (lower.includes("column") ||
+      lower.includes("schema cache") ||
+      lower.includes("could not find"))
+  ) {
+    return "Falta la columna reserva_usuario_id en ot_vehiculos. Aplica en Supabase la migración db/migrations/ot_vehiculos_reserva_individual_usuario.sql.";
+  }
+  if (lower.includes("reserva_usuario") && lower.includes("foreign key")) {
+    return "El usuario asignado no existe o no está activo.";
+  }
+  if (lower.includes("reserva_individual") && lower.includes("invalid input value for enum")) {
+    return 'El estado "Reserva individual" no está habilitado en la base de datos. Aplica la migración ot_estado_vehiculo_reserva_individual.sql.';
+  }
+  return mapImagenesDbError(message);
+}
+
+type VehiculoPayloadDb = ReturnType<typeof payloadConFotos>;
+
+function filaOtVehiculosDesdePayload(
+  payload: VehiculoPayloadDb,
+  modo: "insert" | "update",
+) {
+  const { reserva_usuario_id, ...resto } = payload;
+  const fila: Record<string, unknown> = { ...resto };
+  if (payload.estado === "RESERVA_INDIVIDUAL" && reserva_usuario_id) {
+    fila.reserva_usuario_id = reserva_usuario_id;
+  } else if (modo === "update") {
+    fila.reserva_usuario_id = null;
+  }
+  return fila;
+}
+
+async function validarUsuarioReservaIndividual(
+  supabase: SupabaseClient,
+  usuarioId: string,
+) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", usuarioId)
+    .eq("activo", true)
+    .maybeSingle();
+
+  if (error || !data?.id) {
+    throw new Error("El usuario asignado no existe o no está activo.");
+  }
+}
+
 export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow> {
   const { supabase, user } = await requireFlotaManageAuth();
 
@@ -133,6 +199,10 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
   }
 
   const payload = payloadConFotos(parsed.data, { requiereCirculacion: true });
+  if (payload.estado === "RESERVA_INDIVIDUAL" && payload.reserva_usuario_id) {
+    await validarUsuarioReservaIndividual(supabase, payload.reserva_usuario_id);
+  }
+  const fila = filaOtVehiculosDesdePayload(payload, "insert");
 
   const { data: existingPlaca } = await supabase
     .from(TABLE)
@@ -148,14 +218,14 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
     .from(TABLE)
     .insert([
       {
-        ...payload,
+        ...fila,
         km_referencia_servicio: payload.kilometraje_actual,
       },
     ])
     .select("*")
     .single();
 
-  if (error) throw new Error(mapImagenesDbError(error.message));
+  if (error) throw new Error(mapVehiculoDbError(error.message));
 
   const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
 
@@ -173,6 +243,10 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   const placa = parsed.data.placa.trim().toUpperCase();
   const payload = payloadConFotos({ ...parsed.data, placa });
+  if (payload.estado === "RESERVA_INDIVIDUAL" && payload.reserva_usuario_id) {
+    await validarUsuarioReservaIndividual(supabase, payload.reserva_usuario_id);
+  }
+  const fila = filaOtVehiculosDesdePayload(payload, "update");
 
   const { data: existingPlaca } = await supabase
     .from(TABLE)
@@ -202,14 +276,14 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
   const { data, error } = await supabase
     .from(TABLE)
     .update({
-      ...payload,
+      ...fila,
       ...(reiniciarCicloServicioKm ? { km_referencia_servicio: kmNuevo } : {}),
     })
     .eq("id", id)
     .select("*")
     .single();
 
-  if (error) throw new Error(mapImagenesDbError(error.message));
+  if (error) throw new Error(mapVehiculoDbError(error.message));
 
   const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
 

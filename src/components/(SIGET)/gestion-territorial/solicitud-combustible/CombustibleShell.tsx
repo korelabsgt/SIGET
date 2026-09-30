@@ -6,6 +6,7 @@ import { GvBackToTerritorial } from "../gestion-vehiculos/lib/gv-back-to-territo
 import { GvModuloPageFrame } from "../gestion-vehiculos/lib/gv-modulo-page-frame";
 import { GvTabFilter } from "../gestion-vehiculos/lib/gv-tab-filter";
 import {
+  GV_MODULO_HEADER_ROW_CLASS,
   GV_MODULO_SCROLL_INNER_CLASS,
   GV_MODULO_SCROLL_OUTER_CLASS,
   GV_TABLE_AREA_CLASS,
@@ -53,9 +54,9 @@ export function CombustibleShell() {
   if (!allowed) return null;
 
   return (
-    <GvModuloPageFrame>
-      <div className="mb-6 flex shrink-0 items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+    <GvModuloPageFrame className="min-h-0 flex-1 overflow-hidden">
+      <div className={GV_MODULO_HEADER_ROW_CLASS}>
+        <div className="flex min-w-0 items-center gap-3 sm:flex-1">
           <GvBackToTerritorial morph className="self-auto" />
           <div className="min-w-0">
             <h1 className="min-w-0 text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
@@ -83,10 +84,12 @@ export function CombustibleShell() {
         </div>
       </div>
 
-      <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
-        <div className={GV_MODULO_SCROLL_INNER_CLASS}>
-          <div className={GV_TABLE_AREA_CLASS}>
-            {seccion === "vales" && puedeVerVales ? <Vales /> : <SolicitudesCombustible />}
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:basis-0 lg:overflow-hidden">
+        <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
+          <div className={GV_MODULO_SCROLL_INNER_CLASS}>
+            <div className={GV_TABLE_AREA_CLASS}>
+              {seccion === "vales" && puedeVerVales ? <Vales /> : <SolicitudesCombustible />}
+            </div>
           </div>
         </div>
       </div>

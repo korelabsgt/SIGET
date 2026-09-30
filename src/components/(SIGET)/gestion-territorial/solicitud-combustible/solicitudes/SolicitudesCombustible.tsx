@@ -14,7 +14,6 @@ import {
 import {
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
-  gvTableShellVisibleRows,
 } from "../../gestion-vehiculos/lib/table-ui";
 import { GvTabFilter } from "../../gestion-vehiculos/lib/gv-tab-filter";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
@@ -35,6 +34,7 @@ import {
   listarVehiculosCatalogoFlota,
 } from "../../gestion-vehiculos/flota/lib/helpers";
 import { cn } from "@/lib/utils";
+import { GV_PANEL_STACK_CLASS } from "../../gestion-vehiculos/lib/page-shell";
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 import { useGvPermissionRole } from "../../gestion-vehiculos/lib/gv-permissions-hook";
 import { useGvClientMounted } from "../../gestion-vehiculos/lib/use-gv-client-mounted";
@@ -288,8 +288,10 @@ export function SolicitudesCombustible() {
         accion={accion}
       />
 
+      <div className={GV_PANEL_STACK_CLASS}>
       <GestionVehiculosTableShell
-        visibleRows={gvTableShellVisibleRows(pageSize)}
+        className="min-h-0 flex-1"
+        visibleRows={null}
         toolbar={
           <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
             <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
@@ -310,7 +312,7 @@ export function SolicitudesCombustible() {
                 className="!h-11 min-w-0 w-full shrink-0 text-xs sm:w-[10.5rem] lg:hidden"
               />
             </div>
-            <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+            <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
               <GvMonthPicker
                 value={periodoFilter}
                 onChange={handlePeriodoChange}
@@ -376,6 +378,7 @@ export function SolicitudesCombustible() {
           />
         )}
       </GestionVehiculosTableShell>
+      </div>
     </>
   );
 }

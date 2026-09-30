@@ -16,7 +16,11 @@ import { Crear } from "./forms/Crear";
 
 import { SolicitudActionModal } from "./SolicitudActionModal";
 
-import { GestionVehiculosTableShell, GV_TABLE_BODY_CENTER_CLASS } from "../lib/table-ui";
+import {
+  GestionVehiculosTableShell,
+  GV_TABLE_BODY_CENTER_CLASS,
+  GV_TABLE_VIEWPORT_FILL,
+} from "../lib/table-ui";
 
 import { useGvTablePagination } from "../lib/table-pagination";
 
@@ -283,8 +287,8 @@ export function Solicitudes() {
       <GvTableSectionMotion panelId="solicitudes">
 
         <GestionVehiculosTableShell
-
-          visibleRows={null}
+          className="min-h-0 flex-1"
+          visibleRows={GV_TABLE_VIEWPORT_FILL}
 
           pagination={{
 
@@ -348,7 +352,7 @@ export function Solicitudes() {
 
 
 
-              <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
 
                 <GvMonthPicker
 

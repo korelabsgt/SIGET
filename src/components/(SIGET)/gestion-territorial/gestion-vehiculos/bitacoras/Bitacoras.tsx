@@ -19,7 +19,13 @@ import { computeMetricasBitacorasMes, extractVehiculosVinculadosBitacoras, forma
 import { normalizarMesCalendario } from "@/lib/fechas-gt";
 import { useVehiculos } from "../flota/lib/hooks";
 import { formatVehiculoOpcion } from "../flota/lib/helpers";
-import { GestionVehiculosTableShell, GvTableKpiSlot, GV_TABLE_BODY_CENTER_CLASS } from "../lib/table-ui";
+import {
+  GestionVehiculosTableEmpty,
+  GestionVehiculosTableShell,
+  GvTableKpiSlot,
+  GV_TABLE_BODY_CENTER_CLASS,
+  GV_TABLE_VIEWPORT_FILL,
+} from "../lib/table-ui";
 import { cn } from "@/lib/utils";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -29,6 +35,9 @@ import {
   GV_HEADER_OUTLINE_BUTTON_CLASS,
   GV_TABLE_SEARCH_INPUT_CLASS,
   GV_TABLE_SEARCH_WRAPPER_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
   GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
 } from "../lib/gv-header-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
@@ -157,6 +166,47 @@ export function Bitacoras() {
 
   useGvPanelChrome("bitacoras");
 
+  const vehiculoFiltroTriggerClass = cn(
+    filtroTriggerClass,
+    canViewAll
+      ? "w-full min-w-0 max-w-none lg:min-w-[12rem] lg:max-w-[min(26rem,32vw)]"
+      : "w-full min-w-0 max-w-none lg:!w-auto lg:min-w-[8.75rem] lg:max-w-[10.5rem] shrink-0",
+  );
+
+  const vehiculoSelect = (
+    <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
+      <SelectTrigger className={vehiculoFiltroTriggerClass}>
+        <SelectValue
+          placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+        />
+      </SelectTrigger>
+      <SelectContent position="popper" className={filtroContentClass}>
+        <SelectItem
+          value={TODOS_VEHICULOS}
+          textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+          className={filtroItemClass}
+        >
+          {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
+        </SelectItem>
+        {vehiculosParaFiltro
+          .filter((v) => v.id)
+          .map((v) => {
+            const label = formatVehiculoOpcion(v);
+            return (
+              <SelectItem
+                key={v.id}
+                value={v.id as string}
+                textValue={label}
+                className={filtroItemClass}
+              >
+                {label}
+              </SelectItem>
+            );
+          })}
+      </SelectContent>
+    </Select>
+  );
+
   return (
     <>
       <Crear
@@ -166,7 +216,8 @@ export function Bitacoras() {
       />
       <GvTableSectionMotion panelId="bitacoras">
       <GestionVehiculosTableShell
-        visibleRows={null}
+        className="min-h-0 flex-1"
+        visibleRows={GV_TABLE_VIEWPORT_FILL}
         kpiSlot={
           puedeVerMetricas ? (
             <GvTableKpiSlot>
@@ -179,83 +230,49 @@ export function Bitacoras() {
           ) : undefined
         }
         toolbar={
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-              <div className={cn(GV_TABLE_SEARCH_WRAPPER_CLASS, "w-full min-w-0 sm:flex-1")}>
-                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-celeste-trifinio" />
-                <input
-                  type="text"
-                  placeholder="Buscar"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={GV_TABLE_SEARCH_INPUT_CLASS}
+            <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
+              <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
+                <div className={cn(GV_TABLE_SEARCH_WRAPPER_CLASS, "min-w-0 w-full flex-1")}>
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-celeste-trifinio" />
+                  <input
+                    type="text"
+                    placeholder="Buscar destino, placa o conductor..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
+                  />
+                </div>
+                <div className="w-full min-w-0 lg:hidden">{vehiculoSelect}</div>
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="!h-11 min-w-0 w-full text-xs sm:w-[10.5rem] lg:hidden"
                 />
               </div>
 
-              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-1">
-                <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:contents">
-                  <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-                    <SelectTrigger
-                      className={cn(
-                        filtroTriggerClass,
-                        "h-11 min-w-0 w-full px-2 text-xs data-[size=default]:h-11 sm:w-auto sm:min-w-[11rem] sm:max-w-[min(22rem,36vw)] sm:shrink-0",
-                      )}
-                    >
-                      <SelectValue
-                        placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className={filtroContentClass}>
-                      <SelectItem
-                        value={TODOS_VEHICULOS}
-                        textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                        className={filtroItemClass}
-                      >
-                        {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-                      </SelectItem>
-                      {vehiculosParaFiltro
-                        .filter((v) => v.id)
-                        .map((v) => {
-                          const label = formatVehiculoOpcion(v);
-                          return (
-                            <SelectItem
-                              key={v.id}
-                              value={v.id as string}
-                              textValue={label}
-                              className={filtroItemClass}
-                            >
-                              {label}
-                            </SelectItem>
-                          );
-                        })}
-                    </SelectContent>
-                  </Select>
-
-                  <GvMonthPicker
-                    value={periodoFilter}
-                    onChange={setPeriodoFilter}
-                    className="!h-11 min-w-0 !w-full shrink text-xs sm:!w-[10.5rem] sm:shrink-0"
+              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
+                <div className="hidden w-auto shrink-0 lg:block">{vehiculoSelect}</div>
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="hidden shrink-0 lg:inline-flex"
+                />
+                {puedeExportar ? (
+                  <GvExportReporteButton
+                    onClick={handleExportReporte}
+                    disabled={loading}
+                    loading={isExporting}
                   />
-                </div>
-
-                <div className="flex flex-row flex-wrap items-center justify-end gap-1">
-                  {puedeExportar ? (
-                    <GvExportReporteButton
-                      onClick={handleExportReporte}
-                      disabled={loading}
-                      loading={isExporting}
-                    />
-                  ) : null}
-
-                  <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-auto shrink-0")}
-                  >
-                    <Plus className="h-4 w-4 shrink-0" />
-                    <span className="sm:hidden">Viaje</span>
-                    <span className="hidden sm:inline">Registrar viaje</span>
-                  </button>
-                </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(true)}
+                  className={cn(GV_HEADER_OUTLINE_BUTTON_CLASS, "w-auto shrink-0")}
+                >
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="lg:hidden">Viaje</span>
+                  <span className="hidden lg:inline">Registrar viaje</span>
+                </button>
               </div>
             </div>
           }
@@ -275,17 +292,15 @@ export function Bitacoras() {
               <Loader2 className="size-8 animate-spin text-celeste-trifinio" />
             </div>
           ) : bitacorasFiltradas.length === 0 ? (
-            <div className="flex min-h-full flex-col items-center justify-center px-4 py-16 text-center">
-              <BookOpen className="mb-4 size-10 text-celeste-trifinio/70" />
-              <p className="font-semibold text-foreground">
-                {hayFiltros ? "Sin coincidencias" : "Sin bitácoras"}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {hayFiltros
+            <GestionVehiculosTableEmpty
+              icon={<BookOpen className="size-10 text-celeste-trifinio/70" />}
+              title={hayFiltros ? "Sin coincidencias" : "Sin bitácoras"}
+              description={
+                hayFiltros
                   ? "Prueba con otra fecha, destino, placa o vehículo."
-                  : "Aún no se ha registrado ningún viaje en la bitácora digital."}
-              </p>
-            </div>
+                  : "Aún no se ha registrado ningún viaje en la bitácora digital."
+              }
+            />
           ) : (
             <BitacorasPanel
               bitacoras={bitacorasPaginadas}

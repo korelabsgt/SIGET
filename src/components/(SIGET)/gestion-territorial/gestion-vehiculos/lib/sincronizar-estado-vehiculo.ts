@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { estadoVehiculoConReservaFija } from "../flota/lib/helpers";
+import { estadoVehiculoConReservaFija, estadoVehiculoNormalizado } from "../flota/lib/helpers";
 import {
   vehiculoReservadoEnDiaCalendario,
   type SolicitudCalendarioRef,
@@ -64,12 +64,16 @@ export async function sincronizarEstadoFlotaVehiculo(
 
   const { data: vehiculo, error: vehiculoError } = await supabase
     .from(VEHICULOS_TABLE)
-    .select("placa")
+    .select("placa, estado")
     .eq("id", vehiculoId)
     .maybeSingle();
 
   if (vehiculoError) {
     throw new Error("No se pudo verificar el vehículo en flota.");
+  }
+
+  if (estadoVehiculoNormalizado(vehiculo?.estado) === "RESERVA_INDIVIDUAL") {
+    return;
   }
 
   const estado = estadoVehiculoConReservaFija(

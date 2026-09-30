@@ -10,6 +10,7 @@ export function VehiculosCards({
   exportingVehiculoId = null,
   onDelete,
   onVerReserva,
+  onVerReservaIndividual,
   canManage,
   canDelete,
 }: {
@@ -20,6 +21,7 @@ export function VehiculosCards({
   exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => void;
   onVerReserva: (vehiculo: VehiculoRow) => void;
+  onVerReservaIndividual: (vehiculo: VehiculoRow) => void;
   canManage: boolean;
   canDelete: boolean;
 }) {
@@ -36,6 +38,11 @@ export function VehiculosCards({
           onDelete={() => onDelete(vehiculo)}
           onVerReserva={
             vehiculo.estado === "RESERVADO" ? () => onVerReserva(vehiculo) : undefined
+          }
+          onVerReservaIndividual={
+            vehiculo.estado === "RESERVA_INDIVIDUAL"
+              ? () => onVerReservaIndividual(vehiculo)
+              : undefined
           }
           canManage={canManage}
           canDelete={canDelete}

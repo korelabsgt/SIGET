@@ -24,6 +24,7 @@ import {
   GestionVehiculosTableShell,
   GvTableKpiSlot,
   GV_TABLE_BODY_CENTER_CLASS,
+  GV_TABLE_VIEWPORT_FILL,
 } from "../lib/table-ui";
 import {
   GV_FILTRO_FIELD_CLASS,
@@ -258,7 +259,8 @@ export function Mantenimiento() {
       </GvHeaderExtras>
       <GvTableSectionMotion panelId="mantenimiento">
       <GestionVehiculosTableShell
-        visibleRows={null}
+        className="min-h-0 flex-1"
+        visibleRows={GV_TABLE_VIEWPORT_FILL}
         kpiSlot={
           canManage ? (
             <GvTableKpiSlot>
@@ -304,7 +306,7 @@ export function Mantenimiento() {
               <div
                 className={cn(
                   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
-                  "shrink-0 flex-nowrap",
+                  "max-lg:justify-end shrink-0 flex-nowrap",
                   !canExport && "w-full gap-0.5 lg:!w-auto",
                 )}
               >

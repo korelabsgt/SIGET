@@ -7,6 +7,7 @@ import { GV_DETALLE_NESTED_CLASS } from "../lib/detalle-ui";
 import { type VehiculoRow } from "./lib/zod";
 import {
   combinarFotosVehiculo,
+  esFotoSeguroVehiculo,
   esFotoTarjetaCirculacion,
   separarFotosVehiculo,
 } from "./lib/helpers";
@@ -28,14 +29,15 @@ export function VehiculoGaleria({
   className?: string;
 }) {
   const tituloVehiculo = `${vehiculo.marca} ${vehiculo.modelo}`;
-  const { unidad, tarjetaCirculacion } = separarFotosVehiculo(vehiculo);
-  const fotos = combinarFotosVehiculo(unidad, tarjetaCirculacion);
+  const { unidad, tarjetasCirculacion, fotoSeguro } = separarFotosVehiculo(vehiculo);
+  const fotos = combinarFotosVehiculo(unidad, tarjetasCirculacion, fotoSeguro);
   const { data: signedMap = {}, isLoading: firmandoFotos } = useSignedStorageUrls(fotos);
   const fotosConSrc = fotos
     .map((path) => ({
       path,
       src: resolveStorageDisplaySrc(path, signedMap),
       esTarjeta: esFotoTarjetaCirculacion(path),
+      esSeguro: esFotoSeguroVehiculo(path),
     }))
     .filter((item) => item.src.length > 0);
   const [fotoRota, setFotoRota] = useState(false);
@@ -70,16 +72,22 @@ export function VehiculoGaleria({
                   activa ? "ring-2 ring-celeste-trifinio" : "opacity-55 hover:opacity-100",
                 )}
                 aria-label={
-                  item.esTarjeta
-                    ? "Ver tarjeta de circulación"
-                    : `Ver fotografía ${index + 1}`
+                  item.esSeguro
+                    ? "Ver seguro"
+                    : item.esTarjeta
+                      ? "Ver tarjeta de circulación"
+                      : `Ver fotografía ${index + 1}`
                 }
                 aria-pressed={activa}
               >
                 <img src={item.src} alt="" className="size-full object-cover" />
-                {item.esTarjeta ? (
+                {item.esSeguro ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-emerald-600/90 py-px text-center text-[7px] font-bold uppercase tracking-wide text-white">
+                    Seguro
+                  </span>
+                ) : item.esTarjeta ? (
                   <span className="absolute inset-x-0 bottom-0 bg-celeste-trifinio/90 py-px text-center text-[7px] font-bold uppercase tracking-wide text-white">
-                    Tarjeta
+                    Circ.
                   </span>
                 ) : null}
               </button>

@@ -38,6 +38,26 @@ export type PisoPickerSolicitudGt = {
   minuteMin: number;
 };
 
+export const SOLICITUD_MINUTOS_CUARTO = [0, 15, 30, 45] as const;
+
+export function minutosCuartoDisponibles(minuteMin: number): number[] {
+  return SOLICITUD_MINUTOS_CUARTO.filter((m) => m >= minuteMin);
+}
+
+export function ajustarMinutoCuartoSolicitud(minute: number, minuteMin: number): number {
+  const disponibles = minutosCuartoDisponibles(minuteMin);
+  if (disponibles.length === 0) return SOLICITUD_MINUTOS_CUARTO[SOLICITUD_MINUTOS_CUARTO.length - 1];
+  if (disponibles.includes(minute as (typeof SOLICITUD_MINUTOS_CUARTO)[number])) {
+    return minute;
+  }
+  const siguiente = disponibles.find((m) => m >= minute);
+  return siguiente ?? disponibles[disponibles.length - 1];
+}
+
+export function esMinutoCuartoSolicitud(minute: number): boolean {
+  return (SOLICITUD_MINUTOS_CUARTO as readonly number[]).includes(minute);
+}
+
 export function pisoPickerSolicitudGt(pisoIso?: string | null): PisoPickerSolicitudGt {
   const ahora = partesFechaHoraGt();
   const hoy = ahora.calendario;

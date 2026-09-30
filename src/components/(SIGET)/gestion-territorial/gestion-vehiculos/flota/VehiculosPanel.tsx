@@ -11,6 +11,7 @@ export function VehiculosPanel({
   onOpenGaleria,
   onExportExcel,
   onVerReserva,
+  onVerReservaIndividual,
   exportingVehiculoId = null,
   onDelete,
   canManage,
@@ -22,6 +23,7 @@ export function VehiculosPanel({
   onOpenGaleria: (vehiculo: VehiculoRow) => void;
   onExportExcel: (vehiculo: VehiculoRow) => void;
   onVerReserva: (vehiculo: VehiculoRow) => void;
+  onVerReservaIndividual: (vehiculo: VehiculoRow) => void;
   exportingVehiculoId?: string | null;
   onDelete: (vehiculo: VehiculoRow) => Promise<boolean>;
   canManage: boolean;
@@ -37,6 +39,7 @@ export function VehiculosPanel({
           onOpenGaleria={onOpenGaleria}
           onExportExcel={onExportExcel}
           onVerReserva={onVerReserva}
+          onVerReservaIndividual={onVerReservaIndividual}
           exportingVehiculoId={exportingVehiculoId}
           canManage={canManage}
         />
@@ -49,6 +52,7 @@ export function VehiculosPanel({
           onOpenGaleria={onOpenGaleria}
           onExportExcel={onExportExcel}
           onVerReserva={onVerReserva}
+          onVerReservaIndividual={onVerReservaIndividual}
           exportingVehiculoId={exportingVehiculoId}
           onDelete={(vehiculo) => {
             void onDelete(vehiculo);

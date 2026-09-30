@@ -6,8 +6,12 @@ import { toast } from "react-toastify";
 import { Label } from "@/components/ui/label";
 import {
   CIRCULACION_PATH_MARKER,
+  MAX_FOTOS_CIRCULACION,
+  MAX_FOTOS_DOCUMENTOS,
+  MAX_FOTOS_SEGURO,
   MAX_FOTOS_UNIDAD,
   MIN_FOTOS_VEHICULO,
+  SEGURO_PATH_MARKER,
   type TipoFotoVehiculo,
 } from "../lib/helpers";
 import { canManageFlota } from "../../lib/permissions";
@@ -149,120 +153,137 @@ export function ImagenVehiculoDropzone({
   );
 }
 
-export function TarjetaCirculacionCampo({
-  preview,
-  loading = false,
-  onSelectFile,
-  onRemove,
+type DocumentoPreviewItem = {
+  key: string;
+  preview: string;
+  loading: boolean;
+  etiqueta: string;
+  onRemove: () => void;
+};
+
+export function DocumentosVehiculoCampo({
+  documentos,
+  onAddFiles,
   disabled,
   sinEspacio = false,
-  requerida = false,
+  requeridaCirculacion = false,
 }: {
-  preview: string;
-  loading?: boolean;
-  onSelectFile: (file: File) => void;
-  onRemove: () => void;
+  documentos: DocumentoPreviewItem[];
+  onAddFiles: (files: File[]) => void;
   disabled?: boolean;
   sinEspacio?: boolean;
-  requerida?: boolean;
+  requeridaCirculacion?: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
-  const tieneImagen = preview.length > 0 || loading;
+  const ocupados = documentos.length;
+  const puedeAgregar = ocupados < MAX_FOTOS_DOCUMENTOS && !disabled && !sinEspacio;
 
-  const applyTarjetaFile = (selected: File[]) => {
+  const applyArchivos = (selected: File[]) => {
+    if (selected.length === 0) return;
     const valid = filtrarArchivosValidos(selected);
-    if (valid.length === 0 || !valid[0]) return;
-    onSelectFile(valid[0]);
+    if (valid.length === 0) return;
+    const cupo = MAX_FOTOS_DOCUMENTOS - ocupados;
+    onAddFiles(valid.slice(0, Math.max(0, cupo)));
   };
 
   return (
     <div className="space-y-2">
       <Label>
-        Tarjeta de circulación
-        {requerida ? <span className="ml-1 text-red-500">*</span> : null}
+        Documentos del vehículo
+        {requeridaCirculacion ? <span className="ml-1 text-red-500">*</span> : null}
       </Label>
       <p className="text-xs text-muted-foreground">
-        {requerida
-          ? "Fotografía obligatoria de la tarjeta de circulación."
-          : "Fotografía de la tarjeta de circulación. Se guarda junto a las del vehículo."}
+        Hasta {MAX_FOTOS_CIRCULACION} fotografías de tarjeta de circulación y {MAX_FOTOS_SEGURO}{" "}
+        del seguro.
+        {requeridaCirculacion
+          ? " Al menos una fotografía de circulación es obligatoria."
+          : " Se guardan junto a las fotografías del vehículo."}
       </p>
 
-      <AnimatePresence mode="popLayout" initial={false}>
-        {tieneImagen ? (
-          <motion.div
-            key="tarjeta"
-            layout={!prefersReducedMotion}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.99 }}
-            transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
-            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800"
-          >
-            {preview ? (
-              <img
-                src={preview}
-                alt="Tarjeta de circulación"
-                className="size-full object-cover"
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center bg-zinc-200 dark:bg-zinc-700">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={onRemove}
-              className="absolute right-1.5 top-1.5 inline-flex size-7 cursor-pointer items-center justify-center rounded-lg border-0 bg-red-100 text-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
-              aria-label="Quitar tarjeta de circulación"
-            >
-              <X className="size-3.5" />
-            </button>
-          </motion.div>
-        ) : sinEspacio ? (
-          <motion.p
-            key="sin-espacio"
-            initial={prefersReducedMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-          >
-            Ya hay {MAX_FOTOS_UNIDAD + 1} imágenes guardadas. Elimina una fotografía del vehículo
-            para poder subir la tarjeta de circulación.
-          </motion.p>
-        ) : (
-          <motion.div
-            key="subir"
-            layout={!prefersReducedMotion}
-            initial={prefersReducedMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-center transition-colors lg:cursor-pointer lg:hover:bg-muted/50"
-          >
-            <ImagenVehiculoEscritorioFileInput
-              multiple={false}
-              disabled={disabled}
-              onFiles={applyTarjetaFile}
-            />
-            <div className="mb-2 flex size-9 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950/60">
-              <UploadCloud className="size-4" />
-            </div>
-            <p className="text-sm font-medium lg:pointer-events-none">
-              <span className="lg:hidden">Fotografía de la tarjeta</span>
-              <span className="hidden lg:inline">Subir tarjeta de circulación</span>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground lg:pointer-events-none">
-              JPG, PNG o WEBP (se optimiza a máx. 200 KB).
-            </p>
-            <ImagenVehiculoFuentePicker
-              multiple={false}
-              disabled={disabled}
-              className="mt-3 max-w-sm"
-              onFiles={applyTarjetaFile}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {sinEspacio ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+          Ya alcanzaste el máximo de imágenes permitidas. Elimina una fotografía del vehículo o un
+          documento para subir otro archivo.
+        </p>
+      ) : null}
+
+      {documentos.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {documentos.map((item) => (
+              <motion.div
+                key={item.key}
+                layout={!prefersReducedMotion}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={
+                  prefersReducedMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, y: -8, scale: 0.99 }
+                }
+                transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800"
+              >
+                {item.preview ? (
+                  <img src={item.preview} alt={item.etiqueta} className="size-full object-cover" />
+                ) : (
+                  <div className="flex size-full items-center justify-center bg-zinc-200 dark:bg-zinc-700">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                <span className="absolute inset-x-0 bottom-0 bg-celeste-trifinio/90 py-px text-center text-[7px] font-bold uppercase tracking-wide text-white">
+                  {item.etiqueta}
+                </span>
+                {!item.loading ? (
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={item.onRemove}
+                    className="absolute right-1.5 top-1.5 inline-flex size-7 cursor-pointer items-center justify-center rounded-lg border-0 bg-red-100 text-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
+                    aria-label={`Quitar ${item.etiqueta}`}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {puedeAgregar ? (
+            <>
+              <ImagenVehiculoFuentePicker compact disabled={disabled} onFiles={applyArchivos} />
+              <label className="relative hidden h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl bg-sky-100 text-celeste-trifinio hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900 lg:flex">
+                <Plus className="size-5" />
+                <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">Añadir</span>
+                <ImagenVehiculoEscritorioFileInput
+                  multiple
+                  disabled={disabled}
+                  onFiles={applyArchivos}
+                />
+              </label>
+            </>
+          ) : null}
+        </div>
+      ) : puedeAgregar ? (
+        <div className="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-4 text-center transition-colors lg:cursor-pointer lg:hover:bg-muted/50">
+          <ImagenVehiculoEscritorioFileInput multiple disabled={disabled} onFiles={applyArchivos} />
+          <div className="mb-2 flex size-9 items-center justify-center rounded-full bg-sky-100 text-celeste-trifinio dark:bg-sky-950/60">
+            <UploadCloud className="size-4" />
+          </div>
+          <p className="text-sm font-medium lg:pointer-events-none">
+            <span className="lg:hidden">Subir documentos</span>
+            <span className="hidden lg:inline">Subir circulación y seguro</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground lg:pointer-events-none">
+            Hasta {MAX_FOTOS_DOCUMENTOS} imágenes (JPG, PNG o WEBP, máx. 200 KB).
+          </p>
+          <ImagenVehiculoFuentePicker
+            multiple
+            disabled={disabled}
+            className="mt-3 max-w-sm"
+            onFiles={applyArchivos}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -310,7 +331,9 @@ export async function uploadImagenVehiculo(
   const nombreArchivo =
     tipo === "circulacion"
       ? `${crypto.randomUUID()}${CIRCULACION_PATH_MARKER}.jpg`
-      : `${crypto.randomUUID()}.jpg`;
+      : tipo === "seguro"
+        ? `${crypto.randomUUID()}${SEGURO_PATH_MARKER}.jpg`
+        : `${crypto.randomUUID()}.jpg`;
   const filePath = rutaStorageFotoFlotaVehiculo(placa, nombreArchivo);
 
   const { error: uploadError } = await supabase.storage

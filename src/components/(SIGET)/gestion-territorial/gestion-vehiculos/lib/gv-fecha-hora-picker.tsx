@@ -39,6 +39,8 @@ import { fechaCalendarioGt, partesFechaHoraGt } from "@/lib/fechas-gt";
 import { GvFechaHoraInput } from "./gv-fecha-input";
 import { maskFechaHoraManual, partesFechaHoraManual, parseFechaHoraManualToIso } from "./fechas-input";
 import {
+  ajustarMinutoCuartoSolicitud,
+  minutosCuartoDisponibles,
   pisoPickerSolicitudGt,
   type PisoPickerSolicitudGt,
 } from "../solicitudes/lib/calendario-reservas";
@@ -119,12 +121,25 @@ function clampHoraMinuto(
   minute: number,
   hourMin: number,
   minuteMin: number,
+  soloMinutosCuarto = false,
 ): { hour: number; minute: number } {
-  if (hour < hourMin) return { hour: hourMin, minute: minuteMin };
-  if (hour === hourMin && minute < minuteMin) {
-    return { hour: hourMin, minute: minuteMin };
+  let h = hour;
+  let m = minute;
+  const minEfectivo = soloMinutosCuarto ? ajustarMinutoCuartoSolicitud(minuteMin, minuteMin) : minuteMin;
+
+  if (h < hourMin) {
+    h = hourMin;
+    m = minEfectivo;
+  } else if (h === hourMin && m < minEfectivo) {
+    m = minEfectivo;
   }
-  return { hour, minute };
+
+  if (soloMinutosCuarto) {
+    const pisoMin = h === hourMin ? minEfectivo : 0;
+    m = ajustarMinutoCuartoSolicitud(m, pisoMin);
+  }
+
+  return { hour: h, minute: m };
 }
 
 function GvTimeUnitSelect({
@@ -132,15 +147,25 @@ function GvTimeUnitSelect({
   onChange,
   max,
   min = 0,
+  options,
   ariaLabel,
 }: {
   value: number;
   onChange: (n: number) => void;
   max: number;
   min?: number;
+  options?: number[];
   ariaLabel: string;
 }) {
-  const safeValue = value < min ? min : value;
+  const items =
+    options ??
+    Array.from({ length: max - min }, (_, i) => {
+      return min + i;
+    });
+  const safeValue = items.includes(value)
+    ? value
+    : (items.find((n) => n >= value) ?? items[items.length - 1] ?? min);
+
   return (
     <Select
       value={String(safeValue)}
@@ -150,18 +175,11 @@ function GvTimeUnitSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" className={GV_TIME_SELECT_CONTENT_CLASS}>
-        {Array.from({ length: max - min }, (_, i) => {
-          const n = min + i;
-          return (
-            <SelectItem
-              key={n}
-              value={String(n)}
-              className={GV_TIME_SELECT_ITEM_CLASS}
-            >
-              {pad2(n)}
-            </SelectItem>
-          );
-        })}
+        {items.map((n) => (
+          <SelectItem key={n} value={String(n)} className={GV_TIME_SELECT_ITEM_CLASS}>
+            {pad2(n)}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
@@ -180,6 +198,7 @@ function GvFechaHoraPickerPanel({
   onApply,
   piso,
   restringirPasado,
+  soloMinutosCuarto,
 }: {
   currentMonth: Date;
   setCurrentMonth: (d: Date) => void;
@@ -193,6 +212,7 @@ function GvFechaHoraPickerPanel({
   onApply: () => void;
   piso: PisoPickerSolicitudGt;
   restringirPasado: boolean;
+  soloMinutosCuarto: boolean;
 }) {
   const hoyGt = fechaCalendarioGt();
   const diaSeleccionado = selectedDay ? calendarioGtDesdeDate(selectedDay) : "";
@@ -200,20 +220,36 @@ function GvFechaHoraPickerPanel({
     ? minutosPermitidosParaDia(diaSeleccionado, piso)
     : { hourMin: 0, minuteMin: 0 };
 
+  const minuteMinEfectivo = soloMinutosCuarto
+    ? ajustarMinutoCuartoSolicitud(minuteMin, minuteMin)
+    : minuteMin;
+
+  const opcionesMinuto = soloMinutosCuarto
+    ? minutosCuartoDisponibles(draftHour === hourMin ? minuteMinEfectivo : 0)
+    : undefined;
+
   const clampDraft = useCallback(
     (day: Date, hour: number, minute: number) => {
-      if (!restringirPasado) {
+      if (!restringirPasado && !soloMinutosCuarto) {
         setDraftHour(hour);
         setDraftMinute(minute);
         return;
       }
       const dia = calendarioGtDesdeDate(day);
-      const mins = minutosPermitidosParaDia(dia, piso);
-      const clamped = clampHoraMinuto(hour, minute, mins.hourMin, mins.minuteMin);
+      const mins = restringirPasado
+        ? minutosPermitidosParaDia(dia, piso)
+        : { hourMin: 0, minuteMin: 0 };
+      const clamped = clampHoraMinuto(
+        hour,
+        minute,
+        mins.hourMin,
+        mins.minuteMin,
+        soloMinutosCuarto,
+      );
       setDraftHour(clamped.hour);
       setDraftMinute(clamped.minute);
     },
-    [piso, restringirPasado],
+    [piso, restringirPasado, soloMinutosCuarto],
   );
 
   const monthStart = startOfMonth(currentMonth);
@@ -335,9 +371,13 @@ function GvFechaHoraPickerPanel({
             <span className="text-muted-foreground">:</span>
             <GvTimeUnitSelect
               value={draftMinute}
-              onChange={(m) => setDraftMinute(m)}
+              onChange={(m) => {
+                setDraftMinute(m);
+                if (selectedDay) clampDraft(selectedDay, draftHour, m);
+              }}
               max={60}
-              min={draftHour === hourMin ? minuteMin : 0}
+              min={draftHour === hourMin ? (soloMinutosCuarto ? minuteMinEfectivo : minuteMin) : 0}
+              options={opcionesMinuto}
               ariaLabel="Minutos"
             />
           </div>
@@ -432,21 +472,38 @@ export const GvFechaHoraPickerInput = forwardRef<
 
     setSelectedDay(day);
     setCurrentMonth(day ?? new Date());
-    setDraftHour(ahora.hour);
-    setDraftMinute(ahora.minute);
+
+    let hour = ahora.hour;
+    let minute = ahora.minute;
+    if (value.trim()) {
+      const parts = partesFechaHoraManual(value);
+      if (parts.hour.length === 2 && Number.isFinite(Number(parts.hour))) {
+        hour = Number(parts.hour);
+      }
+      if (parts.minute.length === 2 && Number.isFinite(Number(parts.minute))) {
+        minute = Number(parts.minute);
+      }
+    }
 
     if (solicitudNoPasadaGt && day) {
       const dia = calendarioGtDesdeDate(day);
       const mins = minutosPermitidosParaDia(dia, piso);
       const clamped = clampHoraMinuto(
-        ahora.hour,
-        ahora.minute,
+        hour,
+        minute,
         mins.hourMin,
         mins.minuteMin,
+        true,
       );
       setDraftHour(clamped.hour);
       setDraftMinute(clamped.minute);
+      return;
     }
+
+    setDraftHour(hour);
+    setDraftMinute(
+      solicitudNoPasadaGt ? ajustarMinutoCuartoSolicitud(minute, 0) : minute,
+    );
   }, [piso, solicitudNoPasadaGt]);
 
   const emitValue = useCallback(
@@ -464,12 +521,21 @@ export const GvFechaHoraPickerInput = forwardRef<
 
   const applySelection = useCallback(() => {
     const day = selectedDay ?? dateFromCalendarioGt(piso.calendarioMin) ?? new Date();
+    let hour = draftHour;
+    let minute = draftMinute;
+    if (solicitudNoPasadaGt) {
+      const dia = calendarioGtDesdeDate(day);
+      const mins = minutosPermitidosParaDia(dia, piso);
+      const clamped = clampHoraMinuto(hour, minute, mins.hourMin, mins.minuteMin, true);
+      hour = clamped.hour;
+      minute = clamped.minute;
+    }
     const masked = buildManualFromParts(
       day.getFullYear(),
       day.getMonth() + 1,
       day.getDate(),
-      draftHour,
-      draftMinute,
+      hour,
+      minute,
     );
 
     if (solicitudNoPasadaGt) {
@@ -523,6 +589,7 @@ export const GvFechaHoraPickerInput = forwardRef<
               onApply={applySelection}
               piso={piso}
               restringirPasado={solicitudNoPasadaGt}
+              soloMinutosCuarto={solicitudNoPasadaGt}
             />,
             document.body,
           )

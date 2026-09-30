@@ -59,6 +59,9 @@ export function ReservaVehiculoModal({
                 <p className="text-[10px] font-bold uppercase tracking-wider text-celeste-trifinio">
                   {formatEstadoLabel(reserva.estado)}
                 </p>
+                <p className="mt-2 text-base font-semibold capitalize text-foreground">
+                  {reserva.destino}
+                </p>
                 <dl className="mt-3 space-y-2.5 text-sm">
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -70,7 +73,7 @@ export function ReservaVehiculoModal({
                   </div>
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Inicio
+                      Del
                     </dt>
                     <dd className="mt-0.5 text-foreground">
                       {formatFechaHoraGv(reserva.fechaInicio)}
@@ -78,7 +81,7 @@ export function ReservaVehiculoModal({
                   </div>
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Fin estimado
+                      Al
                     </dt>
                     <dd className="mt-0.5 text-foreground">
                       {formatFechaHoraGv(reserva.fechaFinEstimada)}

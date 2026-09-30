@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 
 import { GvBackToTerritorial } from "./gv-back-to-territorial";
 import { GvModuloPageFrame } from "./gv-modulo-page-frame";
+import { GV_MODULO_HEADER_ROW_CLASS } from "./page-shell";
 import { GvSectionSelect } from "./gv-section-select";
 import { useGvSection, type GvSubmoduloId } from "./tab-context";
 
@@ -59,21 +60,21 @@ function GvPageChromeLayout({
   headerExtrasContainerRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <GvModuloPageFrame className="min-h-0 flex-1 overflow-hidden">
+    <GvModuloPageFrame className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0">
       {!hideChrome ? (
-        <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <GvBackToTerritorial morph className="self-auto" />
+        <div className={GV_MODULO_HEADER_ROW_CLASS}>
+          <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+            <GvBackToTerritorial morph className="shrink-0" />
             <h1 className="min-w-0 text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
               Gestión de vehículos
             </h1>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2">
+          <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            <GvSectionSelect className="w-full sm:w-auto" />
             <div
               ref={headerExtrasContainerRef}
-              className="flex shrink-0 items-center gap-2 lg:order-2"
+              className="flex shrink-0 items-center justify-end gap-2"
             />
-            <GvSectionSelect className="lg:order-1" />
           </div>
         </div>
       ) : null}

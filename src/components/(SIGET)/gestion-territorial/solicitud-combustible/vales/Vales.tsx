@@ -8,7 +8,6 @@ import { GvMorphIcon } from "../../gestion-vehiculos/lib/morph-icon";
 import {
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
-  gvTableShellVisibleRows,
 } from "../../gestion-vehiculos/lib/table-ui";
 import {
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
@@ -19,6 +18,8 @@ import { GvTabFilter } from "../../gestion-vehiculos/lib/gv-tab-filter";
 import { useGvTablePagination } from "../../gestion-vehiculos/lib/table-pagination";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
 import { GvExportReporteButton } from "../../gestion-vehiculos/lib/gv-export-ui";
+import { GV_PANEL_STACK_CLASS } from "../../gestion-vehiculos/lib/page-shell";
+import { cn } from "@/lib/utils";
 import { useGvPermissionRole } from "../../gestion-vehiculos/lib/gv-permissions-hook";
 import {
   canDeleteValeCombustible,
@@ -83,8 +84,10 @@ export function Vales() {
         solicitudes={solicitudes}
       />
 
+      <div className={GV_PANEL_STACK_CLASS}>
       <GestionVehiculosTableShell
-        visibleRows={gvTableShellVisibleRows(pageSize)}
+        className="min-h-0 flex-1"
+        visibleRows={null}
         toolbar={
           <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
             <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
@@ -104,7 +107,7 @@ export function Vales() {
             </div>
 
             {canAdmin || canExport ? (
-              <div className={GV_TABLE_TOOLBAR_ACTIONS_CLASS}>
+              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
                 {canExport ? (
                   <GvExportReporteButton
                     onClick={() => setExportModalOpen(true)}
@@ -151,6 +154,7 @@ export function Vales() {
           />
         )}
       </GestionVehiculosTableShell>
+      </div>
     </>
   );
 }

@@ -8,6 +8,7 @@ import type { SolicitudRow } from "../../solicitudes/lib/zod";
 export type ReservaVehiculoDetalle = {
   id: string;
   estado: SolicitudRow["estado"];
+  destino: string;
   solicitanteNombre: string;
   fechaInicio: string;
   fechaFinEstimada: string;

@@ -42,9 +42,11 @@ const estadoBadgeBase =
 function EstadoBadge({
   estado,
   onVerReserva,
+  onVerReservaIndividual,
 }: {
   estado: VehiculoRow["estado"];
   onVerReserva?: () => void;
+  onVerReservaIndividual?: () => void;
 }) {
   const colors: Record<VehiculoRow["estado"], string> = {
     LIBRE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
@@ -56,25 +58,34 @@ function EstadoBadge({
   };
 
   const label = formatEstadoVehiculoLabel(estado);
-  const clickable = estado === "RESERVADO" && onVerReserva;
+  const onDetalle =
+    estado === "RESERVADO" && onVerReserva
+      ? onVerReserva
+      : estado === "RESERVA_INDIVIDUAL" && onVerReservaIndividual
+        ? onVerReservaIndividual
+        : undefined;
 
-  if (clickable) {
+  if (onDetalle) {
     return (
       <span
         role="button"
         tabIndex={0}
-        onClick={onVerReserva}
+        onClick={onDetalle}
         onKeyDown={(e) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           e.preventDefault();
-          onVerReserva();
+          onDetalle();
         }}
         className={cn(
           estadoBadgeBase,
           colors[estado],
           "cursor-pointer transition-opacity hover:opacity-90",
         )}
-        aria-label={`Ver reserva: ${label}`}
+        aria-label={
+          estado === "RESERVA_INDIVIDUAL"
+            ? `Ver reserva individual: ${label}`
+            : `Ver reserva: ${label}`
+        }
       >
         {label}
       </span>
@@ -122,6 +133,7 @@ function VehiculoListRow({
   onOpenGaleria,
   onExportExcel,
   onVerReserva,
+  onVerReservaIndividual,
   exporting,
   canManage,
 }: {
@@ -131,6 +143,7 @@ function VehiculoListRow({
   onOpenGaleria: (vehiculo: VehiculoRow) => void;
   onExportExcel: (vehiculo: VehiculoRow) => void;
   onVerReserva: (vehiculo: VehiculoRow) => void;
+  onVerReservaIndividual: (vehiculo: VehiculoRow) => void;
   exporting: boolean;
   canManage: boolean;
 }) {
@@ -206,6 +219,11 @@ function VehiculoListRow({
               ? () => onVerReserva(vehiculo)
               : undefined
           }
+          onVerReservaIndividual={
+            vehiculo.estado === "RESERVA_INDIVIDUAL"
+              ? () => onVerReservaIndividual(vehiculo)
+              : undefined
+          }
         />
       </td>
       {canManage ? (
@@ -245,6 +263,7 @@ export function VehiculosList({
   onOpenGaleria,
   onExportExcel,
   onVerReserva,
+  onVerReservaIndividual,
   exportingVehiculoId = null,
   canManage,
   rowOffset = 0,
@@ -254,6 +273,7 @@ export function VehiculosList({
   onOpenGaleria: (vehiculo: VehiculoRow) => void;
   onExportExcel: (vehiculo: VehiculoRow) => void;
   onVerReserva: (vehiculo: VehiculoRow) => void;
+  onVerReservaIndividual: (vehiculo: VehiculoRow) => void;
   exportingVehiculoId?: string | null;
   canManage: boolean;
   rowOffset?: number;
@@ -320,6 +340,7 @@ export function VehiculosList({
               onOpenGaleria={onOpenGaleria}
               onExportExcel={onExportExcel}
               onVerReserva={onVerReserva}
+              onVerReservaIndividual={onVerReservaIndividual}
               exporting={exportingVehiculoId === (vehiculo.id ?? vehiculo.placa)}
               canManage={canManage}
             />

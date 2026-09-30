@@ -165,8 +165,8 @@ async function urlABase64Imagen(
 async function cargarFotosBase64(
   vehiculo: VehiculoRow,
 ): Promise<Array<{ base64: string; extension: "png" | "jpeg" }>> {
-  const { unidad, tarjetaCirculacion } = separarFotosVehiculo(vehiculo);
-  const paths = combinarFotosVehiculo(unidad, tarjetaCirculacion);
+  const { unidad, tarjetasCirculacion, fotoSeguro } = separarFotosVehiculo(vehiculo);
+  const paths = combinarFotosVehiculo(unidad, tarjetasCirculacion, fotoSeguro);
   if (paths.length === 0) return [];
 
   const signedMap = await firmarUrlsFotos(paths);

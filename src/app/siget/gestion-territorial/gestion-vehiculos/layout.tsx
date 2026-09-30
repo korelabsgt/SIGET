@@ -5,6 +5,10 @@ export default function GestionVehiculosLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <GestionVehiculosShell />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col lg:h-0 lg:overflow-hidden">
+      <GestionVehiculosShell />
+    </div>
+  );
 }
 

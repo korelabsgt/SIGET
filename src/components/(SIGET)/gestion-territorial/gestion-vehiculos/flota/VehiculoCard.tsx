@@ -57,6 +57,7 @@ export function VehiculoCard({
   exporting = false,
   onDelete,
   onVerReserva,
+  onVerReservaIndividual,
   canManage,
   canDelete,
 }: {
@@ -67,6 +68,7 @@ export function VehiculoCard({
   exporting?: boolean;
   onDelete: () => void;
   onVerReserva?: () => void;
+  onVerReservaIndividual?: () => void;
   canManage: boolean;
   canDelete: boolean;
 }) {
@@ -96,21 +98,34 @@ export function VehiculoCard({
           </div>
         }
         badge={
-          vehiculo.estado === "RESERVADO" && onVerReserva ? (
+          (vehiculo.estado === "RESERVADO" && onVerReserva) ||
+          (vehiculo.estado === "RESERVA_INDIVIDUAL" && onVerReservaIndividual) ? (
             <GvMobileRecordBadge
               role="button"
               tabIndex={0}
-              onClick={onVerReserva}
+              onClick={
+                vehiculo.estado === "RESERVA_INDIVIDUAL"
+                  ? onVerReservaIndividual
+                  : onVerReserva
+              }
               onKeyDown={(e) => {
                 if (e.key !== "Enter" && e.key !== " ") return;
                 e.preventDefault();
-                onVerReserva();
+                if (vehiculo.estado === "RESERVA_INDIVIDUAL") {
+                  onVerReservaIndividual?.();
+                } else {
+                  onVerReserva?.();
+                }
               }}
               className={cn(
                 estadoVehiculoBadgeClass(vehiculo.estado),
                 "cursor-pointer transition-opacity hover:opacity-90",
               )}
-              aria-label="Ver reserva"
+              aria-label={
+                vehiculo.estado === "RESERVA_INDIVIDUAL"
+                  ? "Ver reserva individual"
+                  : "Ver reserva"
+              }
             >
               {formatEstadoVehiculoLabel(vehiculo.estado)}
             </GvMobileRecordBadge>

@@ -50,19 +50,33 @@ export const vehiculoSchema = z.object({
     .min(0, "La referencia de servicio no puede ser negativa")
     .optional(),
   estado: z.enum(ESTADOS_VEHICULO).default("LIBRE"),
+  reserva_usuario_id: z.string().uuid().nullable().optional(),
   vencimiento_seguro: fechaManualOpcional,
   vencimiento_circulacion: fechaManualOpcional,
-  imagen_url: z.array(z.string()).max(4).default([]),
+  imagen_url: z.array(z.string()).max(6).default([]),
   created_at: z.string().optional(),
 });
 
-export const vehiculoInputSchema = vehiculoSchema.omit({
+export const vehiculoInputBaseSchema = vehiculoSchema.omit({
   id: true,
   created_at: true,
 });
 
+export const vehiculoInputSchema = vehiculoInputBaseSchema.superRefine((data, ctx) => {
+  if (data.estado !== "RESERVA_INDIVIDUAL") return;
+  const raw = data.reserva_usuario_id;
+  const usuarioId = typeof raw === "string" ? raw.trim() : "";
+  if (!usuarioId) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Selecciona el usuario para la reserva individual.",
+      path: ["reserva_usuario_id"],
+    });
+  }
+});
+
 export type VehiculoRow = z.infer<typeof vehiculoSchema>;
-export type VehiculoInput = z.infer<typeof vehiculoInputSchema>;
+export type VehiculoInput = z.infer<typeof vehiculoInputBaseSchema>;
 export type EstadoVehiculo = (typeof ESTADOS_VEHICULO)[number];
 
 export const ALERT_STATUS = ["VERDE", "AMARILLO", "ROJO"] as const;

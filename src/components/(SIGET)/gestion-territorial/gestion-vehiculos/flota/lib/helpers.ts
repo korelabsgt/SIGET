@@ -2,7 +2,7 @@ import { differenceInDays } from "date-fns";
 
 import {
   ESTADOS_VEHICULO,
-  vehiculoInputSchema,
+  vehiculoInputBaseSchema,
   type AlertStatus,
   type EstadoVehiculo,
   type VehiculoRow,
@@ -558,6 +558,9 @@ export function esVehiculoOperableParaIniciarMision(
 export function esVehiculoSeleccionableParaSolicitud(
   vehiculo: Pick<VehiculoRow, "estado">,
 ): boolean {
+  if (estadoVehiculoNormalizado(vehiculo.estado) === "RESERVA_INDIVIDUAL") {
+    return false;
+  }
   return esVehiculoDisponible(vehiculo);
 }
 
@@ -565,7 +568,8 @@ export function aplicarEstadoFlotaOperativoHoy(
   vehiculo: VehiculoRow,
   solicitudes: SolicitudCalendarioRef[],
 ): VehiculoRow {
-  if (estadoVehiculoNormalizado(vehiculo.estado) === "EN_MANTENIMIENTO") {
+  const estadoActual = estadoVehiculoNormalizado(vehiculo.estado);
+  if (estadoActual === "EN_MANTENIMIENTO" || estadoActual === "RESERVA_INDIVIDUAL") {
     return vehiculo;
   }
   if (!vehiculo.id) return vehiculo;
@@ -618,7 +622,7 @@ export function formatVehiculoOpcion(
   return color ? `${base} · ${color}` : base;
 }
 
-const vehiculoCatalogoCamposSchema = vehiculoInputSchema.pick({
+const vehiculoCatalogoCamposSchema = vehiculoInputBaseSchema.pick({
   placa: true,
   marca: true,
   modelo: true,
@@ -647,13 +651,17 @@ export function listarVehiculosCatalogoFlota(vehiculos: VehiculoRow[]): Vehiculo
   return lista.sort((a, b) => a.placa.localeCompare(b.placa, "es"));
 }
 
-export const MAX_FOTOS_VEHICULO = 4;
-export const MIN_FOTOS_VEHICULO = 1;
 export const MAX_FOTOS_UNIDAD = 3;
+export const MAX_FOTOS_CIRCULACION = 2;
+export const MAX_FOTOS_SEGURO = 1;
+export const MAX_FOTOS_DOCUMENTOS = MAX_FOTOS_CIRCULACION + MAX_FOTOS_SEGURO;
+export const MAX_FOTOS_VEHICULO = MAX_FOTOS_UNIDAD + MAX_FOTOS_DOCUMENTOS;
+export const MIN_FOTOS_VEHICULO = 1;
 
 export const CIRCULACION_PATH_MARKER = "_circulacion_";
+export const SEGURO_PATH_MARKER = "_seguro_";
 
-export type TipoFotoVehiculo = "unidad" | "circulacion";
+export type TipoFotoVehiculo = "unidad" | "circulacion" | "seguro";
 
 export function esFotoTarjetaCirculacion(path: string | null | undefined): boolean {
   const valor = path?.trim();
@@ -662,14 +670,29 @@ export function esFotoTarjetaCirculacion(path: string | null | undefined): boole
   return normalizado.toLowerCase().includes(CIRCULACION_PATH_MARKER);
 }
 
+export function esFotoSeguroVehiculo(path: string | null | undefined): boolean {
+  const valor = path?.trim();
+  if (!valor) return false;
+  const normalizado = normalizeVehiculoStoragePath(valor) ?? valor;
+  return normalizado.toLowerCase().includes(SEGURO_PATH_MARKER);
+}
+
+export function esFotoDocumentoVehiculo(path: string | null | undefined): boolean {
+  return esFotoTarjetaCirculacion(path) || esFotoSeguroVehiculo(path);
+}
+
 export function separarFotosVehiculo(vehiculo: Pick<VehiculoRow, "imagen_url">): {
   unidad: string[];
-  tarjetaCirculacion: string | null;
+  tarjetasCirculacion: string[];
+  fotoSeguro: string | null;
 } {
   const fotos = fotosVehiculo(vehiculo);
   return {
-    unidad: fotos.filter((foto) => !esFotoTarjetaCirculacion(foto)),
-    tarjetaCirculacion: fotos.find((foto) => esFotoTarjetaCirculacion(foto)) ?? null,
+    unidad: fotos.filter((foto) => !esFotoDocumentoVehiculo(foto)),
+    tarjetasCirculacion: fotos
+      .filter((foto) => esFotoTarjetaCirculacion(foto))
+      .slice(0, MAX_FOTOS_CIRCULACION),
+    fotoSeguro: fotos.find((foto) => esFotoSeguroVehiculo(foto)) ?? null,
   };
 }
 
@@ -679,9 +702,14 @@ export function fotosUnidadVehiculo(vehiculo: Pick<VehiculoRow, "imagen_url">): 
 
 export function combinarFotosVehiculo(
   unidad: string[],
-  tarjetaCirculacion: string | null,
+  tarjetasCirculacion: string[],
+  fotoSeguro: string | null = null,
 ): string[] {
-  return [...unidad, ...(tarjetaCirculacion ? [tarjetaCirculacion] : [])];
+  return [
+    ...unidad,
+    ...tarjetasCirculacion.slice(0, MAX_FOTOS_CIRCULACION),
+    ...(fotoSeguro ? [fotoSeguro] : []),
+  ];
 }
 
 function normalizarFotoPaths(paths: string[]): string[] {

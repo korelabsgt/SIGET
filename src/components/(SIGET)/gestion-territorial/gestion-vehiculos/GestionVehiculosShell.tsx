@@ -15,7 +15,6 @@ import { GvPageChromeProvider } from "./lib/gv-page-chrome";
 import {
   GV_MODULO_SCROLL_INNER_CLASS,
   GV_MODULO_SCROLL_OUTER_CLASS,
-  GV_PANEL_STACK_CLASS,
   GV_TABLE_AREA_CLASS,
 } from "./lib/page-shell";
 import { buildGvSectionHref, gvSectionFromSearchParams } from "./lib/gv-section-url";
@@ -120,14 +119,16 @@ function GestionVehiculosShellInner() {
         <GvDemoCleanupPortal />
         <div data-gv-scroll-root className={GV_MODULO_SCROLL_OUTER_CLASS}>
           <div data-gv-scroll-root className={GV_MODULO_SCROLL_INNER_CLASS}>
-            <div className={GV_TABLE_AREA_CLASS}>
+            <div className={cn(GV_TABLE_AREA_CLASS, "relative lg:min-h-0 lg:flex-1")}>
               {PANELS.map(({ id, Panel }) =>
                 visited.has(id) ? (
                   <div
                     key={id}
                     className={cn(
-                      GV_PANEL_STACK_CLASS,
-                      section !== id && "h-0 overflow-hidden pointer-events-none",
+                      "flex min-h-0 w-full flex-col",
+                      section === id
+                        ? "relative z-10 min-h-0 flex-1 lg:absolute lg:inset-0"
+                        : "pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0",
                     )}
                     aria-hidden={section !== id}
                   >
