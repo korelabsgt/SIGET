@@ -221,7 +221,10 @@ export function Crear({
   const combustibleSinMisionSeleccionado = Boolean(solicitudCombustibleId);
   const kmInicial = watch("km_inicial");
   const kmFinal = watch("km_final");
-  const recorrido = Math.max(0, kmFinal - kmInicial);
+  const kmInicialFlota =
+    vehiculoSeleccionado?.kilometraje_actual ??
+    (Number.isFinite(kmInicial) ? kmInicial : 0);
+  const recorrido = Math.max(0, kmFinal - kmInicialFlota);
   const comentariosValues = watch("comentarios");
 
   useEffect(() => {
@@ -423,14 +426,15 @@ export function Crear({
   ]);
 
   useEffect(() => {
-    if (selectedVehiculoId && !selectedMisionId) {
-      const vehiculo = vehiculos.find((v) => v.id === selectedVehiculoId);
-      if (vehiculo) {
-        setValue("km_inicial", vehiculo.kilometraje_actual, { shouldValidate: true });
-        setValue("km_final", vehiculo.kilometraje_actual);
-      }
+    if (!open || !vehiculoIdCombustible) return;
+    const vehiculo = vehiculos.find((v) => v.id === vehiculoIdCombustible);
+    if (!vehiculo) return;
+    const kmFlota = vehiculo.kilometraje_actual ?? 0;
+    setValue("km_inicial", kmFlota, { shouldValidate: true });
+    if (!selectedMisionId?.trim()) {
+      setValue("km_final", kmFlota);
     }
-  }, [selectedVehiculoId, selectedMisionId, vehiculos, setValue]);
+  }, [open, vehiculoIdCombustible, vehiculos, selectedMisionId, setValue]);
 
   const onFormValidated = (data: BitacoraInput) => {
     if (reciboCombustibleObligatorio) {
@@ -1054,7 +1058,7 @@ export function Crear({
                 <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
                   <GvDetalleStat
                     label="Km inicial"
-                    value={Number(kmInicial).toLocaleString("es-GT")}
+                    value={Number(kmInicialFlota).toLocaleString("es-GT")}
                   />
                   <GvDetalleStat
                     label="Recorrido"
