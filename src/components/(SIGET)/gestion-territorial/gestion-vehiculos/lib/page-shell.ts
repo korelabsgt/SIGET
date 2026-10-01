@@ -1,5 +1,5 @@
 export const GV_MODULO_PAGE_MOBILE_INSET_CLASS =
-  "mx-auto w-full max-md:max-w-[calc(100%-2rem)] px-3 py-3 sm:px-4 md:px-6 lg:px-6 lg:py-4 lg:min-h-0 lg:overflow-hidden";
+  "mx-auto w-full max-md:max-w-none px-0 py-3 sm:px-4 md:px-6 lg:px-6 lg:py-4 lg:min-h-0 lg:overflow-hidden";
 
 export const GV_MODULO_PAGE_CLASS =
   `relative flex min-h-0 max-w-6xl flex-1 flex-col lg:min-h-0 lg:basis-0 xl:max-w-none xl:w-[90%] ${GV_MODULO_PAGE_MOBILE_INSET_CLASS}`;

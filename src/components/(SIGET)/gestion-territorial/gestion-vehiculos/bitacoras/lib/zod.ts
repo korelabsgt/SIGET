@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ESTADOS_BITACORA } from "./bitacora-estado";
 
 export const bitacoraComentarioInputSchema = z.object({
   texto: z.string().trim().max(500, { message: "Máximo 500 caracteres" }),
@@ -69,6 +70,7 @@ export const bitacoraInputSchema = z
     km_final: z.coerce.number().int().min(0, { message: "Debe ser un número válido" }),
     vale_combustible: z.string().optional().nullable(),
     monto_combustible: z.coerce.number().min(0).default(0),
+    solicitud_combustible_id: z.string().uuid().optional().nullable().or(z.literal("")),
     comentarios: z.array(bitacoraComentarioInputSchema).default([]),
     evidencia_url: z.array(z.string().min(1)).max(1).default([]),
   })
@@ -84,6 +86,7 @@ export type BitacoraRow = {
   solicitud_id: string | null;
   vehiculo_id: string;
   conductor_id: string;
+  estado?: (typeof ESTADOS_BITACORA)[number];
   fecha: string;
   destino: string;
   km_inicial: number;
@@ -103,4 +106,9 @@ export type BitacoraRow = {
   profiles?: {
     nombre: string;
   };
+  ot_solicitudes?: {
+    solicitante?: {
+      nombre?: string | null;
+    } | null;
+  } | null;
 };

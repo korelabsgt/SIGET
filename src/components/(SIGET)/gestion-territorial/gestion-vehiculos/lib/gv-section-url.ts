@@ -3,9 +3,9 @@ import type { GvSubmoduloId } from "./tab-context";
 export const GV_SECTION_QUERY_KEY = "seccion";
 
 const GV_SECTION_IDS: GvSubmoduloId[] = [
-  "flota",
   "solicitudes",
   "bitacoras",
+  "flota",
   "mantenimiento",
 ];
 

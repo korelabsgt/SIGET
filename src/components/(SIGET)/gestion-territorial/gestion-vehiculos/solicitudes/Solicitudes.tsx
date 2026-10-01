@@ -2,9 +2,11 @@
 
 
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { Plus, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { FilePlus, Plus } from "lucide";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 
 import { toast } from "react-toastify";
 
@@ -36,7 +38,12 @@ import { type SolicitudRow } from "./lib/zod";
 
 import { formatEstadoLabel } from "./lib/helpers";
 
-import { GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS } from "../lib/gv-header-ui";
+import {
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
+} from "../lib/gv-header-ui";
 
 
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
@@ -47,18 +54,13 @@ import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 
-import {
-  canAprobarRechazarSolicitudes,
-  canViewGvCampanaNotificaciones,
-} from "../lib/permissions";
+import { canAprobarRechazarSolicitudes } from "../lib/permissions";
 
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 
-import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
 
-import { SolicitudesNotificaciones } from "./SolicitudesNotificaciones";
-
-import { useUserContext } from "@/components/(base)/providers/UserProvider";
+import { useGvSolicitudDetailIntent } from "../lib/gv-solicitud-detail-intent";
 import { useBitacoraPendienteBloqueos } from "../lib/bitacora-pendiente-hooks";
 import { mensajeBloqueoNuevaSolicitudVehiculo } from "../lib/bitacora-pendiente-bloqueo";
 import { cn } from "@/lib/utils";
@@ -95,14 +97,11 @@ export function Solicitudes() {
 
   const gvRole = useGvPermissionRole();
 
-  const { user } = useUserContext();
-
   const { data: bloqueosBitacora } = useBitacoraPendienteBloqueos();
+  const solicitudDetailIntent = useGvSolicitudDetailIntent();
   const bloqueoNuevaSolicitudVehiculo = bloqueosBitacora?.vehiculo ?? null;
 
   const canAprobarRechazar = canAprobarRechazarSolicitudes(gvRole);
-
-  const puedeVerCampanaGestion = canViewGvCampanaNotificaciones(gvRole);
 
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
 
@@ -264,25 +263,23 @@ export function Solicitudes() {
 
   useGvPanelChrome("solicitudes");
 
-
+  useEffect(() => {
+    const pendingId = solicitudDetailIntent?.pendingSolicitudId;
+    if (!pendingId || loading) return;
+    const sol = solicitudes.find((item) => item.id === pendingId);
+    if (!sol) return;
+    setDetailSolicitud(sol);
+    solicitudDetailIntent?.clearPendingSolicitudDetail();
+  }, [
+    loading,
+    solicitudes,
+    solicitudDetailIntent?.pendingSolicitudId,
+    solicitudDetailIntent?.clearPendingSolicitudDetail,
+  ]);
 
   return (
 
     <>
-
-      <GvHeaderExtras panelId="solicitudes">
-        {!loading ? (
-          <SolicitudesNotificaciones
-            solicitudes={solicitudes}
-            variant={puedeVerCampanaGestion ? "gestion" : "usuario"}
-            userId={user?.id}
-            onAbrirSolicitud={(id) => {
-              const sol = solicitudes.find((item) => item.id === id);
-              if (sol) setDetailSolicitud(sol);
-            }}
-          />
-        ) : null}
-      </GvHeaderExtras>
 
       <GvTableSectionMotion panelId="solicitudes">
 
@@ -314,7 +311,7 @@ export function Solicitudes() {
 
             <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
 
-              <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
+              <div className={cn(GV_TABLE_TOOLBAR_PRIMARY_CLASS, "max-lg:order-2 lg:order-1")}>
 
                 <GvTabFilter
 
@@ -338,36 +335,31 @@ export function Solicitudes() {
 
                 />
 
-                <GvMonthPicker
-
-                  value={periodoFilter}
-
-                  onChange={setPeriodoFilter}
-
-                  className="!h-11 min-w-0 w-full text-xs lg:hidden sm:w-[10.5rem]"
-
-                />
-
               </div>
 
 
 
-              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
+              <div
+                className={cn(
+                  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+                  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
+                  "max-lg:order-1 lg:order-2",
+                )}
+              >
 
-                <GvMonthPicker
-
-                  value={periodoFilter}
-
-                  onChange={setPeriodoFilter}
-
-                  className="hidden lg:inline-flex"
-
-                />
-
-                <button
-
+                <SigetActionButton
                   type="button"
-
+                  label={
+                    <>
+                      <span className="max-lg:inline lg:hidden">Solicitar</span>
+                      <span className="hidden lg:inline">Crear</span>
+                    </>
+                  }
+                  ariaLabel="Nueva solicitud"
+                  accentColor={sigetAccent.crear}
+                  morphFrom={Plus}
+                  morphTo={FilePlus}
+                  disabled={Boolean(bloqueoNuevaSolicitudVehiculo)}
                   onClick={() => {
                     if (bloqueoNuevaSolicitudVehiculo) {
                       toast.warn(
@@ -377,23 +369,28 @@ export function Solicitudes() {
                     }
                     setFormOpen(true);
                   }}
+                  className="max-lg:order-1 h-11 max-lg:h-11 max-lg:w-full lg:order-2 lg:h-9 lg:w-auto"
+                />
 
-                  className={cn(
-                    GV_HEADER_OUTLINE_BUTTON_CLASS,
-                    bloqueoNuevaSolicitudVehiculo && "cursor-not-allowed opacity-50",
-                  )}
+                <GvMonthPicker
 
-                  aria-disabled={bloqueoNuevaSolicitudVehiculo ? true : undefined}
+                  value={periodoFilter}
 
-                >
+                  onChange={setPeriodoFilter}
 
-                  <Plus className="size-4 shrink-0" />
+                  className="max-lg:order-2 !h-11 min-w-0 w-full text-sm lg:hidden"
 
-                  <span className="lg:hidden">Nueva</span>
+                />
 
-                  <span className="hidden lg:inline">Nueva solicitud</span>
+                <GvMonthPicker
 
-                </button>
+                  value={periodoFilter}
+
+                  onChange={setPeriodoFilter}
+
+                  className="hidden lg:order-1 lg:inline-flex"
+
+                />
 
               </div>
 

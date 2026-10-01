@@ -78,7 +78,7 @@ export default function Header() {
         className="relative z-[100] w-full shrink-0 border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800"
       >
         <div className="mx-auto flex min-h-[var(--header-row-height)] flex-col px-1 py-1 md:px-2.5">
-          <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex w-full items-center justify-between gap-2 py-2.5 md:py-0">
             <button
               type="button"
               id="observatorio-header-brand"
@@ -160,7 +160,7 @@ export default function Header() {
           </div>
 
           {showBreadcrumb ? (
-            <div className="min-w-0 w-full px-1 pb-0.5 pt-0.5">
+            <div className="min-w-0 w-full px-1 py-2.5 md:py-0 md:pb-0.5 md:pt-0.5">
               <BreadcrumbNav />
             </div>
           ) : null}

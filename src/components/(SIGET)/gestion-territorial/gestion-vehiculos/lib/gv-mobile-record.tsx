@@ -4,6 +4,13 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { GvTableMorphRow } from "./gv-table-morph-row";
 
+export const GV_MOBILE_RECORD_TITLE_CLASS =
+  "truncate text-lg font-bold tracking-tight text-foreground";
+
+export const GV_MOBILE_RECORD_SUBTITLE_CLASS = "text-sm text-muted-foreground";
+
+export const GV_MOBILE_RECORD_META_ICON_CLASS = "size-4 shrink-0 text-celeste-trifinio";
+
 export function GvMobileRecordList({
   children,
   className,
@@ -43,7 +50,7 @@ export function GvMobileRecordHeader({
 }) {
   return (
     <div className={cn("flex items-start justify-between gap-3", className)}>
-      <div className="min-w-0 flex-1 text-sm font-semibold text-foreground">{title}</div>
+      <div className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground">{title}</div>
       {badge ? <div className="shrink-0">{badge}</div> : null}
     </div>
   );
@@ -71,11 +78,11 @@ export function GvMobileRecordMetaRow({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-start gap-2 text-sm text-muted-foreground", className)}>
+    <div className={cn("flex items-start gap-2.5 text-base text-muted-foreground", className)}>
       {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
       <div className="min-w-0">
         <div className="text-foreground">{children}</div>
-        {subtext ? <div className="text-xs text-muted-foreground">{subtext}</div> : null}
+        {subtext ? <div className="text-sm text-muted-foreground">{subtext}</div> : null}
       </div>
     </div>
   );
@@ -92,7 +99,7 @@ export function GvMobileRecordFooter({
 }) {
   return (
     <div className={cn("flex items-center justify-between gap-2", className)}>
-      <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         {left}
       </div>
       {right ? (
@@ -115,7 +122,7 @@ export function GvMobileRecordBadge({
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+        "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
         className,
       )}
       {...props}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, OctagonAlert } from "lucide";
+import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { cn } from "@/lib/utils";
-import { GV_DANGER_OUTLINE_BUTTON_CLASS } from "../../lib/gv-danger-ui";
 import { ReportarAveriaModal } from "./ReportarAveriaModal";
 
 export function Crear({ compact = false }: { compact?: boolean }) {
@@ -11,15 +11,24 @@ export function Crear({ compact = false }: { compact?: boolean }) {
 
   return (
     <>
-      <button
+      <SigetActionButton
         type="button"
+        label={
+          <>
+            <span className="lg:hidden">Avería</span>
+            <span className="hidden lg:inline">Reportar</span>
+          </>
+        }
+        ariaLabel="Reportar avería"
+        accentColor={sigetAccent.quitar}
+        morphFrom={AlertTriangle}
+        morphTo={OctagonAlert}
         onClick={() => setOpen(true)}
-        className={cn(GV_DANGER_OUTLINE_BUTTON_CLASS, compact && "px-3")}
-      >
-        <AlertTriangle className="h-4 w-4 shrink-0" />
-        <span className="lg:hidden">Avería</span>
-        <span className="hidden lg:inline">Reportar avería</span>
-      </button>
+        className={cn(
+          "h-11 shrink-0 max-lg:w-full lg:h-9 lg:w-auto",
+          compact && "lg:px-3",
+        )}
+      />
 
       <ReportarAveriaModal open={open} onOpenChange={setOpen} />
     </>

@@ -11,11 +11,13 @@ export function BitacorasPanel({
   catalogo,
   detail,
   onDetailChange,
+  onConfirmarPendiente,
 }: {
   bitacoras: BitacoraRow[];
   catalogo?: BitacoraRow[];
   detail?: BitacoraRow | null;
   onDetailChange?: (bitacora: BitacoraRow | null) => void;
+  onConfirmarPendiente?: (bitacora: BitacoraRow) => void;
 }) {
   const [internalDetail, setInternalDetail] = useState<BitacoraRow | null>(null);
   const isControlled = detail !== undefined;
@@ -39,10 +41,18 @@ export function BitacorasPanel({
     <>
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="hidden min-h-0 flex-1 flex-col lg:flex">
-          <BitacorasList bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+          <BitacorasList
+            bitacoras={bitacoras}
+            onDetail={setSelectedBitacora}
+            onConfirmarPendiente={onConfirmarPendiente}
+          />
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:hidden">
-          <BitacorasCards bitacoras={bitacoras} onDetail={setSelectedBitacora} />
+          <BitacorasCards
+            bitacoras={bitacoras}
+            onDetail={setSelectedBitacora}
+            onConfirmarPendiente={onConfirmarPendiente}
+          />
         </div>
       </div>
 

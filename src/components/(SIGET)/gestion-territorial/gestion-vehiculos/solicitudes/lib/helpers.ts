@@ -1,4 +1,6 @@
 import { differenceInMinutes } from "date-fns";
+import { formatFechaHoraGv } from "../../lib/gv-fechas";
+import { esRetornoMisionPendiente } from "./calendario-reservas";
 import { type SolicitudRow } from "./zod";
 
 export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
@@ -39,6 +41,27 @@ export function nombrePilotoSolicitud(
   }
   if (solicitud.piloto) return "Usuario registrado";
   return solicitud.solicitante?.nombre?.trim() || "No especificado";
+}
+
+export function retornoMisionRegistrado(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio" | "fecha_fin_estimada">,
+): boolean {
+  if (solicitud.estado !== "FINALIZADA") return false;
+  return !esRetornoMisionPendiente(solicitud.fecha_inicio, solicitud.fecha_fin_estimada);
+}
+
+export function textoRetornoMision(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio" | "fecha_fin_estimada">,
+): string {
+  if (!retornoMisionRegistrado(solicitud)) return "Pendiente";
+  return formatFechaHoraGv(solicitud.fecha_fin_estimada);
+}
+
+export function textoDuracionMision(
+  solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio" | "fecha_fin_estimada">,
+): string {
+  if (!retornoMisionRegistrado(solicitud)) return "Pendiente";
+  return formatDuracionMision(solicitud.fecha_inicio, solicitud.fecha_fin_estimada);
 }
 
 export function formatDuracionMision(inicio: string, fin: string): string {

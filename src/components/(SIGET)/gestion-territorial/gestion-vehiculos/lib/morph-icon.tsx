@@ -93,13 +93,13 @@ export function GvMorphIcon({
   const rowMorphHover = useGvTableRowMorphHover();
   const scopeHover = useMorphHoverScope(
     wrapperRef,
-    morphOnHover && rowMorphHover === null,
+    morphOnHover && rowMorphHover === undefined,
     externalHover,
   );
   const isHovered =
     externalHover !== undefined
       ? externalHover
-      : rowMorphHover !== null
+      : rowMorphHover !== undefined
         ? rowMorphHover
         : scopeHover;
 

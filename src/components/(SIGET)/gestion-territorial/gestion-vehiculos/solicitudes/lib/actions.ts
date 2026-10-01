@@ -7,6 +7,10 @@ import {
   esVehiculoDisponible,
   esVehiculoOperableParaIniciarMision,
 } from "../../flota/lib/helpers";
+import {
+  asegurarBitacorasPendientesMisionesEnCurso,
+  crearBitacoraPendienteAlIniciarMision,
+} from "../../bitacoras/lib/crear-pendiente-mision";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import {
   canAprobarRechazarSolicitudes,
@@ -22,15 +26,12 @@ import {
   fetchBitacoraPendienteBloqueos,
   mensajeBloqueoNuevaSolicitudVehiculo,
 } from "../../lib/bitacora-pendiente-bloqueo";
+import { COMENTARIO_PREFIJO_MISION_CANCELADA, formatEstadoLabel } from "./helpers";
 import {
-  COMENTARIO_PREFIJO_MISION_CANCELADA,
-  COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
-  formatEstadoLabel,
-  horaInicioSolicitudPasada,
-} from "./helpers";
-import {
+  esRetornoMisionPendiente,
+  fechaFinEstimadaPendienteDesdeInicio,
   findConflictoDiaVehiculo,
-  validarFechasMisionNoAnterioresAHoyGt,
+  validarFechaInicioMisionNoAnteriorAHoyGt,
   type SolicitudCalendarioRef,
 } from "./calendario-reservas";
 import { formatFechaCalendarioGt, formatFechaHoraGt } from "@/lib/fechas-gt";
@@ -75,7 +76,9 @@ function mensajeConflictoDiaVehiculo(
     year: "numeric",
   });
   const rangoBloqueo = bloqueo
-    ? ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)}, retorno ${formatFechaHoraGt(bloqueo.fecha_fin_estimada)})`
+    ? esRetornoMisionPendiente(bloqueo.fecha_inicio, bloqueo.fecha_fin_estimada)
+      ? ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)})`
+      : ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)}, retorno ${formatFechaHoraGt(bloqueo.fecha_fin_estimada)})`
     : "";
 
   if (estado === "APROBADA") {
@@ -106,71 +109,10 @@ async function requireAuth() {
   return { user, role, supabase };
 }
 
-async function rechazarSolicitudVencidaPorId(
-  admin: ReturnType<typeof createAdminClient>,
-  id: string,
-): Promise<boolean> {
-  const { error } = await admin
-    .from(TABLE)
-    .update({
-      estado: "RECHAZADA",
-      comentarios: COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
-      aprobado_por: null,
-    })
-    .eq("id", id)
-    .eq("estado", "PENDIENTE");
-
-  if (error) {
-    console.error("rechazarSolicitudVencidaPorId:", error);
-    return false;
-  }
-
-  return true;
-}
-
-async function rechazarSolicitudesPendientesVencidas(): Promise<void> {
-  const admin = createAdminClient();
-  const ahoraIso = new Date().toISOString();
-
-  const { data, error } = await admin
-    .from(TABLE)
-    .select("id, fecha_inicio")
-    .eq("estado", "PENDIENTE")
-    .lt("fecha_inicio", ahoraIso);
-
-  if (error) {
-    console.error("rechazarSolicitudesPendientesVencidas:", error);
-    return;
-  }
-
-  const ids = (data ?? [])
-    .filter((row) => horaInicioSolicitudPasada(row.fecha_inicio))
-    .map((row) => row.id);
-
-  if (ids.length === 0) return;
-
-  const { error: updateError } = await admin
-    .from(TABLE)
-    .update({
-      estado: "RECHAZADA",
-      comentarios: COMENTARIO_RECHAZO_SOLICITUD_VENCIDA,
-      aprobado_por: null,
-    })
-    .in("id", ids)
-    .eq("estado", "PENDIENTE");
-
-  if (updateError) {
-    console.error("rechazarSolicitudesPendientesVencidas update:", updateError);
-    return;
-  }
-
-  revalidatePath(REVALIDATE_ROUTE);
-  revalidatePath(FLOTA_ROUTE);
-}
-
 export async function getSolicitudes(): Promise<SolicitudRow[]> {
   try {
-    await rechazarSolicitudesPendientesVencidas();
+    const adminSync = createAdminClient();
+    await asegurarBitacorasPendientesMisionesEnCurso(adminSync);
 
     const { user, role, supabase } = await requireAuth();
 
@@ -215,13 +157,12 @@ export async function createSolicitud(input: SolicitudInput) {
     const solicitanteIdSolicitado = solicitante_id?.trim() || user.id;
     const solicitanteId = puedeElegirSolicitante ? solicitanteIdSolicitado : user.id;
 
-    const fechasHoy = validarFechasMisionNoAnterioresAHoyGt(
-      rest.fecha_inicio,
-      rest.fecha_fin_estimada,
-    );
+    const fechasHoy = validarFechaInicioMisionNoAnteriorAHoyGt(rest.fecha_inicio);
     if (!fechasHoy.ok) {
       return { success: false, error: fechasHoy.message };
     }
+
+    const fecha_fin_estimada = fechaFinEstimadaPendienteDesdeInicio(rest.fecha_inicio);
 
     const supabase = await createClient();
 
@@ -292,7 +233,7 @@ export async function createSolicitud(input: SolicitudInput) {
         {
           vehiculo_id,
           fecha_inicio: rest.fecha_inicio,
-          fecha_fin_estimada: rest.fecha_fin_estimada,
+          fecha_fin_estimada,
         },
         calendario,
       );
@@ -311,7 +252,7 @@ export async function createSolicitud(input: SolicitudInput) {
           solicitante_id: solicitanteId,
           vehiculo_id: vehiculo_id || null,
           fecha_inicio: rest.fecha_inicio,
-          fecha_fin_estimada: rest.fecha_fin_estimada,
+          fecha_fin_estimada,
           destino: rest.destino,
           justificacion: rest.justificacion,
           pasajeros: rest.pasajeros || null,
@@ -380,27 +321,14 @@ export async function cambiarEstadoSolicitud(
 
     const { data: actual, error: actualError } = await supabase
       .from(TABLE)
-      .select("id, solicitante_id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada")
+      .select(
+        "id, solicitante_id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, destino, piloto",
+      )
       .eq("id", id)
       .maybeSingle();
 
     if (actualError || !actual) {
       return { success: false, error: "No se encontró la solicitud." };
-    }
-
-    if (
-      actual.estado === "PENDIENTE" &&
-      horaInicioSolicitudPasada(actual.fecha_inicio)
-    ) {
-      const adminVencida = createAdminClient();
-      await rechazarSolicitudVencidaPorId(adminVencida, actual.id);
-      revalidatePath(REVALIDATE_ROUTE);
-      revalidatePath(FLOTA_ROUTE);
-      return {
-        success: false,
-        error:
-          "La solicitud venció sin respuesta y fue rechazada automáticamente. Actualice la lista.",
-      };
     }
 
     if (esTransicionMision) {
@@ -566,6 +494,27 @@ export async function cambiarEstadoSolicitud(
 
     for (const vehiculoId of vehiculosAfectados) {
       await sincronizarEstadoFlotaVehiculo(admin, vehiculoId);
+    }
+
+    if (nuevoEstado === "EN_MISION" && data.estado === "EN_MISION") {
+      try {
+        await crearBitacoraPendienteAlIniciarMision(admin, {
+          id: data.id,
+          destino: data.destino,
+          vehiculo_id: data.vehiculo_id,
+          piloto: actual.piloto,
+          solicitante_id: data.solicitante_id ?? actual.solicitante_id,
+        });
+      } catch (bitacoraErr) {
+        console.error("crearBitacoraPendienteAlIniciarMision:", bitacoraErr);
+        return {
+          success: false,
+          error:
+            bitacoraErr instanceof Error
+              ? bitacoraErr.message
+              : "La misión inició, pero no se pudo abrir la bitácora. Contacte al administrador.",
+        };
+      }
     }
 
     revalidatePath(REVALIDATE_ROUTE);

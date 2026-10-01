@@ -79,7 +79,7 @@ export function GvMonthPicker({
   if (!mounted) {
     return (
       <button type="button" className={triggerClassName} aria-hidden tabIndex={-1}>
-        <span className="truncate text-sm font-semibold">{label}</span>
+        <span className="truncate text-sm font-semibold max-lg:text-base">{label}</span>
         <GvMorphIcon
           icon={Calendar}
           hoverIcon={CalendarDays}
@@ -94,7 +94,7 @@ export function GvMonthPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button type="button" data-morph-hover-scope className={triggerClassName}>
-          <span className="truncate text-sm font-semibold">{label}</span>
+          <span className="truncate text-sm font-semibold max-lg:text-base">{label}</span>
           <GvMorphIcon
             icon={Calendar}
             hoverIcon={CalendarDays}

@@ -19,13 +19,6 @@ export const GV_MENU_OPTIONS: {
   hoverIcon: IconNode;
 }[] = [
   {
-    id: "flota",
-    title: "Flota",
-    desc: "Control y asignación de la flota vehicular de la institución.",
-    icon: Car,
-    hoverIcon: CarFront,
-  },
-  {
     id: "solicitudes",
     title: "Solicitudes",
     desc: "Reservas de vehículos para misiones.",
@@ -38,6 +31,13 @@ export const GV_MENU_OPTIONS: {
     desc: "Registro digital de viajes y métricas operativas.",
     icon: BookOpen,
     hoverIcon: BookMarked,
+  },
+  {
+    id: "flota",
+    title: "Flota",
+    desc: "Control y asignación de la flota vehicular de la institución.",
+    icon: Car,
+    hoverIcon: CarFront,
   },
   {
     id: "mantenimiento",

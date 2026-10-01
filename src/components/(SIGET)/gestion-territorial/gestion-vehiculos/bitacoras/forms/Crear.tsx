@@ -44,20 +44,40 @@ import {
   ImagenVehiculoEscritorioFileInput,
   ImagenVehiculoFuentePicker,
 } from "../../lib/imagen-vehiculo-fuente-picker";
-import { BITACORA_RECIBO_PENDIENTE } from "../lib/helpers";
+import {
+  BITACORA_RECIBO_PENDIENTE,
+  destinoBitacoraFormulario,
+  esBitacoraReservaIndividualPendiente,
+} from "../lib/helpers";
 import { GvMorphIcon } from "../../lib/morph-icon";
 import { useUser } from "@/components/(base)/providers/UserProvider";
-import { type BitacoraInput, bitacoraInputSchema } from "../lib/zod";
-import { useBitacoraFormOptions, useCrearBitacora } from "../lib/hooks";
+import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow } from "../lib/zod";
+import {
+  useBitacoraFormOptions,
+  useCombustiblesSinMisionBitacora,
+  useConfirmarBitacora,
+} from "../lib/hooks";
+import type { CombustibleSinMisionOpcion } from "../lib/actions";
+import { esBitacoraPendiente } from "../lib/bitacora-estado";
 import { type VehiculoRow } from "../../flota/lib/zod";
 import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
 import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
 import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
-import { getCombustibleAprobadoPorMision } from "../lib/actions";
+import {
+  getCombustibleAprobadoPorMision,
+  getCombustibleAprobadoSinMisionPorVehiculo,
+} from "../lib/actions";
 import {
   combustibleAprobadoParaBitacora,
   misionRequiereReciboCombustible,
 } from "../lib/combustible-mision";
+import {
+  GvDetalleEncabezadoVehiculo,
+  GvDetalleFilaVehiculo,
+  GvDetalleSeccionTitulo,
+  GvDetalleStat,
+  GvDetalleTarjetaAnidada,
+} from "../../lib/gv-detalle-modal-ui";
 import {
   GvModalForm,
   GvModalFormBody,
@@ -75,25 +95,10 @@ import {
   modalFieldClass,
 } from "../../lib/gv-modal-shell";
 
-interface SolicitudActiva {
-  id: string;
-  destino: string;
-  conductor_id: string;
-  vehiculo_id: string;
-  estado?: string;
-  ot_vehiculos: { kilometraje_actual: number } | { kilometraje_actual: number }[] | null;
-}
-
 const selectOverflowScrollWrapClass = "min-w-0 max-w-full overflow-x-auto";
 
 const selectOverflowTriggerClass =
   "w-max min-w-full [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-nowrap";
-
-function kmDeMision(rel: SolicitudActiva["ot_vehiculos"]): number {
-  if (!rel) return 0;
-  if (Array.isArray(rel)) return rel[0]?.kilometraje_actual || 0;
-  return rel.kilometraje_actual || 0;
-}
 
 function formatVehiculoLabel(v: Pick<VehiculoRow, "placa" | "marca" | "modelo">) {
   return `${v.placa} · ${v.marca} ${v.modelo}`;
@@ -103,18 +108,23 @@ export function Crear({
   open,
   onOpenChange,
   onSaved,
+  bitacoraPendiente = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  bitacoraPendiente?: BitacoraRow | null;
 }) {
-  const crear = useCrearBitacora();
+  const confirmar = useConfirmarBitacora();
+  const bitacoraId = bitacoraPendiente?.id ?? "";
+  const esConfirmacionPendiente = Boolean(
+    bitacoraPendiente && esBitacoraPendiente(bitacoraPendiente),
+  );
   const user = useUser();
   const nombreResponsable =
     (user?.user_metadata?.nombre as string | undefined)?.trim() || "Tu perfil";
   const { data: options, isLoading: loading } = useBitacoraFormOptions(open);
   const vehiculos = (options?.vehiculos ?? []) as VehiculoRow[];
-  const misiones = (options?.misiones ?? []) as SolicitudActiva[];
 
   const {
     register,
@@ -137,6 +147,7 @@ export function Crear({
       km_final: 0,
       vale_combustible: "",
       monto_combustible: 0,
+      solicitud_combustible_id: "",
       comentarios: [],
       evidencia_url: [],
     },
@@ -186,6 +197,28 @@ export function Crear({
 
   const selectedMisionId = watch("solicitud_id");
   const selectedVehiculoId = watch("vehiculo_id");
+  const misionIdCombustible =
+    selectedMisionId?.trim() || bitacoraPendiente?.solicitud_id?.trim() || "";
+  const vehiculoIdCombustible =
+    selectedVehiculoId?.trim() || bitacoraPendiente?.vehiculo_id?.trim() || "";
+  const vehiculoSeleccionado =
+    vehiculos.find((v) => v.id === vehiculoIdCombustible) ?? null;
+  const esReservaIndividualPendiente =
+    bitacoraPendiente !== null &&
+    esBitacoraReservaIndividualPendiente(bitacoraPendiente, vehiculoSeleccionado);
+  const datosMisionBloqueados = Boolean(misionIdCombustible);
+  const bloqueoVehiculoYResponsable =
+    datosMisionBloqueados || esReservaIndividualPendiente;
+  const combustibleSoloLectura = datosMisionBloqueados && !esReservaIndividualPendiente;
+  const { data: combustiblesSinMision = [], isLoading: loadingCombustiblesSinMision } =
+    useCombustiblesSinMisionBitacora(
+      vehiculoIdCombustible,
+      open && esReservaIndividualPendiente,
+    );
+  const valeCombustible = watch("vale_combustible");
+  const montoCombustible = watch("monto_combustible");
+  const solicitudCombustibleId = watch("solicitud_combustible_id")?.trim() ?? "";
+  const combustibleSinMisionSeleccionado = Boolean(solicitudCombustibleId);
   const kmInicial = watch("km_inicial");
   const kmFinal = watch("km_final");
   const recorrido = Math.max(0, kmFinal - kmInicial);
@@ -250,6 +283,23 @@ export function Crear({
     setEvidenciaPreviewUrl(null);
     setEvidenciaPathSubido(null);
 
+    if (bitacoraPendiente && esBitacoraPendiente(bitacoraPendiente)) {
+      reset({
+        solicitud_id: bitacoraPendiente.solicitud_id ?? "",
+        vehiculo_id: bitacoraPendiente.vehiculo_id,
+        conductor_id: bitacoraPendiente.conductor_id,
+        destino: destinoBitacoraFormulario(bitacoraPendiente.destino),
+        km_inicial: bitacoraPendiente.km_inicial,
+        km_final: bitacoraPendiente.km_final,
+        vale_combustible: bitacoraPendiente.vale_combustible ?? "",
+        monto_combustible: bitacoraPendiente.monto_combustible ?? 0,
+        solicitud_combustible_id: "",
+        comentarios: bitacoraPendiente.comentarios.map((c) => ({ texto: c.texto })),
+        evidencia_url: [],
+      });
+      return;
+    }
+
     reset({
       solicitud_id: "",
       vehiculo_id: "",
@@ -259,28 +309,34 @@ export function Crear({
       km_final: 0,
       vale_combustible: "",
       monto_combustible: 0,
+      solicitud_combustible_id: "",
       comentarios: [],
       evidencia_url: [],
     });
-  }, [open, reset, user?.id]);
+  }, [open, reset, user?.id, bitacoraPendiente]);
 
-  useEffect(() => {
-    if (selectedMisionId && misiones.length > 0) {
-      const mision = misiones.find((m) => m.id === selectedMisionId);
-      if (mision) {
-        const kmActual = kmDeMision(mision.ot_vehiculos);
-        setValue("vehiculo_id", mision.vehiculo_id, { shouldValidate: true });
-        setValue("destino", mision.destino, { shouldValidate: true });
-        setValue("km_inicial", kmActual, { shouldValidate: true });
-        setValue("km_final", kmActual);
-      }
+  const aplicarCombustibleSinMision = (opcion: CombustibleSinMisionOpcion) => {
+    setValue("solicitud_combustible_id", opcion.id, { shouldValidate: true });
+    setValue("vale_combustible", opcion.vale, { shouldValidate: true });
+    setValue("monto_combustible", opcion.monto, { shouldValidate: true });
+    const requiereRecibo = opcion.vale.trim().length > 0;
+    setReciboCombustibleObligatorio(requiereRecibo);
+    if (!requiereRecibo) {
+      clearEvidencia();
+      clearErrors("evidencia_url");
     }
-  }, [selectedMisionId, misiones, setValue]);
+    setCombustibleMisionAviso(
+      opcion.monto > 0
+        ? `Vale ${opcion.vale}. Debe adjuntar el recibo de carga.`
+        : `Vale ${opcion.vale}. Adjunte el recibo; indique el monto si falta en la aprobación.`,
+    );
+  };
 
   useEffect(() => {
     if (!open) return;
+    if (esReservaIndividualPendiente) return;
 
-    if (!selectedMisionId) {
+    if (!misionIdCombustible && !vehiculoIdCombustible) {
       setCombustibleMisionAviso(null);
       setReciboCombustibleObligatorio(false);
       clearEvidencia();
@@ -290,7 +346,19 @@ export function Crear({
 
     let cancelled = false;
 
-    void getCombustibleAprobadoPorMision(selectedMisionId).then((row) => {
+    void (async () => {
+      let row = null as Awaited<ReturnType<typeof getCombustibleAprobadoPorMision>>;
+      let origenSinMision = false;
+
+      if (misionIdCombustible) {
+        row = await getCombustibleAprobadoPorMision(misionIdCombustible);
+      }
+
+      if (!row && vehiculoIdCombustible) {
+        row = await getCombustibleAprobadoSinMisionPorVehiculo(vehiculoIdCombustible);
+        origenSinMision = Boolean(row);
+      }
+
       if (cancelled) return;
 
       const requiereRecibo = misionRequiereReciboCombustible(row);
@@ -305,15 +373,21 @@ export function Crear({
         setValue("vale_combustible", "", { shouldValidate: false });
         setValue("monto_combustible", 0, { shouldValidate: false });
         setCombustibleMisionAviso(
-          "No hay solicitud de combustible aprobada vinculada a esta misión.",
+          misionIdCombustible
+            ? "No hay combustible aprobado vinculado a la misión ni sin vincular para este vehículo."
+            : "No hay solicitud de combustible aprobada sin vincular para este vehículo.",
         );
         return;
       }
 
       const datos = combustibleAprobadoParaBitacora(row);
       if (!datos) {
+        setValue("vale_combustible", "", { shouldValidate: false });
+        setValue("monto_combustible", 0, { shouldValidate: false });
         setCombustibleMisionAviso(
-          "Hay combustible aprobado sin rango de cupones. Complete vale y monto manualmente.",
+          origenSinMision
+            ? "Hay combustible aprobado sin misión vinculada, pero sin rango de cupones registrado."
+            : "Hay combustible aprobado sin rango de cupones en la solicitud vinculada.",
         );
         return;
       }
@@ -321,21 +395,32 @@ export function Crear({
       setValue("vale_combustible", datos.vale, { shouldValidate: true });
       setValue("monto_combustible", datos.monto, { shouldValidate: true });
 
+      const prefijoOrigen = origenSinMision
+        ? "Combustible aprobado sin misión vinculada · "
+        : "";
+
       if (datos.monto > 0) {
         setCombustibleMisionAviso(
-          `${datos.cantidad} cupón(es) entregados · vale ${datos.vale}. Debe adjuntar el recibo de carga.`,
+          `${prefijoOrigen}${datos.cantidad} cupón(es) entregados · vale ${datos.vale}. Debe adjuntar el recibo de carga.`,
         );
       } else {
         setCombustibleMisionAviso(
-          `Vale ${datos.vale} (${datos.cantidad} cupón(es) entregados). Adjunte el recibo; indique el monto si falta denominación en la aprobación.`,
+          `${prefijoOrigen}Vale ${datos.vale} (${datos.cantidad} cupón(es) entregados). Adjunte el recibo; el monto se tomó de la aprobación si estaba registrado.`,
         );
       }
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [open, selectedMisionId, setValue, clearErrors]);
+  }, [
+    open,
+    esReservaIndividualPendiente,
+    misionIdCombustible,
+    vehiculoIdCombustible,
+    setValue,
+    clearErrors,
+  ]);
 
   useEffect(() => {
     if (selectedVehiculoId && !selectedMisionId) {
@@ -410,20 +495,28 @@ export function Crear({
         evidenciaPaths = [evidenciaPathSubido];
       }
 
-      const res = await crear.mutateAsync({ ...data, evidencia_url: evidenciaPaths });
+      if (!bitacoraId) {
+        toast.error("No hay una bitácora pendiente para confirmar.");
+        return "error";
+      }
+
+      const res = await confirmar.mutateAsync({
+        id: bitacoraId,
+        input: { ...data, evidencia_url: evidenciaPaths },
+      });
       if (!res.success) {
         toast.error(res.error || "Hubo un error al guardar la bitácora");
         return "error";
       }
 
       if (!huboAveria) {
-        toast.success("Bitácora registrada con éxito");
+        toast.success("Bitácora confirmada con éxito");
         return "listo";
       }
 
       const yaReportada = await vehiculoTieneAveriaActiva(data.vehiculo_id);
       if (yaReportada) {
-        toast.success("Bitácora registrada con éxito");
+        toast.success("Bitácora confirmada con éxito");
         toast.info(
           "Este vehículo ya tiene un reporte de avería activo en mantenimiento.",
         );
@@ -479,10 +572,10 @@ export function Crear({
   };
 
   const flujoBloqueado =
-    consultaAveriaOpen || reportarAveriaOpen || crear.isPending || subiendoEvidencia;
+    consultaAveriaOpen || reportarAveriaOpen || confirmar.isPending || subiendoEvidencia;
 
   const handleClose = () => {
-    if (crear.isPending) return;
+    if (confirmar.isPending) return;
     onOpenChange(false);
   };
 
@@ -491,7 +584,13 @@ export function Crear({
       <GvModalShell
         open={open}
         onClose={handleClose}
-        title="Registrar bitácora de viaje"
+        title={
+          esReservaIndividualPendiente
+            ? "Confirmar bitácora de reserva individual"
+            : esConfirmacionPendiente
+              ? "Confirmar bitácora de viaje"
+              : "Bitácora de viaje"
+        }
         maxWidth="max-w-2xl"
       >
         {open && loading ? (
@@ -500,136 +599,68 @@ export function Crear({
           </div>
         ) : open ? (
           <GvModalForm onSubmit={handleSubmit(onFormValidated)} className="w-full min-w-0">
-            <GvModalFormBody className="space-y-4">
-              <ModalField>
-                <ModalLabel htmlFor="solicitud_id">Misión a vincular (opcional)</ModalLabel>
-                <Controller
-                  name="solicitud_id"
-                  control={control}
-                  render={({ field }) => (
-                    <div className={selectOverflowScrollWrapClass}>
-                      <Select
-                        onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
-                        value={field.value || "none"}
-                      >
-                        <SelectTrigger
-                          id="solicitud_id"
-                          className={cn(GV_MODAL_SELECT_TRIGGER_CLASS, selectOverflowTriggerClass)}
-                        >
-                          <SelectValue placeholder="Seleccionar misión en curso" />
-                        </SelectTrigger>
-                        <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
-                          <SelectItem value="none" className={GV_MODAL_SELECT_ITEM_CLASS}>
-                            Ninguna — registro manual
-                          </SelectItem>
-                          {misiones.map((m) => {
-                            const sufijoEstado =
-                              m.estado === "FINALIZADA" ? " · finalizada" : "";
-                            const label = `Misión a ${m.destino} · ${kmDeMision(m.ot_vehiculos)} km${sufijoEstado}`;
-                            return (
-                              <SelectItem
-                                key={m.id}
-                                value={m.id}
-                                textValue={label}
-                                className={cn(GV_MODAL_SELECT_ITEM_CLASS, "whitespace-nowrap")}
-                              >
-                                {label}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {selectedMisionId
-                    ? "Vehículo, conductor y destino se completan desde la misión seleccionada."
-                    : "Se listan tus misiones en curso y la última finalizada sin bitácora vinculada."}
-                </p>
-              </ModalField>
+            <GvModalFormBody className="space-y-6">
+              <input type="hidden" {...register("solicitud_id")} />
+              <input type="hidden" {...register("conductor_id")} />
+              <input type="hidden" {...register("km_inicial")} />
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section className="min-w-0 space-y-4">
+                <GvDetalleSeccionTitulo>Ruta y kilometraje</GvDetalleSeccionTitulo>
+
+                {!bloqueoVehiculoYResponsable ? (
+                  <ModalField>
+                    <ModalLabel htmlFor="vehiculo_id">Vehículo</ModalLabel>
+                    <Controller
+                      name="vehiculo_id"
+                      control={control}
+                      render={({ field }) => (
+                        <div className={selectOverflowScrollWrapClass}>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <SelectTrigger
+                              id="vehiculo_id"
+                              className={cn(GV_MODAL_SELECT_TRIGGER_CLASS, selectOverflowTriggerClass)}
+                            >
+                              <SelectValue placeholder="Seleccionar vehículo" />
+                            </SelectTrigger>
+                            <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
+                              {vehiculos
+                                .filter((v) => v.id)
+                                .map((v) => {
+                                  const label = formatVehiculoLabel(v);
+                                  return (
+                                    <SelectItem
+                                      key={v.id}
+                                      value={v.id as string}
+                                      textValue={label}
+                                      className={cn(GV_MODAL_SELECT_ITEM_CLASS, "whitespace-nowrap")}
+                                    >
+                                      {label}
+                                    </SelectItem>
+                                  );
+                                })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    />
+                    {errors.vehiculo_id ? (
+                      <p className="text-xs text-red-500">{errors.vehiculo_id.message}</p>
+                    ) : null}
+                  </ModalField>
+                ) : null}
+
                 <ModalField>
-                  <ModalLabel htmlFor="vehiculo_id">Vehículo</ModalLabel>
-                  <Controller
-                    name="vehiculo_id"
-                    control={control}
-                    render={({ field }) => (
-                      <div className={selectOverflowScrollWrapClass}>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                          disabled={!!selectedMisionId}
-                        >
-                          <SelectTrigger
-                            id="vehiculo_id"
-                            className={cn(GV_MODAL_SELECT_TRIGGER_CLASS, selectOverflowTriggerClass)}
-                            disabled={!!selectedMisionId}
-                          >
-                            <SelectValue placeholder="Seleccionar vehículo" />
-                          </SelectTrigger>
-                          <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
-                            {vehiculos
-                              .filter((v) => v.id)
-                              .map((v) => {
-                                const label = formatVehiculoLabel(v);
-                                return (
-                                  <SelectItem
-                                    key={v.id}
-                                    value={v.id as string}
-                                    textValue={label}
-                                    className={cn(GV_MODAL_SELECT_ITEM_CLASS, "whitespace-nowrap")}
-                                  >
-                                    {label}
-                                  </SelectItem>
-                                );
-                              })}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                  <ModalLabel htmlFor="destino">Destino de la ruta</ModalLabel>
+                  <ModalInput
+                    id="destino"
+                    {...register("destino")}
+                    disabled={datosMisionBloqueados && !esReservaIndividualPendiente}
                   />
-                  {errors.vehiculo_id ? (
-                    <p className="text-xs text-red-500">{errors.vehiculo_id.message}</p>
+                  {errors.destino ? (
+                    <p className="text-xs text-red-500">{errors.destino.message}</p>
                   ) : null}
                 </ModalField>
 
-                <ModalField>
-                  <ModalLabel htmlFor="conductor_display">Responsable del viaje</ModalLabel>
-                  <input type="hidden" {...register("conductor_id")} />
-                  <ModalInput
-                    id="conductor_display"
-                    readOnly
-                    value={nombreResponsable}
-                    className="opacity-90"
-                  />
-                </ModalField>
-              </div>
-
-              <ModalField>
-                <ModalLabel htmlFor="destino">Destino de la ruta</ModalLabel>
-                <ModalInput
-                  id="destino"
-                  {...register("destino")}
-                  disabled={!!selectedMisionId}
-                />
-                {errors.destino ? (
-                  <p className="text-xs text-red-500">{errors.destino.message}</p>
-                ) : null}
-              </ModalField>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <ModalField>
-                  <ModalLabel htmlFor="km_inicial">Km inicial</ModalLabel>
-                  <ModalInput
-                    id="km_inicial"
-                    type="number"
-                    readOnly
-                    className="tabular-nums opacity-80"
-                    {...register("km_inicial")}
-                  />
-                </ModalField>
                 <ModalField>
                   <ModalLabel htmlFor="km_final">Km final</ModalLabel>
                   <ModalInput
@@ -642,46 +673,132 @@ export function Crear({
                     <p className="text-xs text-red-500">{errors.km_final.message}</p>
                   ) : null}
                 </ModalField>
-                <ModalField>
-                  <ModalLabel htmlFor="recorrido">Recorrido</ModalLabel>
-                  <ModalInput
-                    id="recorrido"
-                    readOnly
-                    value={`${recorrido} km`}
-                    className="tabular-nums font-semibold"
-                  />
-                </ModalField>
-              </div>
+              </section>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <ModalField>
-                  <ModalLabel htmlFor="vale_combustible">Vale de combustible</ModalLabel>
-                  <ModalInput
-                    id="vale_combustible"
-                    placeholder="Ej. 15001 – 15050"
-                    {...register("vale_combustible")}
-                  />
-                </ModalField>
-                <ModalField>
-                  <ModalLabel htmlFor="monto_combustible">Monto (Q.)</ModalLabel>
-                  <ModalInput
-                    id="monto_combustible"
-                    type="number"
-                    step="0.01"
-                    className="tabular-nums"
-                    placeholder="Total cupones entregados"
-                    {...register("monto_combustible")}
-                  />
-                </ModalField>
+              {esReservaIndividualPendiente || !combustibleSoloLectura ? (
+              <section className="min-w-0 space-y-4">
+                <GvDetalleSeccionTitulo>Combustible</GvDetalleSeccionTitulo>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {esReservaIndividualPendiente ? (
+                  <>
+                    <ModalField className="lg:col-span-2">
+                      <ModalLabel>Solicitud de combustible (sin misión)</ModalLabel>
+                      <input type="hidden" {...register("solicitud_combustible_id")} />
+                      <input type="hidden" {...register("vale_combustible")} />
+                      <input type="hidden" {...register("monto_combustible")} />
+                      {loadingCombustiblesSinMision ? (
+                        <div className="relative">
+                          <ModalInput
+                            readOnly
+                            disabled
+                            value="Cargando solicitudes…"
+                            className="pr-10 text-muted-foreground"
+                            aria-busy
+                          />
+                          <Loader2
+                            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-celeste-trifinio"
+                            aria-hidden
+                          />
+                        </div>
+                      ) : combustiblesSinMision.length === 0 ? (
+                        <ModalInput
+                          readOnly
+                          disabled
+                          value="Sin vales aprobados sin misión"
+                          className="text-muted-foreground"
+                        />
+                      ) : (
+                        <div className="flex flex-col gap-2" role="listbox" aria-label="Solicitudes de combustible">
+                          {combustiblesSinMision.map((opcion) => {
+                            const selected = solicitudCombustibleId === opcion.id;
+                            return (
+                              <button
+                                key={opcion.id}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                onClick={() => aplicarCombustibleSinMision(opcion)}
+                                className={cn(
+                                  "w-full cursor-pointer rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-semibold leading-snug transition-[border-color,background-color,box-shadow] motion-reduce:transition-none",
+                                  selected
+                                    ? "border-celeste-trifinio bg-sky-50/90 text-foreground shadow-none ring-2 ring-celeste-trifinio/20 dark:bg-sky-950/35"
+                                    : "border-transparent bg-zinc-100 text-foreground hover:border-celeste-trifinio/40 hover:bg-sky-50/50 dark:bg-zinc-800/80 dark:hover:bg-sky-950/25",
+                                )}
+                              >
+                                {opcion.etiqueta}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </ModalField>
+                    {combustibleSinMisionSeleccionado ? (
+                      <div
+                        className={cn(
+                          "lg:col-span-2 rounded-2xl border border-celeste-trifinio/25 bg-sky-50/70 p-4 dark:border-celeste-trifinio/30 dark:bg-sky-950/25",
+                        )}
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-celeste-trifinio dark:text-sky-300">
+                          Vale seleccionado
+                        </p>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-muted-foreground">Vale de combustible</p>
+                            <p className="mt-1 break-words text-sm font-bold text-foreground">
+                              {valeCombustible?.trim() ? valeCombustible.trim() : "—"}
+                            </p>
+                          </div>
+                          <div className="min-w-0 sm:text-right">
+                            <p className="text-xs font-semibold text-muted-foreground">Monto (Q.)</p>
+                            <p className="mt-1 text-sm font-black tabular-nums text-foreground">
+                              {Number(montoCombustible) > 0
+                                ? `Q${Number(montoCombustible).toLocaleString("es-GT", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}`
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <ModalField>
+                      <ModalLabel htmlFor="vale_combustible">Vale de combustible</ModalLabel>
+                      <ModalInput
+                        id="vale_combustible"
+                        placeholder="Ej. 15001 – 15050"
+                        {...register("vale_combustible")}
+                      />
+                    </ModalField>
+                    <ModalField>
+                      <ModalLabel htmlFor="monto_combustible">Monto (Q.)</ModalLabel>
+                      <ModalInput
+                        id="monto_combustible"
+                        type="number"
+                        step="0.01"
+                        className="tabular-nums"
+                        placeholder="Total cupones entregados"
+                        {...register("monto_combustible")}
+                      />
+                    </ModalField>
+                  </>
+                )}
               </div>
               {combustibleMisionAviso ? (
                 <p className="text-xs text-muted-foreground">{combustibleMisionAviso}</p>
               ) : null}
+              </section>
+              ) : null}
 
               {reciboCombustibleObligatorio ? (
+              <section className="min-w-0 space-y-4">
+                <GvDetalleSeccionTitulo>Recibo de combustible</GvDetalleSeccionTitulo>
               <ModalField>
                 <ModalLabel>
-                  Recibo de combustible
+                  Evidencia
                   <span className="ml-1 text-red-500" aria-hidden>
                     *
                   </span>
@@ -771,10 +888,14 @@ export function Crear({
                   </div>
                 )}
               </ModalField>
+              </section>
               ) : null}
 
+              {!esReservaIndividualPendiente ? (
+              <section className="min-w-0 space-y-4">
+                <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
               <ModalField>
-                <ModalLabel>Comentarios del viaje</ModalLabel>
+                <ModalLabel>Observaciones del recorrido</ModalLabel>
                 <p className="text-xs text-muted-foreground">
                   Agrega observaciones del recorrido. El autor queda registrado como responsable del viaje.
                 </p>
@@ -892,13 +1013,63 @@ export function Crear({
                   Agregar
                 </button>
               </ModalField>
+              </section>
+              ) : null}
+
+              <section className="min-w-0 space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-700/80">
+                <GvDetalleSeccionTitulo>Información del viaje</GvDetalleSeccionTitulo>
+                <GvDetalleTarjetaAnidada>
+                  {bloqueoVehiculoYResponsable && vehiculoSeleccionado ? (
+                    <GvDetalleEncabezadoVehiculo
+                      marca={vehiculoSeleccionado.marca}
+                      modelo={vehiculoSeleccionado.modelo}
+                      placa={vehiculoSeleccionado.placa}
+                    />
+                  ) : null}
+                  <div className={cn(bloqueoVehiculoYResponsable && vehiculoSeleccionado && "mt-3")}>
+                    <GvDetalleFilaVehiculo label="Responsable del viaje" value={nombreResponsable} />
+                  </div>
+                  {combustibleSoloLectura ? (
+                    <div className="mt-1">
+                      <input type="hidden" {...register("vale_combustible")} />
+                      <input type="hidden" {...register("monto_combustible")} />
+                      <GvDetalleFilaVehiculo
+                        label="Vale de combustible"
+                        value={valeCombustible?.trim() ? valeCombustible.trim() : "—"}
+                      />
+                      <GvDetalleFilaVehiculo
+                        label="Monto (Q.)"
+                        value={
+                          Number(montoCombustible) > 0
+                            ? `Q${Number(montoCombustible).toLocaleString("es-GT", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}`
+                            : "—"
+                        }
+                      />
+                    </div>
+                  ) : null}
+                </GvDetalleTarjetaAnidada>
+                <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                  <GvDetalleStat
+                    label="Km inicial"
+                    value={Number(kmInicial).toLocaleString("es-GT")}
+                  />
+                  <GvDetalleStat
+                    label="Recorrido"
+                    value={`${recorrido.toLocaleString("es-GT")} km`}
+                    valueClassName="text-celeste-trifinio dark:text-[#6f9fd4]"
+                  />
+                </div>
+              </section>
             </GvModalFormBody>
 
             <GvModalFooter>
               <ModalCancelButton onClick={handleClose} disabled={flujoBloqueado} />
               <ModalSubmit
                 disabled={flujoBloqueado}
-                label={subiendoEvidencia ? "Subiendo" : "Registrar"}
+                label={subiendoEvidencia ? "Subiendo" : "Confirmar"}
               />
             </GvModalFooter>
           </GvModalForm>
@@ -908,12 +1079,12 @@ export function Crear({
       <ConsultaAveriaModal
         open={consultaAveriaOpen}
         onOpenChange={(next) => {
-          if (!next && crear.isPending) return;
+          if (!next && confirmar.isPending) return;
           setConsultaAveriaOpen(next);
           if (!next) setPendingBitacora(null);
         }}
         onConfirmar={handleConsultaAveria}
-        isPending={crear.isPending}
+        isPending={confirmar.isPending}
       />
 
       <ReportarAveriaModal

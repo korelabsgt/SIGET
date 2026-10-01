@@ -98,6 +98,24 @@ export function ModalInput({
   );
 }
 
+export function ModalDatoInformativo({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      className={cn(
+        "flex min-h-10 min-w-0 items-center text-sm font-semibold leading-snug text-foreground",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function ModalTextarea({
   className,
   ...props

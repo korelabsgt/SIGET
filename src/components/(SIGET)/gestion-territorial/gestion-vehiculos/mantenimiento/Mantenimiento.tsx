@@ -1,24 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MantenimientoPanel } from "./MantenimientoPanel";
-import { MantenimientoNotificaciones } from "./MantenimientoNotificaciones";
 import { MantenimientoStatsCards } from "./MantenimientoStatsCards";
 import { Crear } from "./forms/Crear";
 import { VerEditar } from "./forms/VerEditar";
 import { Loader2, Wrench } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { toast } from "react-toastify";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useFallasMantenimiento, useMecanicos } from "./lib/hooks";
 import { useVehiculos } from "../flota/lib/hooks";
-import { formatVehiculoOpcion } from "../flota/lib/helpers";
 import {
   GestionVehiculosTableEmpty,
   GestionVehiculosTableShell,
@@ -27,13 +18,17 @@ import {
   GV_TABLE_VIEWPORT_FILL,
 } from "../lib/table-ui";
 import {
-  GV_FILTRO_FIELD_CLASS,
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
   GV_TABLE_TOOLBAR_PRIMARY_CLASS,
   GV_TABLE_TOOLBAR_ROW_CLASS,
-  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
 } from "../lib/gv-header-ui";
-import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
+import {
+  GV_TODOS_VEHICULOS,
+  GvVehiculoFiltroSelect,
+} from "../lib/gv-vehiculo-filtro-select";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { useGvPanelActionIntent } from "../lib/gv-panel-action-intent";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { GvExportReporteButton } from "../lib/gv-export-ui";
 import { GvMonthPicker } from "../lib/gv-month-picker";
@@ -52,7 +47,6 @@ import {
   canExportMantenimientoReporte,
   canGestionarFallasMantenimiento,
   canManageMantenimiento,
-  canViewGvCampanaNotificaciones,
   canViewAllFallasMantenimiento,
 } from "../lib/permissions";
 import { type FallaRow } from "./lib/zod";
@@ -60,24 +54,11 @@ import { type FallaRow } from "./lib/zod";
 const TABS = ["ACTIVAS", "CRITICAS", "SOLVENTADAS"] as const;
 type TabMantenimiento = (typeof TABS)[number];
 
-const TODOS_VEHICULOS = "__todos__";
-
 const TAB_LABELS: Record<TabMantenimiento, string> = {
   ACTIVAS: "Taller",
   CRITICAS: "Alta",
   SOLVENTADAS: "Solventadas",
 };
-
-const filtroTriggerClass = cn(
-  GV_FILTRO_FIELD_CLASS,
-  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
-);
-
-const filtroContentClass =
-  "z-[200] max-h-60 border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
-
-const filtroItemClass =
-  "cursor-pointer rounded-lg bg-white focus:bg-sky-50 dark:bg-zinc-900 dark:focus:bg-zinc-800";
 
 export function Mantenimiento() {
   const gvRole = useGvPermissionRole();
@@ -85,7 +66,7 @@ export function Mantenimiento() {
   const canExport = canExportMantenimientoReporte(gvRole);
   const canGestionar = canGestionarFallasMantenimiento(gvRole);
   const canViewAll = canViewAllFallasMantenimiento(gvRole);
-  const puedeVerCampana = canViewGvCampanaNotificaciones(gvRole);
+  const panelIntent = useGvPanelActionIntent();
   const {
     data: fallas = [],
     isLoading,
@@ -96,7 +77,7 @@ export function Mantenimiento() {
   const { data: vehiculosFlota = [] } = useVehiculos();
   const [tabActiva, setTabActiva] = useState<TabMantenimiento>("ACTIVAS");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
-  const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS);
+  const [vehiculoFilter, setVehiculoFilter] = useState(GV_TODOS_VEHICULOS);
   const [isExporting, setIsExporting] = useState(false);
   const [detailFalla, setDetailFalla] = useState<FallaRow | null>(null);
   const [fallaAccion, setFallaAccion] = useState<{
@@ -121,7 +102,7 @@ export function Mantenimiento() {
   );
 
   const fallasPorVehiculo = useMemo(
-    () => filtrarFallasPorVehiculo(fallasDelPeriodo, vehiculoFilter, TODOS_VEHICULOS),
+    () => filtrarFallasPorVehiculo(fallasDelPeriodo, vehiculoFilter, GV_TODOS_VEHICULOS),
     [fallasDelPeriodo, vehiculoFilter],
   );
 
@@ -155,9 +136,35 @@ export function Mantenimiento() {
 
   useGvPanelChrome("mantenimiento");
 
+  const abrirFallaDesdeCampana = (falla: FallaRow) => {
+    if (canGestionar) {
+      setFallaAccion({
+        falla,
+        modo: falla.estado === "EN_REPARACION" ? "solventar" : "atender",
+      });
+      return;
+    }
+    setDetailFalla(falla);
+  };
+
+  useEffect(() => {
+    const pendingId = panelIntent?.pendingMantenimientoFallaId;
+    if (!pendingId || isLoading) return;
+    const falla = fallas.find((f) => f.id === pendingId);
+    if (!falla) return;
+    abrirFallaDesdeCampana(falla);
+    panelIntent?.clearPendingMantenimientoFalla();
+  }, [
+    isLoading,
+    fallas,
+    canGestionar,
+    panelIntent?.pendingMantenimientoFallaId,
+    panelIntent?.clearPendingMantenimientoFalla,
+  ]);
+
   const handleExportReporte = async () => {
     const vehiculoId =
-      vehiculoFilter === TODOS_VEHICULOS ? "all" : vehiculoFilter;
+      vehiculoFilter === GV_TODOS_VEHICULOS ? "all" : vehiculoFilter;
 
     if (fallasPorVehiculo.length === 0) {
       toast.warning("No hay averías para exportar en el periodo seleccionado.");
@@ -198,65 +205,24 @@ export function Mantenimiento() {
   };
 
   const vehiculoFiltroTriggerClass = cn(
-    filtroTriggerClass,
     canViewAll
       ? "w-full min-w-0 max-w-none lg:min-w-[12rem] lg:max-w-[min(26rem,32vw)]"
       : "w-full min-w-0 max-w-none lg:!w-auto lg:min-w-[8.75rem] lg:max-w-[10.5rem] shrink-0",
   );
 
   const vehiculoSelect = (
-    <Select value={vehiculoFilter} onValueChange={setVehiculoFilter}>
-      <SelectTrigger className={vehiculoFiltroTriggerClass}>
-        <SelectValue
-          placeholder={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-        />
-      </SelectTrigger>
-      <SelectContent position="popper" className={filtroContentClass}>
-        <SelectItem
-          value={TODOS_VEHICULOS}
-          textValue={canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-          className={filtroItemClass}
-        >
-          {canViewAll ? "Todos los vehículos" : "Mis vehículos"}
-        </SelectItem>
-        {vehiculosParaFiltro
-          .filter((v) => v.id)
-          .map((v) => {
-            const label = formatVehiculoOpcion(v);
-            return (
-              <SelectItem
-                key={v.id}
-                value={v.id as string}
-                textValue={label}
-                className={filtroItemClass}
-              >
-                {label}
-              </SelectItem>
-            );
-          })}
-      </SelectContent>
-    </Select>
+    <GvVehiculoFiltroSelect
+      value={vehiculoFilter}
+      onValueChange={setVehiculoFilter}
+      vehiculos={vehiculosParaFiltro}
+      canViewAll={canViewAll}
+      triggerClassName={vehiculoFiltroTriggerClass}
+      todosValue={GV_TODOS_VEHICULOS}
+    />
   );
 
   return (
     <>
-      <GvHeaderExtras panelId="mantenimiento">
-        {!isLoading && puedeVerCampana ? (
-          <MantenimientoNotificaciones
-            fallas={fallas}
-            onAbrirFalla={(falla) => {
-              if (canGestionar) {
-                setFallaAccion({
-                  falla,
-                  modo: falla.estado === "EN_REPARACION" ? "solventar" : "atender",
-                });
-                return;
-              }
-              setDetailFalla(falla);
-            }}
-          />
-        ) : null}
-      </GvHeaderExtras>
       <GvTableSectionMotion panelId="mantenimiento">
       <GestionVehiculosTableShell
         className="min-h-0 flex-1"
@@ -299,15 +265,15 @@ export function Mantenimiento() {
                 <GvMonthPicker
                   value={periodoFilter}
                   onChange={setPeriodoFilter}
-                  className="!h-11 min-w-0 w-full text-xs sm:w-[10.5rem] lg:hidden"
+                  className="!h-11 min-w-0 w-full text-sm sm:w-[10.5rem] lg:hidden"
                 />
               </div>
 
               <div
                 className={cn(
                   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
-                  "max-lg:justify-end shrink-0 flex-nowrap",
-                  !canExport && "w-full gap-0.5 lg:!w-auto",
+                  canExport ? GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS : null,
+                  "min-w-0 w-full shrink-0 flex-nowrap lg:flex-wrap",
                 )}
               >
                 <div className="hidden w-auto shrink-0 lg:block">{vehiculoSelect}</div>
@@ -324,6 +290,7 @@ export function Mantenimiento() {
                     onClick={handleExportReporte}
                     disabled={isLoading || fallasPorVehiculo.length === 0}
                     loading={isExporting}
+                    className="max-lg:text-sm"
                   />
                 ) : null}
                 <Crear compact={!canExport} />

@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import type { VehiculoRow } from "../../flota/lib/zod";
 import { getDatosReporteBitacora } from "./actions";
+import { nombreSolicitanteBitacora } from "./helpers";
 import type { BitacoraRow } from "./zod";
 
 const COLUMN_COUNT = 9;
@@ -102,7 +103,7 @@ function formatPeriodoReporte(mesLabel: string, anio: string): string {
 }
 
 function responsableBitacoraNombre(bitacora: BitacoraRow): string {
-  return bitacora.profiles?.nombre?.trim() ?? "";
+  return nombreSolicitanteBitacora(bitacora);
 }
 
 function setCellUnderlineValue(

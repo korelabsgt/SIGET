@@ -19,18 +19,13 @@ export function formatEstadoSolicitudCombustible(estado: EstadoSolicitudCombusti
 }
 
 export function esMisionVehiculoActiva(
-  solicitud: Pick<SolicitudRow, "estado" | "fecha_fin_estimada">,
+  solicitud: Pick<SolicitudRow, "estado">,
 ): boolean {
-  if (solicitud.estado === "RECHAZADA" || solicitud.estado === "FINALIZADA") {
-    return false;
-  }
-
-  const fin = new Date(solicitud.fecha_fin_estimada);
-  if (Number.isNaN(fin.getTime())) {
-    return false;
-  }
-
-  return fin.getTime() >= Date.now();
+  return (
+    solicitud.estado === "PENDIENTE" ||
+    solicitud.estado === "APROBADA" ||
+    solicitud.estado === "EN_MISION"
+  );
 }
 
 export function misionesParaVinculoCombustible(

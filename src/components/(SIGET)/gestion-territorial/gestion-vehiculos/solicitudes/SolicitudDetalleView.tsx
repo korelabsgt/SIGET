@@ -19,7 +19,8 @@ import { type SolicitudRow } from "./lib/zod";
 import {
   esSolicitudMisionCancelada,
   estadoBadgeClass,
-  formatDuracionMision,
+  textoDuracionMision,
+  textoRetornoMision,
   formatEstadoLabel,
   nombrePilotoSolicitud,
 } from "./lib/helpers";
@@ -396,11 +397,8 @@ function ContenidoDetalle({
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <StatResumen label="Salida" value={formatFechaHoraGv(solicitud.fecha_inicio)} />
-          <StatResumen label="Retorno" value={formatFechaHoraGv(solicitud.fecha_fin_estimada)} />
-          <StatResumen
-            label="Duración"
-            value={formatDuracionMision(solicitud.fecha_inicio, solicitud.fecha_fin_estimada)}
-          />
+          <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
+          <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
         </div>
 
         <BloqueMotivoRechazo solicitud={solicitud} />
@@ -447,11 +445,8 @@ function ContenidoDetalle({
 
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <StatResumen label="Salida" value={formatFechaHoraGv(solicitud.fecha_inicio)} />
-        <StatResumen label="Retorno" value={formatFechaHoraGv(solicitud.fecha_fin_estimada)} />
-        <StatResumen
-          label="Duración"
-          value={formatDuracionMision(solicitud.fecha_inicio, solicitud.fecha_fin_estimada)}
-        />
+        <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
+        <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
       </div>
 
       <div className="mt-6">

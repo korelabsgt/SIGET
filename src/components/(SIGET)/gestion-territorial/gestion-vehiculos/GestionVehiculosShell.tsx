@@ -12,6 +12,8 @@ import {
 } from "./lib/tab-context";
 import { useRequireFlotaYCombustible } from "./lib/gv-permissions-hook";
 import { GvPageChromeProvider } from "./lib/gv-page-chrome";
+import { GvSolicitudDetailIntentProvider } from "./lib/gv-solicitud-detail-intent";
+import { GvPanelActionIntentProvider } from "./lib/gv-panel-action-intent";
 import {
   GV_MODULO_SCROLL_INNER_CLASS,
   GV_MODULO_SCROLL_OUTER_CLASS,
@@ -47,9 +49,9 @@ const Mantenimiento = dynamic(
 );
 
 const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
-  { id: "flota", Panel: Flota },
   { id: "solicitudes", Panel: Solicitudes },
   { id: "bitacoras", Panel: Bitacoras },
+  { id: "flota", Panel: Flota },
   { id: "mantenimiento", Panel: Mantenimiento },
 ];
 
@@ -115,6 +117,8 @@ function GestionVehiculosShellInner() {
 
   return (
     <GvSectionProvider section={section} selectSection={selectSection}>
+      <GvSolicitudDetailIntentProvider>
+      <GvPanelActionIntentProvider>
       <GvPageChromeProvider>
         <GvDemoCleanupPortal />
         <div data-gv-scroll-root className={GV_MODULO_SCROLL_OUTER_CLASS}>
@@ -140,6 +144,8 @@ function GestionVehiculosShellInner() {
           </div>
         </div>
       </GvPageChromeProvider>
+      </GvPanelActionIntentProvider>
+      </GvSolicitudDetailIntentProvider>
     </GvSectionProvider>
   );
 }

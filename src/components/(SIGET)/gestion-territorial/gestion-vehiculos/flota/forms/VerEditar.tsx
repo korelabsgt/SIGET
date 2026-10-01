@@ -29,6 +29,7 @@ import { useCrearVehiculo, useEditarVehiculo } from "../lib/hooks";
 import {
   combinarFotosVehiculo,
   estadoVehiculoConReservaFija,
+  estadoVehiculoNormalizado,
   estadosVehiculoSeleccionables,
   formatEstadoVehiculoLabel,
   separarFotosVehiculo,
@@ -101,6 +102,9 @@ export function VerEditar({
   const placa = useWatch({ control, name: "placa" });
   const estadoVehiculo = useWatch({ control, name: "estado" });
   const esReservaIndividual = estadoVehiculo === "RESERVA_INDIVIDUAL";
+  const estadoReservadoPorMision =
+    !esNuevo &&
+    estadoVehiculoNormalizado(initialData?.estado) === "RESERVADO";
 
   useEffect(() => {
     if (!esReservaIndividual) {
@@ -260,6 +264,7 @@ export function VerEditar({
         setFotosUnidad(unidad);
         setFotosCirculacion(tarjetasCirculacion);
         setFotoSeguro(seguro);
+        const estadoDb = estadoVehiculoConReservaFija(initialData.placa, initialData.estado);
         reset({
           placa: initialData.placa,
           marca: initialData.marca,
@@ -267,7 +272,8 @@ export function VerEditar({
           color: initialData.color,
           anio: initialData.anio,
           kilometraje_actual: initialData.kilometraje_actual,
-          estado: estadoVehiculoConReservaFija(initialData.placa, initialData.estado),
+          estado:
+            estadoVehiculoNormalizado(estadoDb) === "RESERVADO" ? "LIBRE" : estadoDb,
           reserva_usuario_id: initialData.reserva_usuario_id ?? null,
           vencimiento_seguro: formatFechaManualInput(initialData.vencimiento_seguro),
           vencimiento_circulacion: formatFechaManualInput(
@@ -363,17 +369,32 @@ export function VerEditar({
             </div>
             <div className="space-y-2">
               <Label htmlFor="estado">Estado</Label>
-              <select
-                id="estado"
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                {...register("estado")}
-              >
-                {estadosVehiculoSeleccionables(placa).map((estado) => (
-                  <option key={estado} value={estado}>
-                    {formatEstadoVehiculoLabel(estado)}
-                  </option>
-                ))}
-              </select>
+              {estadoReservadoPorMision ? (
+                <div
+                  id="estado"
+                  className="flex h-10 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+                >
+                  {formatEstadoVehiculoLabel("RESERVADO")}
+                </div>
+              ) : (
+                <select
+                  id="estado"
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...register("estado")}
+                >
+                  {estadosVehiculoSeleccionables(placa).map((estado) => (
+                    <option key={estado} value={estado}>
+                      {formatEstadoVehiculoLabel(estado)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {estadoReservadoPorMision ? (
+                <p className="text-xs text-muted-foreground">
+                  Se asigna al aprobar una misión. Finalice o cancele la misión para liberar el
+                  vehículo.
+                </p>
+              ) : null}
               {errors.estado && (
                 <p className="text-xs text-red-500">{errors.estado.message}</p>
               )}

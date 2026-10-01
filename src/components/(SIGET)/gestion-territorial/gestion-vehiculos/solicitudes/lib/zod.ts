@@ -2,7 +2,7 @@ import { z } from "zod";
 import { parseFechaHoraManualToIso } from "../../lib/fechas-input";
 import {
   esMinutoCuartoSolicitud,
-  validarFechasMisionNoAnterioresAHoyGt,
+  validarFechaInicioMisionNoAnteriorAHoyGt,
 } from "./calendario-reservas";
 import { partesFechaHoraGt } from "@/lib/fechas-gt";
 
@@ -43,7 +43,6 @@ export const PILOTO_MODO = ["solicitante", "otro"] as const;
 export const solicitudInputSchema = z
   .object({
     fecha_inicio: fechaHoraManual("La fecha de inicio es requerida"),
-    fecha_fin_estimada: fechaHoraManual("La fecha fin estimada es requerida"),
     destino: z.string().min(3, "El destino debe tener al menos 3 caracteres"),
     justificacion: z.string().min(10, "La justificación debe ser detallada (min 10 caracteres)"),
     pasajeros: z.string().optional(),
@@ -52,22 +51,8 @@ export const solicitudInputSchema = z
     piloto_id: z.string().optional(),
     solicitante_id: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      const inicio = new Date(data.fecha_inicio).getTime();
-      const fin = new Date(data.fecha_fin_estimada).getTime();
-      return fin > inicio;
-    },
-    {
-      message: "La fecha de fin estimada debe ser posterior a la fecha de inicio",
-      path: ["fecha_fin_estimada"],
-    },
-  )
   .superRefine((data, ctx) => {
-    const fechas = validarFechasMisionNoAnterioresAHoyGt(
-      data.fecha_inicio,
-      data.fecha_fin_estimada,
-    );
+    const fechas = validarFechaInicioMisionNoAnteriorAHoyGt(data.fecha_inicio);
     if (!fechas.ok) {
       ctx.addIssue({
         code: "custom",

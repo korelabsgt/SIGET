@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { IconNode } from "lucide";
 import { MorphHoverIcon } from "@/components/ui/morph-hover-icon";
 import { RippleButton } from "@/components/ui/ripple-button";
@@ -67,7 +67,7 @@ export function SigetActionButton({
   type = "button",
   iconOnly = false,
 }: {
-  label: string;
+  label: ReactNode;
   accentColor: string;
   rippleColor?: string;
   morphFrom: IconNode;
@@ -90,7 +90,9 @@ export function SigetActionButton({
       type={type}
       rippleColor={rippleColor}
       onClick={onClick}
-      aria-label={ariaLabel ?? label}
+      aria-label={
+        ariaLabel ?? (typeof label === "string" ? label : undefined)
+      }
       role={role}
       aria-checked={ariaChecked}
       aria-busy={ariaBusy || undefined}

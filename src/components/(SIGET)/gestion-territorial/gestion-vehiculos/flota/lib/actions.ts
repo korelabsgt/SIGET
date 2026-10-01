@@ -1,7 +1,8 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient } from "@/utils/supabase/server";
+import { crearBitacoraPendienteReservaIndividual } from "../../bitacoras/lib/crear-pendiente-reserva-individual";
 import { revalidatePath } from "next/cache";
 import {
   combinarFotosVehiculo,
@@ -9,6 +10,7 @@ import {
   MAX_FOTOS_CIRCULACION,
   MAX_FOTOS_SEGURO,
   estadoVehiculoConReservaFija,
+  estadoVehiculoNormalizado,
   fotosUnidadVehiculo,
   fotosVehiculo,
   imagenUrlParaDb,
@@ -261,7 +263,7 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   const { data: vehiculoActual, error: fetchActualError } = await supabase
     .from(TABLE)
-    .select("kilometraje_actual")
+    .select("kilometraje_actual, estado")
     .eq("id", id)
     .maybeSingle();
 
@@ -272,6 +274,10 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
   const kmNuevo = payload.kilometraje_actual;
   const kmAnterior = vehiculoActual.kilometraje_actual ?? 0;
   const reiniciarCicloServicioKm = kmNuevo !== kmAnterior;
+
+  if (estadoVehiculoNormalizado(vehiculoActual.estado) === "RESERVADO") {
+    delete fila.estado;
+  }
 
   const { data, error } = await supabase
     .from(TABLE)
@@ -286,6 +292,18 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
   if (error) throw new Error(mapVehiculoDbError(error.message));
 
   const vehiculo = normalizeVehiculoRow(data as VehiculoRow);
+
+  if (estadoVehiculoNormalizado(vehiculo.estado) === "RESERVA_INDIVIDUAL") {
+    const admin = createAdminClient();
+    const vehiculoId = vehiculo.id?.trim();
+    if (vehiculoId) {
+      await crearBitacoraPendienteReservaIndividual(admin, {
+        id: vehiculoId,
+        reserva_usuario_id: vehiculo.reserva_usuario_id ?? null,
+        kilometraje_actual: vehiculo.kilometraje_actual ?? 0,
+      });
+    }
+  }
 
   revalidatePath(REVALIDATE_ROUTE);
   return vehiculo;

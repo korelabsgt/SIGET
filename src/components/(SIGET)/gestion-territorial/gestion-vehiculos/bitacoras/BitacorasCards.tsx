@@ -7,9 +7,11 @@ import { GvMobileRecordList } from "../lib/gv-mobile-record";
 export function BitacorasCards({
   bitacoras,
   onDetail,
+  onConfirmarPendiente,
 }: {
   bitacoras: BitacoraRow[];
   onDetail: (bitacora: BitacoraRow) => void;
+  onConfirmarPendiente?: (bitacora: BitacoraRow) => void;
 }) {
   if (bitacoras.length === 0) {
     return (
@@ -24,7 +26,12 @@ export function BitacorasCards({
   return (
     <GvMobileRecordList>
       {bitacoras.map((bitacora) => (
-        <BitacoraCard key={bitacora.id} bitacora={bitacora} onDetail={onDetail} />
+        <BitacoraCard
+          key={bitacora.id}
+          bitacora={bitacora}
+          onDetail={onDetail}
+          onConfirmarPendiente={onConfirmarPendiente}
+        />
       ))}
     </GvMobileRecordList>
   );

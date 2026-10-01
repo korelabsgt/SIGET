@@ -149,6 +149,7 @@ export function GvModalShell({
 export {
   ModalCancelButton,
   ModalConfirmDelete,
+  ModalDatoInformativo,
   ModalField,
   ModalFooter,
   ModalForm,

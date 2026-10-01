@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 
 import type { BitacoraRow } from "../bitacoras/lib/zod";
-import { normalizeBitacoraRow } from "../bitacoras/lib/helpers";
+import { BITACORA_LIST_SELECT, normalizeBitacoraRow } from "../bitacoras/lib/helpers";
 import { loadMisionesVinculablesBitacora } from "../bitacoras/lib/misiones-vinculables";
 import {
   esVehiculoSeleccionableParaSolicitud,
@@ -76,7 +76,7 @@ export async function fetchReservasVehiculoHoy(
       `,
     )
     .eq("vehiculo_id", id)
-    .in("estado", ["PENDIENTE", "APROBADA", "EN_MISION"]);
+    .in("estado", ["APROBADA", "EN_MISION"]);
 
   if (error) throw new Error(error.message);
 
@@ -149,13 +149,7 @@ export async function fetchBitacoras(): Promise<BitacoraRow[]> {
 
   let query = client
     .from("ot_bitacoras")
-    .select(
-      `
-        *,
-        ot_vehiculos (placa, marca, modelo),
-        profiles:conductor_id (nombre)
-      `,
-    )
+    .select(BITACORA_LIST_SELECT)
     .order("fecha", { ascending: false });
 
   if (!canViewAllBitacoras(role)) {

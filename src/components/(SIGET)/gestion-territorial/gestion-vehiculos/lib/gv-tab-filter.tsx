@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { GV_FILTRO_FIELD_CLASS } from "./gv-header-ui";
 import { GvSwitchGroup, GvSwitchItem, type GvSwitchTone } from "./switch-ui";
+
+export const GV_TAB_FILTER_SCROLL_CLASS =
+  "overflow-x-auto overscroll-x-contain [touch-action:pan-x] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
 export type GvTabOption<T extends string> = {
   value: T;
@@ -19,27 +12,14 @@ export type GvTabOption<T extends string> = {
   tone?: GvSwitchTone;
 };
 
-const selectTriggerClass = cn(
-  GV_FILTRO_FIELD_CLASS,
-  "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
-);
-
-const selectContentClass =
-  "z-[200] min-w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
-
-const selectItemClass =
-  "cursor-pointer rounded-lg bg-white font-medium text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800";
-
 export function GvTabFilter<T extends string>({
   value,
   onChange,
   options,
   layoutId,
-  layout = "flex",
-  fill = false,
+  fill = true,
   compact = false,
   className,
-  selectClassName,
 }: {
   value: T;
   onChange: (value: T) => void;
@@ -51,65 +31,34 @@ export function GvTabFilter<T extends string>({
   className?: string;
   selectClassName?: string;
 }) {
-  const active = options.find((option) => option.value === value);
-
-  const triggerClass = cn(
-    selectTriggerClass,
-    compact && "h-9 px-2 text-xs data-[size=default]:h-9",
-    selectClassName,
-  );
-
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const scrollable = !fill;
 
   return (
-    <>
-      <div className={cn(compact ? "min-w-0 flex-1 basis-0 lg:hidden" : "w-full lg:hidden", className)}>
-        {mounted ? (
-          <Select value={value} onValueChange={(next) => onChange(next as T)}>
-            <SelectTrigger className={triggerClass}>
-              <SelectValue>{active?.label}</SelectValue>
-            </SelectTrigger>
-            <SelectContent position="popper" className={selectContentClass}>
-              {options.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  textValue={option.label}
-                  className={selectItemClass}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className={cn(triggerClass, "flex items-center justify-between gap-2")} aria-hidden>
-            <span className="truncate">{active?.label}</span>
-            <ChevronDown className="size-4 shrink-0 opacity-50" />
-          </div>
-        )}
-      </div>
-
-      <div className={cn("hidden lg:block lg:w-auto", className)}>
-        <GvSwitchGroup layoutId={layoutId} layout={layout}>
-          {options.map((option) => (
-            <GvSwitchItem
-              key={option.value}
-              active={value === option.value}
-              onClick={() => onChange(option.value)}
-              size="sm"
-              fill={fill}
-              tone={option.tone ?? "default"}
-            >
-              {option.label}
-            </GvSwitchItem>
-          ))}
-        </GvSwitchGroup>
-      </div>
-    </>
+    <div
+      className={cn(
+        "min-w-0 w-full max-w-full",
+        scrollable && GV_TAB_FILTER_SCROLL_CLASS,
+        className,
+      )}
+    >
+      <GvSwitchGroup
+        layoutId={layoutId}
+        variant="tabs"
+        className={scrollable ? "inline-flex w-max min-w-0" : "w-full"}
+      >
+        {options.map((option) => (
+          <GvSwitchItem
+            key={option.value}
+            active={value === option.value}
+            onClick={() => onChange(option.value)}
+            size={compact ? "sm" : "md"}
+            fill={fill}
+            tone={option.tone ?? "default"}
+          >
+            {option.label}
+          </GvSwitchItem>
+        ))}
+      </GvSwitchGroup>
+    </div>
   );
 }

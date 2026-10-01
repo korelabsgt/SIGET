@@ -134,8 +134,8 @@ export function GestionVehiculosTableShell({
               "min-h-0 flex-1 overflow-hidden rounded-t-2xl lg:h-full lg:min-h-0",
             )}
           >
-            {kpiBlock}
             {toolbarBlock}
+            {kpiBlock}
             {bodyBlock}
             {paginationBlock}
           </div>
@@ -179,7 +179,11 @@ export function GestionVehiculosTable({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GestionVehiculosTableScroll>
         <table
-          className="w-full text-left text-sm"
+          className={cn(
+            "w-full border-collapse text-sm",
+            gvTableColumnDividersClass,
+            gvTableCenteredCellsClass,
+          )}
           style={{ minWidth }}
         >
           {children}
@@ -197,7 +201,17 @@ export type GestionVehiculosThCell = {
 
 export const gvTableHeaderThClass = "px-4 py-3 text-center";
 export const gvTableActionThClass = "w-0 whitespace-nowrap px-4 py-3 text-center";
-export const gvTableActionTdClass = "w-0 whitespace-nowrap px-4 py-3 align-middle";
+export const gvTableBodyTdClass = "px-4 py-3 align-middle text-center";
+
+export const gvTableActionTdClass = "w-0 whitespace-nowrap px-4 py-3 align-middle text-center";
+
+export const gvTableColDividerClass = "border-r border-border dark:border-zinc-800";
+
+const gvTableColumnDividersClass =
+  "[&_thead_th:not(:last-child)]:border-r [&_thead_th:not(:last-child)]:border-border dark:[&_thead_th:not(:last-child)]:border-zinc-800 [&_tbody_td:not(:last-child)]:border-r [&_tbody_td:not(:last-child)]:border-border dark:[&_tbody_td:not(:last-child)]:border-zinc-800";
+
+const gvTableCenteredCellsClass =
+  "[&_thead_th]:align-middle [&_thead_th]:text-center [&_tbody_td]:align-middle [&_tbody_td]:text-center";
 
 export const gvTableRowClass =
   "border-b border-border last:border-0 transition-colors hover:bg-sky-50/40 dark:border-zinc-800 dark:hover:bg-sky-950/20";
@@ -214,7 +228,7 @@ export function GestionVehiculosThead({ cells }: { cells: GestionVehiculosThCell
   return (
     <thead>
       <tr className="border-b border-border bg-sky-50 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950">{cells.map((cell) => (
-        <th key={cell.key} className={cn("px-4 py-3", cell.className)}>
+        <th key={cell.key} className={cn("px-4 py-3 text-center", cell.className)}>
           {cell.label}
         </th>
       ))}</tr>
@@ -231,7 +245,7 @@ export type GestionVehiculosTdCell = {
 export function GestionVehiculosTr({ cells }: { cells: GestionVehiculosTdCell[] }) {
   return (
     <tr className={gvTableRowClass} {...gvTableRowMorphProps}>{cells.map((cell) => (
-      <td key={cell.key} className={cn("px-4 py-3", cell.className)}>
+      <td key={cell.key} className={cn(gvTableBodyTdClass, cell.className)}>
         {cell.content}
       </td>
     ))}</tr>

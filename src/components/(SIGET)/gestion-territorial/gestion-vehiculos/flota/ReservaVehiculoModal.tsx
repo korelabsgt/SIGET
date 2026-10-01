@@ -4,7 +4,7 @@ import { Loader2 } from "lucide";
 import { GvModalInset, GvModalShell } from "../lib/gv-modal-shell";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
-import { formatEstadoLabel } from "../solicitudes/lib/helpers";
+import { formatEstadoLabel, textoRetornoMision } from "../solicitudes/lib/helpers";
 import { type VehiculoRow } from "./lib/zod";
 import { useReservasVehiculoHoy } from "./lib/hooks";
 
@@ -84,7 +84,11 @@ export function ReservaVehiculoModal({
                       Al
                     </dt>
                     <dd className="mt-0.5 text-foreground">
-                      {formatFechaHoraGv(reserva.fechaFinEstimada)}
+                      {textoRetornoMision({
+                        estado: reserva.estado,
+                        fecha_inicio: reserva.fechaInicio,
+                        fecha_fin_estimada: reserva.fechaFinEstimada,
+                      })}
                     </dd>
                   </div>
                 </dl>

@@ -2,7 +2,9 @@ export const GV_HEADER_ACTIONS_CLASS =
   "flex flex-row flex-nowrap items-center gap-2";
 
 export const GV_TOOLBAR_BUTTON_BASE_CLASS =
-  "inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-xs font-bold shadow-none transition-colors";
+  "inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-xs font-bold shadow-none transition-colors max-lg:text-sm";
+
+export const GV_TABLE_TOOLBAR_MOBILE_FIELD_TEXT_CLASS = "max-lg:text-sm";
 
 export const GV_HEADER_PRIMARY_BUTTON_CLASS =
   `${GV_TOOLBAR_BUTTON_BASE_CLASS} border-0 bg-celeste-trifinio text-white hover:opacity-90`;
@@ -14,12 +16,12 @@ export const GV_DETAIL_ROUND_ACTION_CLASS =
   "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-celeste-trifinio px-4 text-[10px] font-bold text-white transition-colors hover:opacity-90";
 
 export const GV_FILTRO_FIELD_CLASS =
-  "h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 text-sm font-semibold text-foreground shadow-none transition-colors focus-within:border-celeste-trifinio focus-within:ring-2 focus-within:ring-celeste-trifinio/25 data-[size=default]:h-11 dark:bg-sky-950/20";
+  "h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 text-sm font-semibold text-foreground shadow-none transition-colors focus-within:border-celeste-trifinio focus-within:ring-2 focus-within:ring-celeste-trifinio/25 data-[size=default]:h-11 dark:bg-sky-950/20 max-lg:text-base";
 
 export const GV_TABLE_SEARCH_WRAPPER_CLASS = "relative min-w-0 flex-1";
 
 export const GV_TABLE_SEARCH_INPUT_CLASS =
-  "h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20";
+  "h-11 w-full rounded-xl border border-celeste-trifinio/40 bg-sky-50/60 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 dark:bg-sky-950/20 max-lg:text-base max-lg:placeholder:text-sm";
 
 export const GV_TABLE_TOOLBAR_ROW_CLASS =
   "flex w-full min-w-0 flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-3";
@@ -28,7 +30,10 @@ export const GV_TABLE_TOOLBAR_PRIMARY_CLASS =
   "flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:items-center";
 
 export const GV_TABLE_TOOLBAR_ACTIONS_CLASS =
-  "flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-1 [&_button]:w-auto";
+  "flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-1 max-lg:flex-col max-lg:items-stretch max-lg:gap-2 max-lg:[&>*]:w-full max-lg:[&>*]:min-w-0 [&_button]:w-auto max-lg:[&_button]:w-full";
+
+export const GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS =
+  "max-lg:!grid max-lg:!w-full max-lg:max-w-none max-lg:grid-cols-2 max-lg:gap-2 max-lg:[&>*]:min-w-0 max-lg:[&>*]:w-full max-lg:[&>*:only-child]:col-span-2";
 
 export const GV_TABLE_TOOLBAR_SELECT_WRAP_CLASS =
   "hidden min-w-[12rem] w-max max-w-[min(26rem,42vw)] shrink-0 lg:block";

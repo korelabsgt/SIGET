@@ -9,8 +9,33 @@ import {
   normalizarMesCalendario,
 } from "@/lib/fechas-gt";
 import { registroEnPeriodoCalendario } from "../../lib/periodo-filtro";
+import {
+  esBitacoraConfirmada,
+  esBitacoraPendiente,
+  estadoBitacoraNormalizado,
+} from "./bitacora-estado";
+import { estadoVehiculoNormalizado } from "../../flota/lib/helpers";
+import type { VehiculoRow } from "../../flota/lib/zod";
+import { DESTINO_BITACORA_RESERVA_INDIVIDUAL_PENDIENTE } from "./crear-pendiente-reserva-individual";
 
 export const BITACORA_RECIBO_PENDIENTE = "__recibo_pendiente__";
+
+export function destinoBitacoraFormulario(
+  destino: string | null | undefined,
+): string {
+  const texto = destino?.trim() ?? "";
+  if (texto === DESTINO_BITACORA_RESERVA_INDIVIDUAL_PENDIENTE) return "";
+  return texto;
+}
+
+export function esBitacoraReservaIndividualPendiente(
+  bitacora: Pick<BitacoraRow, "solicitud_id" | "estado">,
+  vehiculo?: Pick<VehiculoRow, "estado"> | null,
+): boolean {
+  if (bitacora.solicitud_id?.trim()) return false;
+  if (!esBitacoraPendiente(bitacora)) return false;
+  return estadoVehiculoNormalizado(vehiculo?.estado) === "RESERVA_INDIVIDUAL";
+}
 
 export function evidenciasBitacora(
   bitacora: Pick<BitacoraRow, "evidencia_url">,
@@ -31,6 +56,7 @@ export function evidenciasBitacora(
 export function normalizeBitacoraRow(row: BitacoraRow): BitacoraRow {
   return {
     ...row,
+    estado: estadoBitacoraNormalizado(row.estado),
     comentarios: parseComentariosJsonb(row.comentarios),
     evidencia_url: evidenciasBitacora(row),
   };
@@ -70,6 +96,7 @@ export function computeMetricasBitacorasMes(
   todosVehiculosValue = "__todos__",
 ) {
   const delMes = bitacoras.filter((bitacora) => {
+    if (!esBitacoraConfirmada(bitacora)) return false;
     if (!bitacoraEnPeriodoCalendario(bitacora.fecha, periodoFilter)) return false;
     if (vehiculoFilter !== todosVehiculosValue && bitacora.vehiculo_id !== vehiculoFilter) {
       return false;
@@ -110,6 +137,7 @@ export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[]
   const alertas: BitacoraAlertItem[] = [];
 
   for (const bitacora of bitacoras) {
+    if (esBitacoraPendiente(bitacora)) continue;
     if (bitacoraSinCombustible(bitacora)) {
       const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
       alertas.push({
@@ -155,6 +183,23 @@ export function extractVehiculosVinculadosBitacoras(bitacoras: BitacoraRow[]) {
   }
 
   return Array.from(map.values()).sort((a, b) => a.placa.localeCompare(b.placa, "es"));
+}
+
+export const BITACORA_LIST_SELECT = `
+  *,
+  ot_vehiculos (placa, marca, modelo),
+  profiles:conductor_id (nombre),
+  ot_solicitudes (
+    solicitante:profiles!solicitante_id (nombre)
+  )
+`;
+
+export function nombreSolicitanteBitacora(
+  bitacora: Pick<BitacoraRow, "profiles" | "ot_solicitudes">,
+): string {
+  const desdeSolicitud = bitacora.ot_solicitudes?.solicitante?.nombre?.trim();
+  if (desdeSolicitud) return desdeSolicitud;
+  return bitacora.profiles?.nombre?.trim() || "Desconocido";
 }
 
 export function formatMontoCombustibleBitacora(monto: number) {

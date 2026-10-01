@@ -19,7 +19,7 @@ import {
 import { GV_FILTRO_FIELD_CLASS } from "./gv-header-ui";
 
 export type GvSwitchTone = "default" | "danger" | "amber";
-export type GvSwitchVariant = "default" | "field";
+export type GvSwitchVariant = "default" | "field" | "tabs";
 
 const GvSwitchLayoutContext = createContext<string | undefined>(undefined);
 const GvSwitchVariantContext = createContext<GvSwitchVariant>("default");
@@ -35,6 +35,22 @@ const switchSpring = {
 };
 
 function switchBoxClasses(active: boolean, tone: GvSwitchTone, variant: GvSwitchVariant) {
+  if (variant === "tabs") {
+    if (tone === "danger") {
+      return active
+        ? "bg-transparent text-red-600 dark:text-red-400"
+        : "bg-transparent text-muted-foreground hover:text-red-600/80 dark:hover:text-red-400/80";
+    }
+    if (tone === "amber") {
+      return active
+        ? "bg-transparent text-amber-800 dark:text-amber-300"
+        : "bg-transparent text-muted-foreground hover:text-amber-700 dark:hover:text-amber-400";
+    }
+    return active
+      ? "bg-transparent text-azul-trifinio dark:text-celeste-trifinio"
+      : "bg-transparent text-muted-foreground hover:text-foreground";
+  }
+
   if (variant === "field") {
     if (tone === "danger") {
       return active
@@ -127,8 +143,13 @@ export function GvSwitchGroup({
   variant?: GvSwitchVariant;
   columns?: 3 | 4;
 }) {
+  const tabsTrackClass =
+    "flex flex-nowrap items-stretch gap-0 border-b border-border dark:border-zinc-700";
+
   const layoutClass =
-    variant === "field"
+    variant === "tabs"
+      ? tabsTrackClass
+      : variant === "field"
       ? cn(
           "grid h-full w-full gap-0.5",
           columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3",
@@ -140,7 +161,12 @@ export function GvSwitchGroup({
           : "flex flex-wrap items-end gap-2";
 
   const inner = (
-    <div className={cn(layoutClass, variant === "field" ? undefined : className)}>
+    <div
+      className={cn(
+        layoutClass,
+        variant === "tabs" ? className : variant === "field" ? undefined : className,
+      )}
+    >
       {children}
     </div>
   );
@@ -152,6 +178,8 @@ export function GvSwitchGroup({
           <div className={cn(GV_FILTRO_FIELD_CLASS, "flex items-center p-0.5", className)}>
             {inner}
           </div>
+        ) : variant === "tabs" ? (
+          inner
         ) : (
           inner
         )}
@@ -185,7 +213,11 @@ export function GvSwitchItem({
 }) {
   const variant = useContext(GvSwitchVariantContext);
   const sizeClass =
-    variant === "field"
+    variant === "tabs"
+      ? fill
+        ? "min-h-10 w-full min-w-0 flex-1 rounded-none px-1.5 py-2 text-center text-[11px] font-semibold leading-tight whitespace-nowrap sm:px-2 sm:text-xs"
+        : "min-h-10 shrink-0 whitespace-nowrap rounded-none px-3 py-2 text-sm font-semibold leading-none"
+      : variant === "field"
       ? "h-full min-h-0 px-1 py-1 text-[8px] font-bold leading-none tracking-tight sm:text-[9px]"
       : size === "sm"
         ? fill
@@ -198,10 +230,15 @@ export function GvSwitchItem({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col",
+        "flex flex-col",
+        variant === "tabs" ? "gap-0" : "min-w-0",
         variant === "field"
           ? "h-full w-full"
-          : fill
+          : variant === "tabs"
+            ? fill
+              ? "min-w-0 w-full flex-1 shrink"
+              : "w-max min-w-max shrink-0 flex-none"
+            : fill
             ? "w-full gap-0.5 md:w-auto md:gap-1"
             : "gap-1",
         className,
@@ -218,20 +255,26 @@ export function GvSwitchItem({
           switchBoxClasses(active, tone, variant),
           variant === "field"
             ? "rounded-lg"
-            : "hover:scale-[1.02] active:scale-[0.98] motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
+            : variant === "tabs"
+              ? "rounded-none shadow-none hover:scale-100 active:scale-100"
+              : "hover:scale-[1.02] active:scale-[0.98] motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
         )}
       >
         <span
           className={cn(
             "inline-flex items-center justify-center gap-2",
             (fill || variant === "field") &&
+              variant !== "tabs" &&
               "w-full min-w-0 truncate md:overflow-visible md:whitespace-normal",
+            variant === "tabs" && "whitespace-nowrap",
           )}
         >
           {children}
         </span>
       </button>
-      {variant === "field" ? null : <SwitchIndicator active={active} tone={tone} />}
+      {variant === "field" ? null : (
+        <SwitchIndicator active={active} tone={tone} />
+      )}
     </div>
   );
 }

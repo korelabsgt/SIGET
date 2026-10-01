@@ -91,10 +91,7 @@ async function resolveSolicitudVehiculoVinculo(
   }
 
   if (
-    !esMisionVehiculoActiva({
-      estado: solicitudVehiculo.estado,
-      fecha_fin_estimada: solicitudVehiculo.fecha_fin_estimada,
-    })
+    !esMisionVehiculoActiva({ estado: solicitudVehiculo.estado })
   ) {
     return {
       error: "Solo se puede vincular una misión activa (no finalizada ni vencida).",

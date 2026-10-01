@@ -26,7 +26,7 @@ const sigetCrumbText =
   "whitespace-nowrap group-hover:underline underline-offset-4";
 
 const sigetCrumbActive =
-  "shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-[10px] md:text-xs";
+  "shrink-0 normal-case text-azul-trifinio underline underline-offset-4 pointer-events-none text-xs md:text-xs";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,7 +37,7 @@ function formatBreadcrumbLabel(segment: string): string {
 }
 
 const crumbRow =
-  "flex min-w-0 w-full max-h-[3.1em] flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-[9px] font-medium leading-tight text-muted-foreground sm:text-[10px] md:pt-0.5 md:text-xs";
+  "flex min-w-0 w-full max-h-[3.1em] flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-[10px] font-medium leading-tight text-muted-foreground md:pt-0.5 md:text-xs";
 
 function SigetCrumb({ active = false }: { active?: boolean }) {
   if (active) {
@@ -103,7 +103,7 @@ export function BreadcrumbNav() {
             className={cn(crumbIconLink, "mr-0.5")}
             title="Atrás"
           >
-            <span className="inline-flex size-3.5 items-center justify-center md:size-4 [&_svg]:block">
+            <span className="inline-flex size-4 items-center justify-center md:size-4 [&_svg]:block">
               <MorphHoverIcon
                 from={ArrowLeft}
                 to={ChevronLeft}
@@ -152,14 +152,14 @@ export function BreadcrumbNav() {
                       : "shrink-0 whitespace-nowrap group/segment",
                   )}
                 >
-                  <ChevronRight className="size-3 md:size-3.5 shrink-0 text-muted-foreground/40 transition-all duration-300 group-hover/segment:translate-x-0.5 group-hover/segment:text-celeste-trifinio" />
+                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/40 transition-all duration-300 group-hover/segment:translate-x-0.5 group-hover/segment:text-celeste-trifinio md:size-3.5" />
                   <Link
                     href={href}
                     className={cn(
                       isLast
                         ? cn(
                             crumbActive,
-                            "line-clamp-2 pointer-events-none min-w-0 whitespace-normal break-words text-[10px] font-bold capitalize leading-tight underline underline-offset-4 md:text-xs",
+                            "line-clamp-2 pointer-events-none min-w-0 whitespace-normal break-words text-xs font-bold capitalize leading-tight underline underline-offset-4 md:text-xs",
                           )
                         : crumbTextLink,
                     )}

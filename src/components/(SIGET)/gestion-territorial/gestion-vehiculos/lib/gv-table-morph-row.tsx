@@ -1,13 +1,20 @@
 "use client";
 
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 
 import { cn } from "@/lib/utils";
 import { gvTableRowClass, gvTableRowMorphProps } from "./table-ui";
 
-const GvTableRowMorphContext = createContext<boolean | null>(null);
+const GvTableRowMorphContext = createContext<boolean | undefined>(undefined);
 
-export function useGvTableRowMorphHover(): boolean | null {
+export function useGvTableRowMorphHover(): boolean | undefined {
   return useContext(GvTableRowMorphContext);
 }
 
@@ -26,6 +33,15 @@ export function GvTableMorphRow({
   const pointerHandlers = {
     onPointerEnter: () => setHovered(true),
     onPointerLeave: () => setHovered(false),
+    onPointerDown: (event: PointerEvent<HTMLDivElement | HTMLTableRowElement>) => {
+      if (event.pointerType === "touch") setHovered(true);
+    },
+    onPointerUp: (event: PointerEvent<HTMLDivElement | HTMLTableRowElement>) => {
+      if (event.pointerType === "touch") setHovered(false);
+    },
+    onPointerCancel: (event: PointerEvent<HTMLDivElement | HTMLTableRowElement>) => {
+      if (event.pointerType === "touch") setHovered(false);
+    },
   };
 
   return (

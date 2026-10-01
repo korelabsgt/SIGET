@@ -2,8 +2,17 @@
 
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Route, Fuel, CheckCircle2 } from "lucide-react";
+import type { IconNode } from "lucide";
+import {
+  CircleCheck,
+  CheckCheck,
+  Droplets,
+  Fuel,
+  Navigation,
+  Route,
+} from "lucide";
 import { cn } from "@/lib/utils";
+import { GvMorphIcon } from "../lib/morph-icon";
 
 interface StatsProps {
   metrics: {
@@ -32,7 +41,9 @@ export function BitacoraStatsCards({
     labelMobile: string;
     labelDesktop: string;
     value: ReactNode;
-    icon: ReactNode;
+    icon: IconNode;
+    hoverIcon: IconNode;
+    iconClass: string;
     bg: string;
     border: string;
   }[] = [
@@ -45,7 +56,9 @@ export function BitacoraStatsCards({
           <span className="ml-0.5 text-[0.85em] font-bold text-muted-foreground">km</span>
         </>
       ),
-      icon: <Route className="size-4 text-indigo-500 sm:size-5" />,
+      icon: Route,
+      hoverIcon: Navigation,
+      iconClass: "text-indigo-500",
       bg: "bg-indigo-500/10",
       border: "border-indigo-500/20",
     },
@@ -58,7 +71,9 @@ export function BitacoraStatsCards({
           {montoCombustible}
         </>
       ),
-      icon: <Fuel className="size-4 text-rose-500 sm:size-5" />,
+      icon: Fuel,
+      hoverIcon: Droplets,
+      iconClass: "text-rose-500",
       bg: "bg-rose-500/10",
       border: "border-rose-500/20",
     },
@@ -66,7 +81,9 @@ export function BitacoraStatsCards({
       labelMobile: "Misiones",
       labelDesktop: "Misiones completadas",
       value: metrics.total_misiones.toLocaleString("es-GT"),
-      icon: <CheckCircle2 className="size-4 text-emerald-500 sm:size-5" />,
+      icon: CircleCheck,
+      hoverIcon: CheckCheck,
+      iconClass: "text-emerald-500",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
     },
@@ -88,6 +105,7 @@ export function BitacoraStatsCards({
               "flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border bg-card p-2 text-center shadow-sm dark:bg-zinc-900/30 sm:gap-3 sm:p-4 sm:text-left md:flex-row md:items-center md:gap-4 md:p-5",
               stat.border,
             )}
+            data-morph-hover-scope
           >
             <div
               className={cn(
@@ -95,7 +113,12 @@ export function BitacoraStatsCards({
                 stat.bg,
               )}
             >
-              {stat.icon}
+              <GvMorphIcon
+                icon={stat.icon}
+                hoverIcon={stat.hoverIcon}
+                size={20}
+                className={stat.iconClass}
+              />
             </div>
             <div className="flex w-full min-w-0 flex-col items-center md:items-start">
               <p className="w-full text-[9px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-xs sm:tracking-wider">

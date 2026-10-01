@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { estadoVehiculoConReservaFija, estadoVehiculoNormalizado } from "../flota/lib/helpers";
 import {
-  vehiculoReservadoEnDiaCalendario,
+  vehiculoReservadoFlotaEnDiaCalendario,
   type SolicitudCalendarioRef,
 } from "../solicitudes/lib/calendario-reservas";
 import { fechaCalendarioGt } from "@/lib/fechas-gt";
@@ -14,7 +14,7 @@ const FALLAS_TABLE = "ot_fallas_mantenimiento";
 const SOLICITUDES_TABLE = "ot_solicitudes";
 
 const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
-const SOLICITUDES_CALENDARIO = ["PENDIENTE", "APROBADA", "EN_MISION"] as const;
+const SOLICITUDES_RESERVA_FLOTA = ["APROBADA", "EN_MISION"] as const;
 
 export async function sincronizarEstadoFlotaVehiculo(
   supabase: SupabaseServer,
@@ -46,7 +46,7 @@ export async function sincronizarEstadoFlotaVehiculo(
     .from(SOLICITUDES_TABLE)
     .select("id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada")
     .eq("vehiculo_id", vehiculoId)
-    .in("estado", [...SOLICITUDES_CALENDARIO]);
+    .in("estado", [...SOLICITUDES_RESERVA_FLOTA]);
 
   if (reservasError) {
     throw new Error("No se pudieron verificar las misiones del vehículo.");
@@ -55,7 +55,7 @@ export async function sincronizarEstadoFlotaVehiculo(
   const lista = (solicitudesCalendario ?? []) as SolicitudCalendarioRef[];
   const misionEnCurso = lista.some((s) => s.estado === "EN_MISION");
   const hoy = fechaCalendarioGt();
-  const reservadoPorCalendarioHoy = vehiculoReservadoEnDiaCalendario(
+  const reservadoPorCalendarioHoy = vehiculoReservadoFlotaEnDiaCalendario(
     vehiculoId,
     hoy,
     lista,

@@ -78,7 +78,6 @@ export function Crear({
     resolver: zodResolver(solicitudInputSchema) as never,
     defaultValues: {
       fecha_inicio: "",
-      fecha_fin_estimada: "",
       destino: "",
       justificacion: "",
       pasajeros: "",
@@ -92,7 +91,6 @@ export function Crear({
   const pilotoModo = watch("piloto_modo");
   const solicitanteId = watch("solicitante_id") || user?.id || "";
   const solicitanteEsUsuarioActual = Boolean(user?.id && solicitanteId === user.id);
-  const fechaInicioManual = watch("fecha_inicio");
 
   const { data: bloqueos } = useQuery({
     queryKey: ["gv-bitacora-pendiente-bloqueos", solicitanteId],
@@ -106,7 +104,6 @@ export function Crear({
     if (open) {
       reset({
         fecha_inicio: "",
-        fecha_fin_estimada: "",
         destino: "",
         justificacion: "",
         pasajeros: "",
@@ -183,30 +180,16 @@ export function Crear({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
-              <GvFechaHoraPickerInput
-                id="fecha_inicio"
-                solicitudNoPasadaGt
-                {...register("fecha_inicio")}
-              />
-              {errors.fecha_inicio && (
-                <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fecha_fin_estimada">Fecha y Hora de Retorno Estimado</Label>
-              <GvFechaHoraPickerInput
-                id="fecha_fin_estimada"
-                solicitudNoPasadaGt
-                solicitudPisoManual={fechaInicioManual}
-                {...register("fecha_fin_estimada")}
-              />
-              {errors.fecha_fin_estimada && (
-                <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
-              )}
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
+            <GvFechaHoraPickerInput
+              id="fecha_inicio"
+              solicitudNoPasadaGt
+              {...register("fecha_inicio")}
+            />
+            {errors.fecha_inicio && (
+              <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">

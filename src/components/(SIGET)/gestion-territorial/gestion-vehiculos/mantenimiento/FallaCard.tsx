@@ -11,6 +11,9 @@ import {
   GvMobileRecordMeta,
   GvMobileRecordMetaRow,
   GvMobileRecordRow,
+  GV_MOBILE_RECORD_META_ICON_CLASS,
+  GV_MOBILE_RECORD_SUBTITLE_CLASS,
+  GV_MOBILE_RECORD_TITLE_CLASS,
 } from "../lib/gv-mobile-record";
 import { type FallaRow } from "./lib/zod";
 import {
@@ -32,9 +35,7 @@ export function FallaCard({
   return (
     <GvMobileRecordRow>
       <GvMobileRecordHeader
-        title={
-          <p className="truncate font-semibold text-foreground">{falla.reportador.nombre}</p>
-        }
+        title={<p className={GV_MOBILE_RECORD_TITLE_CLASS}>{falla.reportador.nombre}</p>}
         badge={
           <GvMobileRecordBadge className={estadoFallaBadgeClass(falla.estado)}>
             {formatEstadoFallaLabel(falla.estado)}
@@ -43,16 +44,16 @@ export function FallaCard({
       />
 
       <GvMobileRecordMeta>
-        <GvMobileRecordMetaRow icon={<Wrench className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow icon={<Wrench className={GV_MOBILE_RECORD_META_ICON_CLASS} />}>
           <span className="line-clamp-2" title={falla.descripcion}>
             {falla.descripcion}
           </span>
         </GvMobileRecordMetaRow>
-        <GvMobileRecordMetaRow icon={<Car className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow icon={<Car className={GV_MOBILE_RECORD_META_ICON_CLASS} />}>
           {vehiculo ? (
             <>
               <span className="font-semibold">{vehiculo.placa}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={GV_MOBILE_RECORD_SUBTITLE_CLASS}>
                 {vehiculo.marca} {vehiculo.modelo}
               </span>
             </>
@@ -60,7 +61,7 @@ export function FallaCard({
             <span className="italic text-muted-foreground">Sin vehículo</span>
           )}
         </GvMobileRecordMetaRow>
-        <GvMobileRecordMetaRow icon={<AlertTriangle className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow icon={<AlertTriangle className={GV_MOBILE_RECORD_META_ICON_CLASS} />}>
           <GvMobileRecordBadge className={severidadBadgeClass(falla.severidad)}>
             {formatSeveridadLabel(falla.severidad)}
           </GvMobileRecordBadge>

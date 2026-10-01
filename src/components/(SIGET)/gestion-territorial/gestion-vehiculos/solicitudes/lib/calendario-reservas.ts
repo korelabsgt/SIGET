@@ -14,6 +14,11 @@ export const ESTADOS_SOLICITUD_OCUPAN_DIA = [
   "EN_MISION",
 ] as const;
 
+export const ESTADOS_SOLICITUD_MARCA_FLOTA_RESERVADO = [
+  "APROBADA",
+  "EN_MISION",
+] as const;
+
 export type SolicitudCalendarioRef = Pick<
   SolicitudRow,
   "id" | "vehiculo_id" | "estado" | "fecha_inicio" | "fecha_fin_estimada"
@@ -92,6 +97,51 @@ export function pisoPickerSolicitudGt(pisoIso?: string | null): PisoPickerSolici
   }
 
   return { calendarioMin, msMin, hourMin, minuteMin };
+}
+
+export function fechaFinEstimadaPendienteDesdeInicio(fechaInicioIso: string): string {
+  return fechaInicioIso;
+}
+
+export function esRetornoMisionPendiente(
+  fechaInicioIso: string,
+  fechaFinIso: string,
+): boolean {
+  const inicio = new Date(fechaInicioIso).getTime();
+  const fin = new Date(fechaFinIso).getTime();
+  if (Number.isNaN(inicio) || Number.isNaN(fin)) return true;
+  return fin <= inicio;
+}
+
+export function validarFechaInicioMisionNoAnteriorAHoyGt(fechaInicioIso: string):
+  | { ok: true }
+  | {
+      ok: false;
+      path: "fecha_inicio";
+      message: string;
+    } {
+  const hoy = fechaCalendarioGt();
+  const diaInicio = fechaCalendarioDesdeIso(fechaInicioIso);
+  const ahoraMs = Date.now();
+  const inicioMs = new Date(fechaInicioIso).getTime();
+
+  if (!diaInicio || diaInicio < hoy) {
+    return {
+      ok: false,
+      path: "fecha_inicio",
+      message: "La salida no puede ser en un día anterior a hoy.",
+    };
+  }
+
+  if (Number.isNaN(inicioMs) || inicioMs < ahoraMs) {
+    return {
+      ok: false,
+      path: "fecha_inicio",
+      message: "La salida no puede ser anterior a la hora actual.",
+    };
+  }
+
+  return { ok: true };
 }
 
 export function validarFechasMisionNoAnterioresAHoyGt(
@@ -215,6 +265,15 @@ export function solicitudOcupaCalendarioVehiculo(
   return (ESTADOS_SOLICITUD_OCUPAN_DIA as readonly string[]).includes(solicitud.estado);
 }
 
+export function solicitudMarcaFlotaReservada(
+  solicitud: Pick<SolicitudRow, "estado" | "vehiculo_id">,
+): solicitud is SolicitudCalendarioRef & { vehiculo_id: string } {
+  if (!solicitud.vehiculo_id) return false;
+  return (ESTADOS_SOLICITUD_MARCA_FLOTA_RESERVADO as readonly string[]).includes(
+    solicitud.estado,
+  );
+}
+
 export function vehiculoReservadoEnDiaCalendario(
   vehiculoId: string,
   diaCalendario: string,
@@ -222,6 +281,20 @@ export function vehiculoReservadoEnDiaCalendario(
 ): boolean {
   for (const sol of solicitudes) {
     if (!solicitudOcupaCalendarioVehiculo(sol)) continue;
+    if (sol.vehiculo_id !== vehiculoId) continue;
+    const dias = diasReservaCalendarioGt(sol.fecha_inicio, sol.fecha_fin_estimada);
+    if (dias.includes(diaCalendario)) return true;
+  }
+  return false;
+}
+
+export function vehiculoReservadoFlotaEnDiaCalendario(
+  vehiculoId: string,
+  diaCalendario: string,
+  solicitudes: SolicitudCalendarioRef[],
+): boolean {
+  for (const sol of solicitudes) {
+    if (!solicitudMarcaFlotaReservada(sol)) continue;
     if (sol.vehiculo_id !== vehiculoId) continue;
     const dias = diasReservaCalendarioGt(sol.fecha_inicio, sol.fecha_fin_estimada);
     if (dias.includes(diaCalendario)) return true;

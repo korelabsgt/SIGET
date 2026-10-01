@@ -1,15 +1,23 @@
 "use server";
 
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import { asegurarBitacorasPendientesMisionesEnCurso } from "./crear-pendiente-mision";
+import {
+  asegurarBitacorasPendientesReservaIndividual,
+  crearBitacoraPendienteReservaIndividual,
+} from "./crear-pendiente-reserva-individual";
+import { estadoVehiculoNormalizado } from "../../flota/lib/helpers";
 import { revalidatePath } from "next/cache";
 import { type BitacoraInput, bitacoraInputSchema, type BitacoraRow, toComentariosJsonbPayload } from "./zod";
-import { evidenciasBitacora, normalizeBitacoraRow } from "./helpers";
+import { BITACORA_LIST_SELECT, evidenciasBitacora, normalizeBitacoraRow } from "./helpers";
 import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
 import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 import {
+  combustibleAprobadoParaBitacora,
   misionRequiereReciboCombustible,
   type CombustibleAprobadoMision,
 } from "./combustible-mision";
@@ -31,17 +39,30 @@ async function requireAuth() {
   return { supabase, user, role };
 }
 
+export async function sincronizarBitacorasPendientesMisionesActivas(): Promise<{
+  creadas: number;
+}> {
+  await requireAuth();
+  const admin = createAdminClient();
+  const creadasMision = await asegurarBitacorasPendientesMisionesEnCurso(admin);
+  const creadasReserva = await asegurarBitacorasPendientesReservaIndividual(admin);
+  const creadas = creadasMision + creadasReserva;
+  if (creadas > 0) {
+    revalidatePath(REVALIDATE_ROUTE);
+  }
+  return { creadas };
+}
+
 export async function getBitacoras(): Promise<BitacoraRow[]> {
   try {
     const { supabase, user, role } = await requireAuth();
+    const admin = createAdminClient();
+    await asegurarBitacorasPendientesMisionesEnCurso(admin);
+    await asegurarBitacorasPendientesReservaIndividual(admin);
 
     let query = supabase
       .from(TABLE)
-      .select(`
-        *,
-        ot_vehiculos (placa, marca, modelo),
-        profiles:conductor_id (nombre)
-      `)
+      .select(BITACORA_LIST_SELECT)
       .order("fecha", { ascending: false });
 
     if (!canViewAllBitacoras(role)) {
@@ -58,16 +79,40 @@ export async function getBitacoras(): Promise<BitacoraRow[]> {
   }
 }
 
-export async function createBitacora(input: BitacoraInput) {
+export async function confirmarBitacora(bitacoraId: string, input: BitacoraInput) {
   try {
-    const { supabase, user } = await requireAuth();
+    const { supabase, user, role } = await requireAuth();
     const parsed = bitacoraInputSchema.parse(input);
     const comentarios = toComentariosJsonbPayload(parsed.comentarios);
     const solicitudId = parsed.solicitud_id?.trim() || null;
     let evidenciaPaths = evidenciasBitacora(parsed);
 
-    if (solicitudId) {
-      const combustibleMision = await fetchCombustibleAprobadoPorMision(supabase, solicitudId);
+    const { data: bitacoraActual, error: bitacoraActualError } = await supabase
+      .from(TABLE)
+      .select("id, solicitud_id, conductor_id, estado")
+      .eq("id", bitacoraId)
+      .maybeSingle();
+
+    if (bitacoraActualError || !bitacoraActual) {
+      return { success: false, error: "No se encontró la bitácora a confirmar." };
+    }
+
+    if (bitacoraActual.estado !== "PENDIENTE") {
+      return { success: false, error: "Esta bitácora ya fue confirmada." };
+    }
+
+    if (bitacoraActual.conductor_id !== user.id && !canViewAllBitacoras(role)) {
+      return { success: false, error: "No tienes permiso para confirmar esta bitácora." };
+    }
+
+    const solicitudVinculada = bitacoraActual.solicitud_id ?? solicitudId;
+    const solicitudCombustibleId = parsed.solicitud_combustible_id?.trim() || null;
+
+    if (solicitudVinculada) {
+      const combustibleMision = await fetchCombustibleAprobadoPorMision(
+        supabase,
+        solicitudVinculada,
+      );
       if (misionRequiereReciboCombustible(combustibleMision) && evidenciaPaths.length === 0) {
         return {
           success: false,
@@ -75,53 +120,89 @@ export async function createBitacora(input: BitacoraInput) {
             "Esta misión tiene combustible aprobado con vales entregados. Debe adjuntar el recibo.",
         };
       }
+    } else if (solicitudCombustibleId) {
+      const combustibleReserva = await fetchCombustibleAprobadoPorId(
+        supabase,
+        solicitudCombustibleId,
+        parsed.vehiculo_id,
+      );
+      if (misionRequiereReciboCombustible(combustibleReserva) && evidenciaPaths.length === 0) {
+        return {
+          success: false,
+          error: "Debe adjuntar el recibo del vale de combustible seleccionado.",
+        };
+      }
     }
 
-    if (solicitudId) {
+    if (!solicitudVinculada) {
+      const { data: vehiculoReserva, error: vehiculoReservaError } = await supabase
+        .from("ot_vehiculos")
+        .select("estado, reserva_usuario_id")
+        .eq("id", parsed.vehiculo_id)
+        .maybeSingle();
+
+      if (vehiculoReservaError || !vehiculoReserva) {
+        return { success: false, error: "No se encontró el vehículo de la bitácora." };
+      }
+
+      if (estadoVehiculoNormalizado(vehiculoReserva.estado) !== "RESERVA_INDIVIDUAL") {
+        return {
+          success: false,
+          error: "Esta bitácora sin misión solo aplica a vehículos en reserva individual.",
+        };
+      }
+
+      const reservaUsuarioId = vehiculoReserva.reserva_usuario_id?.trim() ?? "";
+      const puedeConfirmar =
+        canViewAllBitacoras(role) ||
+        user.id === bitacoraActual.conductor_id ||
+        (reservaUsuarioId && user.id === reservaUsuarioId);
+
+      if (!puedeConfirmar) {
+        return { success: false, error: "No tienes permiso para confirmar esta bitácora." };
+      }
+    }
+
+    if (solicitudVinculada) {
       const { data: solicitud, error: solicitudError } = await supabase
         .from("ot_solicitudes")
         .select("id, solicitante_id, estado")
-        .eq("id", solicitudId)
+        .eq("id", solicitudVinculada)
         .maybeSingle();
 
       if (solicitudError || !solicitud) {
         return { success: false, error: "La misión vinculada no existe." };
       }
-      if (solicitud.solicitante_id !== user.id) {
-        return { success: false, error: "Solo puedes registrar la bitácora de tus misiones." };
+      if (solicitud.solicitante_id !== user.id && bitacoraActual.conductor_id !== user.id) {
+        return { success: false, error: "Solo puedes confirmar bitácoras de tus misiones." };
       }
-
-      if (solicitud.estado === "FINALIZADA") {
-        const { data: bitacoraExistente, error: bitacoraExistenteError } = await supabase
-          .from(TABLE)
-          .select("id")
-          .eq("solicitud_id", solicitudId)
-          .maybeSingle();
-
-        if (bitacoraExistenteError) {
-          return { success: false, error: "No se pudo verificar la misión vinculada." };
-        }
-        if (bitacoraExistente) {
-          return { success: false, error: "Esta misión ya tiene una bitácora vinculada." };
-        }
-      } else if (solicitud.estado !== "EN_MISION") {
-        return { success: false, error: "La misión no puede vincularse en este estado." };
+      if (solicitud.estado !== "EN_MISION") {
+        return {
+          success: false,
+          error: "La misión ya no está en curso. Actualice la lista de bitácoras.",
+        };
       }
     }
 
-    const { error } = await supabase.from(TABLE).insert({
-      solicitud_id: solicitudId,
-      vehiculo_id: parsed.vehiculo_id,
-      conductor_id: user.id,
-      destino: parsed.destino,
-      km_inicial: parsed.km_inicial,
-      km_final: parsed.km_final,
-      vale_combustible: parsed.vale_combustible || null,
-      monto_combustible: parsed.monto_combustible,
-      comentarios,
-      evidencia_url: evidenciaPaths,
-      fecha: new Date().toISOString(),
-    });
+    const fechaBitacoraIso = new Date().toISOString();
+
+    const { error } = await supabase
+      .from(TABLE)
+      .update({
+        solicitud_id: solicitudVinculada,
+        vehiculo_id: parsed.vehiculo_id,
+        destino: parsed.destino,
+        km_inicial: parsed.km_inicial,
+        km_final: parsed.km_final,
+        vale_combustible: parsed.vale_combustible || null,
+        monto_combustible: parsed.monto_combustible,
+        comentarios,
+        evidencia_url: evidenciaPaths,
+        fecha: fechaBitacoraIso,
+        estado: "CONFIRMADA",
+      })
+      .eq("id", bitacoraId)
+      .eq("estado", "PENDIENTE");
 
     if (error) throw error;
 
@@ -140,12 +221,11 @@ export async function createBitacora(input: BitacoraInput) {
       });
     }
 
-    if (solicitudId) {
+    if (solicitudVinculada) {
       const { data: solicitudActual, error: solicitudActualError } = await supabase
         .from("ot_solicitudes")
         .select("estado")
-        .eq("id", solicitudId)
-        .eq("solicitante_id", user.id)
+        .eq("id", solicitudVinculada)
         .maybeSingle();
 
       if (solicitudActualError || !solicitudActual) {
@@ -153,9 +233,8 @@ export async function createBitacora(input: BitacoraInput) {
       } else if (solicitudActual.estado === "EN_MISION") {
         const { error: updateError } = await supabase
           .from("ot_solicitudes")
-          .update({ estado: "FINALIZADA" })
-          .eq("id", solicitudId)
-          .eq("solicitante_id", user.id)
+          .update({ estado: "FINALIZADA", fecha_fin_estimada: fechaBitacoraIso })
+          .eq("id", solicitudVinculada)
           .eq("estado", "EN_MISION");
 
         if (updateError) {
@@ -171,6 +250,27 @@ export async function createBitacora(input: BitacoraInput) {
     }
 
     await sincronizarEstadoFlotaVehiculo(supabase, parsed.vehiculo_id);
+
+    if (!solicitudVinculada) {
+      const { data: vehiculoReserva, error: vehiculoReservaError } = await supabase
+        .from("ot_vehiculos")
+        .select("estado, reserva_usuario_id")
+        .eq("id", parsed.vehiculo_id)
+        .maybeSingle();
+
+      if (
+        !vehiculoReservaError &&
+        vehiculoReserva &&
+        estadoVehiculoNormalizado(vehiculoReserva.estado) === "RESERVA_INDIVIDUAL"
+      ) {
+        const admin = createAdminClient();
+        await crearBitacoraPendienteReservaIndividual(admin, {
+          id: parsed.vehiculo_id,
+          reserva_usuario_id: vehiculoReserva.reserva_usuario_id ?? null,
+          kilometraje_actual: parsed.km_final,
+        });
+      }
+    }
 
     revalidatePath(REVALIDATE_ROUTE);
     return { success: true };
@@ -298,6 +398,171 @@ export async function getCombustibleAprobadoPorMision(
   }
 }
 
+async function fetchCombustibleAprobadoSinMisionPorVehiculo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  vehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = vehiculoId.trim();
+  if (!id) return null;
+
+  const { data, error } = await supabase
+    .from(SOLICITUD_COMBUSTIBLE_TABLE)
+    .select("cupon_del, cupon_al, denominacion_cupon")
+    .eq("vehiculo_id", id)
+    .is("solicitud_vehiculo_id", null)
+    .eq("estado", "APROBADO")
+    .order("fecha_aprobacion", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error?.message?.includes("denominacion_cupon")) {
+    const { data: legacy, error: legacyError } = await supabase
+      .from(SOLICITUD_COMBUSTIBLE_TABLE)
+      .select("cupon_del, cupon_al")
+      .eq("vehiculo_id", id)
+      .is("solicitud_vehiculo_id", null)
+      .eq("estado", "APROBADO")
+      .order("fecha_aprobacion", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (legacyError || !legacy) return null;
+    return {
+      cupon_del: legacy.cupon_del as number,
+      cupon_al: legacy.cupon_al as number,
+      denominacion_cupon: null,
+    };
+  }
+
+  if (error || !data) return null;
+
+  if (data.cupon_del == null || data.cupon_al == null) return null;
+
+  return {
+    cupon_del: Number(data.cupon_del),
+    cupon_al: Number(data.cupon_al),
+    denominacion_cupon:
+      data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
+  };
+}
+
+export async function getCombustibleAprobadoSinMisionPorVehiculo(
+  vehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = vehiculoId.trim();
+  if (!id) return null;
+
+  try {
+    const { supabase } = await requireAuth();
+    return await fetchCombustibleAprobadoSinMisionPorVehiculo(supabase, id);
+  } catch (error) {
+    console.error("getCombustibleAprobadoSinMisionPorVehiculo:", error);
+    return null;
+  }
+}
+
+export type CombustibleSinMisionOpcion = {
+  id: string;
+  etiqueta: string;
+  vale: string;
+  monto: number;
+};
+
+function mapCombustibleSinMisionOpcion(row: {
+  id: string;
+  cupon_del: number | null;
+  cupon_al: number | null;
+  denominacion_cupon: number | null;
+}): CombustibleSinMisionOpcion | null {
+  if (row.cupon_del == null || row.cupon_al == null) return null;
+  const datos = combustibleAprobadoParaBitacora({
+    cupon_del: Number(row.cupon_del),
+    cupon_al: Number(row.cupon_al),
+    denominacion_cupon:
+      row.denominacion_cupon != null ? Number(row.denominacion_cupon) : null,
+  });
+  if (!datos) return null;
+  const montoLabel =
+    datos.monto > 0
+      ? ` · Q${datos.monto.toLocaleString("es-GT", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : "";
+  return {
+    id: row.id,
+    etiqueta: `Vale ${datos.vale}${montoLabel}`,
+    vale: datos.vale,
+    monto: datos.monto,
+  };
+}
+
+async function fetchCombustibleAprobadoPorId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  solicitudCombustibleId: string,
+  vehiculoId: string,
+): Promise<CombustibleAprobadoMision | null> {
+  const id = solicitudCombustibleId.trim();
+  const vehiculo = vehiculoId.trim();
+  if (!id || !vehiculo) return null;
+
+  const { data, error } = await supabase
+    .from(SOLICITUD_COMBUSTIBLE_TABLE)
+    .select("cupon_del, cupon_al, denominacion_cupon, vehiculo_id, solicitud_vehiculo_id, estado")
+    .eq("id", id)
+    .eq("vehiculo_id", vehiculo)
+    .is("solicitud_vehiculo_id", null)
+    .eq("estado", "APROBADO")
+    .maybeSingle();
+
+  if (error || !data) return null;
+  if (data.cupon_del == null || data.cupon_al == null) return null;
+
+  return {
+    cupon_del: Number(data.cupon_del),
+    cupon_al: Number(data.cupon_al),
+    denominacion_cupon:
+      data.denominacion_cupon != null ? Number(data.denominacion_cupon) : null,
+  };
+}
+
+export async function listCombustiblesAprobadosSinMisionPorVehiculo(
+  vehiculoId: string,
+): Promise<CombustibleSinMisionOpcion[]> {
+  const id = vehiculoId.trim();
+  if (!id) return [];
+
+  try {
+    const { supabase } = await requireAuth();
+    const { data, error } = await supabase
+      .from(SOLICITUD_COMBUSTIBLE_TABLE)
+      .select("id, cupon_del, cupon_al, denominacion_cupon, fecha_aprobacion")
+      .eq("vehiculo_id", id)
+      .is("solicitud_vehiculo_id", null)
+      .eq("estado", "APROBADO")
+      .order("fecha_aprobacion", { ascending: false });
+
+    if (error) {
+      console.error("listCombustiblesAprobadosSinMisionPorVehiculo:", error);
+      return [];
+    }
+
+    return (data ?? [])
+      .map((row) =>
+        mapCombustibleSinMisionOpcion({
+          id: String(row.id),
+          cupon_del: row.cupon_del as number | null,
+          cupon_al: row.cupon_al as number | null,
+          denominacion_cupon: row.denominacion_cupon as number | null,
+        }),
+      )
+      .filter((item): item is CombustibleSinMisionOpcion => item !== null);
+  } catch (error) {
+    console.error("listCombustiblesAprobadosSinMisionPorVehiculo:", error);
+    return [];
+  }
+}
+
 export async function getDatosReporteBitacora(mes: number, anio: number, vehiculo_id: string) {
   try {
     const { supabase, user, role } = await requireAuth();
@@ -321,8 +586,12 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
         vale_combustible,
         monto_combustible,
         ot_vehiculos (placa, marca, modelo),
-        profiles:conductor_id (nombre)
+        profiles:conductor_id (nombre),
+        ot_solicitudes (
+          solicitante:profiles!solicitante_id (nombre)
+        )
       `)
+      .eq("estado", "CONFIRMADA")
       .gte("fecha", startDate)
       .lte("fecha", endDate)
       .order("fecha", { ascending: true });

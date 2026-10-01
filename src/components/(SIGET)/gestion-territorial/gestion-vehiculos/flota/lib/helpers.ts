@@ -10,7 +10,7 @@ import {
 import { normalizeVehiculoStoragePath } from "../../lib/storage";
 import { fechaCalendarioGt } from "@/lib/fechas-gt";
 import {
-  vehiculoReservadoEnDiaCalendario,
+  vehiculoReservadoFlotaEnDiaCalendario,
   type SolicitudCalendarioRef,
 } from "../../solicitudes/lib/calendario-reservas";
 
@@ -578,7 +578,7 @@ export function aplicarEstadoFlotaOperativoHoy(
     (s) => s.vehiculo_id === vehiculo.id && s.estado === "EN_MISION",
   );
   const hoy = fechaCalendarioGt();
-  const reservadoPorCalendarioHoy = vehiculoReservadoEnDiaCalendario(
+  const reservadoPorCalendarioHoy = vehiculoReservadoFlotaEnDiaCalendario(
     vehiculo.id,
     hoy,
     solicitudes,
@@ -610,8 +610,9 @@ export function estadoVehiculoConReservaFija(
 export function estadosVehiculoSeleccionables(
   placa: string | null | undefined,
 ): readonly EstadoVehiculo[] {
-  if (!esPlacaSiempreReservada(placa)) return ESTADOS_VEHICULO;
-  return ESTADOS_VEHICULO.filter((estado) => estado !== "LIBRE");
+  const sinReservaManual = ESTADOS_VEHICULO.filter((estado) => estado !== "RESERVADO");
+  if (!esPlacaSiempreReservada(placa)) return sinReservaManual;
+  return sinReservaManual.filter((estado) => estado !== "LIBRE");
 }
 
 export function formatVehiculoOpcion(

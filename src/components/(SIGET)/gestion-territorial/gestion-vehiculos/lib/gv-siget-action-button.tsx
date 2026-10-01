@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { IconNode } from "lucide";
 import {
   SigetActionIcon,
@@ -30,7 +30,7 @@ export function GvSigetActionButton({
   type = "button",
   iconOnly = false,
 }: {
-  label: string;
+  label: ReactNode;
   accentColor: string;
   rippleColor?: string;
   morphFrom: IconNode;
@@ -49,24 +49,26 @@ export function GvSigetActionButton({
   const [buttonHovered, setButtonHovered] = useState(false);
   const rowMorphHover = useGvTableRowMorphHover();
   const hovered =
-    rowMorphHover !== null ? rowMorphHover : morphOnHover ? buttonHovered : false;
+    rowMorphHover !== undefined
+      ? rowMorphHover || (morphOnHover ? buttonHovered : false)
+      : morphOnHover
+        ? buttonHovered
+        : false;
 
   return (
     <RippleButton
       type={type}
       rippleColor={rippleColor}
       onClick={onClick}
-      aria-label={ariaLabel ?? label}
+      aria-label={
+        ariaLabel ?? (typeof label === "string" ? label : undefined)
+      }
       role={role}
       aria-checked={ariaChecked}
       aria-busy={ariaBusy || undefined}
       disabled={disabled}
-      onPointerEnter={
-        rowMorphHover === null && morphOnHover ? () => setButtonHovered(true) : undefined
-      }
-      onPointerLeave={
-        rowMorphHover === null && morphOnHover ? () => setButtonHovered(false) : undefined
-      }
+      onPointerEnter={morphOnHover ? () => setButtonHovered(true) : undefined}
+      onPointerLeave={morphOnHover ? () => setButtonHovered(false) : undefined}
       className={cn(
         sigetBtnSurface,
         iconOnly ? "size-9 w-9 shrink-0 px-0" : "w-full",

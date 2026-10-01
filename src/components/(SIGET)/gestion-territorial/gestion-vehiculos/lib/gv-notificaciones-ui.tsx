@@ -1,6 +1,13 @@
 "use client";
 
 import { type ReactNode } from "react";
+
+export type GvNotificacionesSeccion = {
+  total: number;
+  criticas: number;
+  key: string;
+  content: ReactNode;
+};
 import { Bell, BellRing } from "lucide";
 import { GvMorphIcon } from "./morph-icon";
 import {

@@ -1,7 +1,7 @@
 import { fechaCalendarioGt } from "@/lib/fechas-gt";
 import {
   diasReservaCalendarioGt,
-  solicitudOcupaCalendarioVehiculo,
+  solicitudMarcaFlotaReservada,
 } from "../../solicitudes/lib/calendario-reservas";
 import type { SolicitudRow } from "../../solicitudes/lib/zod";
 
@@ -29,7 +29,7 @@ export function solicitudReservaActivaEnDia(
   diaCalendario: string = fechaCalendarioGt(),
 ): boolean {
   if (solicitud.vehiculo_id !== vehiculoId) return false;
-  if (!solicitudOcupaCalendarioVehiculo(solicitud)) return false;
+  if (!solicitudMarcaFlotaReservada(solicitud)) return false;
   if (solicitud.estado === "EN_MISION") return true;
   const dias = diasReservaCalendarioGt(solicitud.fecha_inicio, solicitud.fecha_fin_estimada);
   return dias.includes(diaCalendario);

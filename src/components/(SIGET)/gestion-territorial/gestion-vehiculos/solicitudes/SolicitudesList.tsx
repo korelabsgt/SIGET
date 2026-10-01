@@ -11,8 +11,10 @@ import {
   GestionVehiculosActionCell,
   gvTableActionTdClass,
   gvTableActionThClass,
+  gvTableBodyTdClass,
 } from "../lib/table-ui";
 import { GvTableMorphRow } from "../lib/gv-table-morph-row";
+import { cn } from "@/lib/utils";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
@@ -25,8 +27,8 @@ function SolicitudListRow({
 }) {
   return (
     <GvTableMorphRow>
-      <td className="px-4 py-3 align-middle">
-        <div className="min-w-0">
+      <td className={gvTableBodyTdClass}>
+        <div className="min-w-0 max-w-full text-center">
           <p className="truncate font-semibold text-foreground">
             {solicitud.solicitante?.nombre || "Desconocido"}
           </p>
@@ -35,21 +37,21 @@ function SolicitudListRow({
           ) : null}
         </div>
       </td>
-      <td className="px-4 py-3 align-middle">
+      <td className={gvTableBodyTdClass}>
         <p className="text-sm font-bold tabular-nums text-foreground">
           {formatFechaHoraGv(solicitud.fecha_inicio)}
         </p>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-middle">
+      <td className={cn(gvTableBodyTdClass, "whitespace-nowrap")}>
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${estadoBadgeClass(solicitud.estado)}`}
         >
           {formatEstadoLabel(solicitud.estado)}
         </span>
       </td>
-      <td className="px-4 py-3 align-middle">
+      <td className={gvTableBodyTdClass}>
         {solicitud.vehiculo ? (
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-full text-center">
             <p className="truncate text-sm font-semibold text-foreground">
               {solicitud.vehiculo.marca} {solicitud.vehiculo.modelo}
             </p>

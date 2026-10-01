@@ -24,7 +24,7 @@ export function GvExportReporteButton({
       onClick={onClick}
       disabled={disabled || loading}
       ariaLabel="Exportar reporte"
-      className={cn("h-11 w-auto shrink-0 rounded-xl px-4", className)}
+      className={cn("h-11 w-auto max-lg:w-full shrink-0 rounded-xl px-4", className)}
     />
   );
 }

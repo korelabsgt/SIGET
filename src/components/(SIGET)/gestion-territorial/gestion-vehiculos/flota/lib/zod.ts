@@ -63,6 +63,15 @@ export const vehiculoInputBaseSchema = vehiculoSchema.omit({
 });
 
 export const vehiculoInputSchema = vehiculoInputBaseSchema.superRefine((data, ctx) => {
+  if (data.estado === "RESERVADO") {
+    ctx.addIssue({
+      code: "custom",
+      message:
+        "El estado Reservado se asigna automáticamente al aprobar una misión con vehículo asignado.",
+      path: ["estado"],
+    });
+    return;
+  }
   if (data.estado !== "RESERVA_INDIVIDUAL") return;
   const raw = data.reserva_usuario_id;
   const usuarioId = typeof raw === "string" ? raw.trim() : "";

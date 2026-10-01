@@ -32,6 +32,9 @@ import {
   GvMobileRecordMeta,
   GvMobileRecordMetaRow,
   GvMobileRecordRow,
+  GV_MOBILE_RECORD_META_ICON_CLASS,
+  GV_MOBILE_RECORD_SUBTITLE_CLASS,
+  GV_MOBILE_RECORD_TITLE_CLASS,
 } from "../lib/gv-mobile-record";
 
 function estadoVehiculoBadgeClass(estado: string) {
@@ -90,8 +93,8 @@ export function VehiculoCard({
       <GvMobileRecordHeader
         title={
           <div className="min-w-0">
-            <p className="truncate font-semibold text-foreground">{vehiculo.placa}</p>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            <p className={GV_MOBILE_RECORD_TITLE_CLASS}>{vehiculo.placa}</p>
+            <p className={cn("mt-0.5 truncate", GV_MOBILE_RECORD_SUBTITLE_CLASS)}>
               {vehiculo.marca} {vehiculo.modelo}
               {vehiculo.anio ? ` · ${vehiculo.anio}` : ""}
             </p>
@@ -138,24 +141,24 @@ export function VehiculoCard({
       />
 
       <GvMobileRecordMeta>
-        <GvMobileRecordMetaRow icon={<Route className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow icon={<Route className={GV_MOBILE_RECORD_META_ICON_CLASS} />}>
           <span className="tabular-nums font-semibold">
             {vehiculo.kilometraje_actual.toLocaleString("es-GT")} km
           </span>
         </GvMobileRecordMetaRow>
         {tieneAlerta ? (
-          <GvMobileRecordMetaRow icon={<AlertTriangle className="size-3.5 text-red-500" />}>
+          <GvMobileRecordMetaRow icon={<AlertTriangle className="size-4 text-red-500" />}>
             <span className="text-red-500">
               {vencSeguro?.text ?? vencCirculacion?.text}
             </span>
             {vencSeguro && vencCirculacion ? (
-              <span className="text-xs text-red-400">
+              <span className="text-sm text-red-400">
                 Seguro y circulación con alerta
               </span>
             ) : null}
           </GvMobileRecordMetaRow>
         ) : (
-          <GvMobileRecordMetaRow icon={<Car className="size-3.5 text-celeste-trifinio" />}>
+          <GvMobileRecordMetaRow icon={<Car className={GV_MOBILE_RECORD_META_ICON_CLASS} />}>
             Documentación al día
           </GvMobileRecordMetaRow>
         )}

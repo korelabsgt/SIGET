@@ -11,8 +11,10 @@ import {
   GestionVehiculosActionCell,
   gvTableActionTdClass,
   gvTableActionThClass,
+  gvTableBodyTdClass,
   gvTableHeaderThClass,
 } from "../lib/table-ui";
+import { cn } from "@/lib/utils";
 import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import {
   estadoFallaBadgeClass,
@@ -32,28 +34,28 @@ function FallaListRow({
 }) {
   return (
     <GvTableMorphRow>
-      <td className="whitespace-nowrap px-4 py-3 align-middle text-center">
+      <td className={cn(gvTableBodyTdClass, "whitespace-nowrap")}>
         <span className="inline-flex min-w-[5.5rem] items-center justify-center whitespace-nowrap rounded-lg bg-zinc-100 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-foreground dark:bg-zinc-700">
           {falla.vehiculo?.placa?.trim() || "—"}
         </span>
       </td>
-      <td className="px-4 py-3 align-middle text-left">
-        <p className="truncate font-semibold capitalize text-foreground">
+      <td className={gvTableBodyTdClass}>
+        <p className="mx-auto max-w-full truncate font-semibold capitalize text-foreground">
           {formatVehiculoFalla(falla)}
         </p>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-middle text-center">
+      <td className={cn(gvTableBodyTdClass, "whitespace-nowrap")}>
         <span className={`${FALLA_BADGE_BASE_CLASS} ${severidadBadgeClass(falla.severidad)}`}>
           {formatSeveridadLabel(falla.severidad)}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-middle text-center">
+      <td className={cn(gvTableBodyTdClass, "whitespace-nowrap")}>
         <span className={`${FALLA_BADGE_BASE_CLASS} ${estadoFallaBadgeClass(falla.estado)}`}>
           {formatEstadoFallaLabel(falla.estado)}
         </span>
       </td>
-      <td className="max-w-[28rem] px-4 py-3 align-middle text-center">
-        <p className="line-clamp-2 text-sm text-foreground" title={falla.descripcion}>
+      <td className={cn(gvTableBodyTdClass, "max-w-[28rem]")}>
+        <p className="line-clamp-2 text-center text-sm text-foreground" title={falla.descripcion}>
           {falla.descripcion}
         </p>
       </td>
@@ -96,7 +98,7 @@ export function MantenimientoList({
       <GestionVehiculosThead
         cells={[
           { key: "placa", label: "Placa", className: gvTableHeaderThClass },
-          { key: "vehiculo", label: "Vehículo", className: `${gvTableHeaderThClass} text-left` },
+          { key: "vehiculo", label: "Vehículo", className: gvTableHeaderThClass },
           { key: "severidad", label: "Severidad", className: gvTableHeaderThClass },
           { key: "estado", label: "Estado", className: gvTableHeaderThClass },
           { key: "descripcion", label: "Descripción", className: gvTableHeaderThClass },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Car, CarFront, Check, Loader2, Plus, ScanSearch, Search, FileSpreadsheet, ArrowDownToLine } from "lucide";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
@@ -9,21 +9,21 @@ import { showToast } from "@/lib/notifications";
 import { confirmDestructivo } from "@/lib/confirm-destructivo";
 
 import { VehiculosPanel } from "./VehiculosPanel";
-import { FlotaNotificaciones } from "./FlotaNotificaciones";
 import { VehiculoGaleriaModal } from "./VehiculoGaleriaModal";
 import { ReservaIndividualVehiculoModal } from "./ReservaIndividualVehiculoModal";
 import { ReservaVehiculoModal } from "./ReservaVehiculoModal";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useEliminarVehiculo, useVehiculos } from "./lib/hooks";
 import { type VehiculoRow, ESTADOS_VEHICULO } from "./lib/zod";
 import { cn } from "@/lib/utils";
-import { GV_FILTRO_FIELD_CLASS, GV_HEADER_OUTLINE_BUTTON_CLASS, GV_TABLE_SEARCH_INPUT_CLASS, GV_TABLE_TOOLBAR_ACTIONS_CLASS, GV_TABLE_TOOLBAR_PRIMARY_CLASS, GV_TABLE_TOOLBAR_ROW_CLASS, GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS } from "../lib/gv-header-ui";
+import {
+  GV_HEADER_OUTLINE_BUTTON_CLASS,
+  GV_TABLE_SEARCH_INPUT_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
+  GV_TABLE_TOOLBAR_PRIMARY_CLASS,
+  GV_TABLE_TOOLBAR_ROW_CLASS,
+} from "../lib/gv-header-ui";
+import { GvTabFilter } from "../lib/gv-tab-filter";
 import {
   GestionVehiculosTableEmpty,
   GestionVehiculosTableShell,
@@ -31,14 +31,14 @@ import {
   GV_TABLE_VIEWPORT_FILL,
 } from "../lib/table-ui";
 import { useGvTablePagination } from "../lib/table-pagination";
-import { useGvPanelChrome, GvHeaderExtras } from "../lib/gv-page-chrome";
+import { useGvPanelChrome } from "../lib/gv-page-chrome";
+import { useGvPanelActionIntent } from "../lib/gv-panel-action-intent";
 import { GvTableSectionMotion } from "../lib/gv-table-motion";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 import {
   canExportFlotaReporte,
   canDeleteVehiculo,
   canManageFlota,
-  canViewGvCampanaNotificaciones,
 } from "../lib/permissions";
 
 const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
@@ -53,25 +53,21 @@ const ESTADO_VEHICULO_LABELS: Record<(typeof ESTADOS_VEHICULO)[number], string> 
   RESERVA_INDIVIDUAL: "Reserva individual",
 };
 
-const filtroEstadoTriggerClass = cn(
-  GV_FILTRO_FIELD_CLASS,
-  GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
-  "cursor-pointer px-3 data-[size=default]:h-11 focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25",
-);
-
-const filtroEstadoContentClass =
-  "z-[200] min-w-[var(--radix-select-trigger-width)] border border-border bg-white p-1 opacity-100 shadow-lg dark:bg-zinc-900";
-
-const filtroEstadoItemClass =
-  "cursor-pointer rounded-lg bg-white font-medium capitalize text-foreground focus:bg-sky-50 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-zinc-800";
+const ESTADO_FILTER_OPTIONS = [
+  { value: TODOS, label: "Todos" },
+  ...ESTADOS_VEHICULO.map((est) => ({
+    value: est,
+    label: ESTADO_VEHICULO_LABELS[est],
+  })),
+];
 
 export function Flota() {
   const gvRole = useGvPermissionRole();
   const canManage = canManageFlota(gvRole);
   const canDelete = canDeleteVehiculo(gvRole);
   const puedeExportar = canExportFlotaReporte(gvRole);
-  const puedeVerAlertas = canViewGvCampanaNotificaciones(gvRole);
   const { data: vehiculos = [], isLoading: loading, error: queryError, refetch } = useVehiculos();
+  const panelIntent = useGvPanelActionIntent();
   const eliminar = useEliminarVehiculo();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,6 +125,20 @@ export function Flota() {
   };
 
   useGvPanelChrome("flota");
+
+  useEffect(() => {
+    const pendingId = panelIntent?.pendingFlotaVehiculoId;
+    if (!pendingId || loading) return;
+    const vehiculo = vehiculos.find((v) => v.id === pendingId);
+    if (!vehiculo) return;
+    handleEdit(vehiculo);
+    panelIntent?.clearPendingFlotaVehiculo();
+  }, [
+    loading,
+    vehiculos,
+    panelIntent?.pendingFlotaVehiculoId,
+    panelIntent?.clearPendingFlotaVehiculo,
+  ]);
 
   const handleExportExcel = async () => {
     if (vehiculosFiltrados.length === 0) {
@@ -194,17 +204,6 @@ export function Flota() {
 
   return (
     <>
-      <GvHeaderExtras panelId="flota">
-        {!loading && puedeVerAlertas ? (
-          <FlotaNotificaciones
-            vehiculos={vehiculos}
-            onAbrirVehiculo={(vehiculoId) => {
-              const vehiculo = vehiculos.find((v) => v.id === vehiculoId);
-              if (vehiculo) handleEdit(vehiculo);
-            }}
-          />
-        ) : null}
-      </GvHeaderExtras>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell
           className="min-h-0 flex-1"
@@ -221,8 +220,8 @@ export function Flota() {
           }}
           toolbar={
             <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
-              <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
-                <div className="relative min-w-0 w-full flex-1" data-morph-hover-scope>
+              <div className={cn(GV_TABLE_TOOLBAR_PRIMARY_CLASS, "max-lg:flex-col max-lg:items-stretch")}>
+                <div className="relative min-w-0 w-full lg:flex-1" data-morph-hover-scope>
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-celeste-trifinio">
                     <GvMorphIcon icon={Search} hoverIcon={ScanSearch} size={16} />
                   </span>
@@ -234,31 +233,23 @@ export function Flota() {
                     className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
                   />
                 </div>
-                <div className="min-w-0 w-full flex-1 lg:max-w-[14rem] lg:shrink-0">
-                  <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                    <SelectTrigger className={filtroEstadoTriggerClass}>
-                      <SelectValue placeholder="Todos los estados" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className={filtroEstadoContentClass}>
-                      <SelectItem value={TODOS} textValue="Todos los estados" className={filtroEstadoItemClass}>
-                        Todos los estados
-                      </SelectItem>
-                      {ESTADOS_VEHICULO.map((est) => (
-                        <SelectItem
-                          key={est}
-                          value={est}
-                          textValue={ESTADO_VEHICULO_LABELS[est]}
-                          className={filtroEstadoItemClass}
-                        >
-                          {ESTADO_VEHICULO_LABELS[est]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <GvTabFilter
+                  value={estadoFilter}
+                  onChange={setEstadoFilter}
+                  layoutId="gv-flota-estado-tabs"
+                  fill={false}
+                  className="min-w-0 w-full max-w-full max-lg:-mx-4 max-lg:w-[calc(100%+2rem)] max-lg:px-4 lg:flex-1"
+                  options={ESTADO_FILTER_OPTIONS}
+                />
               </div>
 
-              <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
+              <div
+                className={cn(
+                  GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+                  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
+                  "min-w-0 w-full max-lg:col-span-full",
+                )}
+              >
                 {puedeExportar && vehiculosFiltrados.length > 0 ? (
                   <SigetActionButton
                     label="Excel"
@@ -268,14 +259,17 @@ export function Flota() {
                     onClick={() => void handleExportExcel()}
                     disabled={isExporting || loading}
                     ariaLabel="Descargar Excel"
-                    className="h-11 w-auto shrink-0 rounded-xl px-4"
+                    className="h-11 w-auto max-lg:h-11 max-lg:w-full shrink-0 rounded-xl px-3 text-sm max-lg:px-4"
                   />
                 ) : null}
                 {canManage ? (
                   <button
                     type="button"
                     onClick={handleCreate}
-                    className={GV_HEADER_OUTLINE_BUTTON_CLASS}
+                    className={cn(
+                      GV_HEADER_OUTLINE_BUTTON_CLASS,
+                      "max-lg:h-11 max-lg:w-full max-lg:text-sm",
+                    )}
                   >
                     <GvMorphIcon icon={Plus} hoverIcon={Check} size={16} />
                     Añadir

@@ -26,7 +26,8 @@ async function idsMisionesConBitacora(
   const { data, error } = await supabase
     .from(BITACORAS_TABLE)
     .select("solicitud_id")
-    .in("solicitud_id", solicitudIds);
+    .in("solicitud_id", solicitudIds)
+    .eq("estado", "CONFIRMADA");
 
   if (error) throw error;
 

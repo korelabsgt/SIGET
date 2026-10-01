@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight, Eye } from "lucide";
-import { Car, MapPin } from "lucide-react";
+import { ArrowRight, Car, CarFront, Eye, MapPin, MapPinned } from "lucide";
 import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
+import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import {
   GvMobileRecordBadge,
@@ -11,6 +11,9 @@ import {
   GvMobileRecordMeta,
   GvMobileRecordMetaRow,
   GvMobileRecordRow,
+  GV_MOBILE_RECORD_META_ICON_CLASS,
+  GV_MOBILE_RECORD_SUBTITLE_CLASS,
+  GV_MOBILE_RECORD_TITLE_CLASS,
 } from "../lib/gv-mobile-record";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 import { type SolicitudRow } from "./lib/zod";
@@ -28,7 +31,7 @@ export function SolicitudCard({
     <GvMobileRecordRow>
       <GvMobileRecordHeader
         title={
-          <p className="truncate font-semibold text-foreground">
+          <p className={GV_MOBILE_RECORD_TITLE_CLASS}>
             {solicitud.solicitante?.nombre || "Desconocido"}
           </p>
         }
@@ -40,16 +43,34 @@ export function SolicitudCard({
       />
 
       <GvMobileRecordMeta>
-        <GvMobileRecordMetaRow icon={<MapPin className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow
+          icon={
+            <GvMorphIcon
+              icon={MapPin}
+              hoverIcon={MapPinned}
+              size={16}
+              className={GV_MOBILE_RECORD_META_ICON_CLASS}
+            />
+          }
+        >
           <span className="line-clamp-2" title={solicitud.destino}>
             {solicitud.destino}
           </span>
         </GvMobileRecordMetaRow>
-        <GvMobileRecordMetaRow icon={<Car className="size-3.5 text-celeste-trifinio" />}>
+        <GvMobileRecordMetaRow
+          icon={
+            <GvMorphIcon
+              icon={Car}
+              hoverIcon={CarFront}
+              size={16}
+              className={GV_MOBILE_RECORD_META_ICON_CLASS}
+            />
+          }
+        >
           {vehiculo ? (
             <>
               <span className="font-semibold">{vehiculo.placa}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className={GV_MOBILE_RECORD_SUBTITLE_CLASS}>
                 {vehiculo.marca} {vehiculo.modelo}
               </span>
             </>

@@ -18,6 +18,7 @@ import { GvBackToTerritorial } from "./gv-back-to-territorial";
 import { GvModuloPageFrame } from "./gv-modulo-page-frame";
 import { GV_MODULO_HEADER_ROW_CLASS } from "./page-shell";
 import { GvSectionSelect } from "./gv-section-select";
+import { GvCampanaNotificaciones } from "./gv-campana-notificaciones";
 import { useGvSection, type GvSubmoduloId } from "./tab-context";
 
 type GvPageChromeDispatch = {
@@ -63,17 +64,18 @@ function GvPageChromeLayout({
     <GvModuloPageFrame className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0">
       {!hideChrome ? (
         <div className={GV_MODULO_HEADER_ROW_CLASS}>
-          <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+          <div className="flex min-w-0 items-center gap-3 max-md:px-2.5 sm:flex-1">
             <GvBackToTerritorial morph className="shrink-0" />
             <h1 className="min-w-0 text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
               Gestión de vehículos
             </h1>
           </div>
-          <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-            <GvSectionSelect className="w-full sm:w-auto" />
+          <div className="flex w-full min-w-0 shrink-0 flex-row items-center gap-2 max-md:px-2.5 sm:justify-end sm:gap-3 sm:w-auto">
+            <GvSectionSelect />
+            <GvCampanaNotificaciones />
             <div
               ref={headerExtrasContainerRef}
-              className="flex shrink-0 items-center justify-end gap-2"
+              className="flex shrink-0 items-center gap-2 empty:hidden"
             />
           </div>
         </div>
