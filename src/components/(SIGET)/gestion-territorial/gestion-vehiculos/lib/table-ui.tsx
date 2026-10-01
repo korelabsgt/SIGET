@@ -17,6 +17,13 @@ export {
 
 export const GV_TABLE_VIEWPORT_FILL = null;
 
+export const GV_TABLE_RECORD_SCROLL = "record-scroll" as const;
+
+export type GvTableVisibleRows =
+  | number
+  | null
+  | typeof GV_TABLE_RECORD_SCROLL;
+
 export type GestionVehiculosTablePaginationProps = {
   pageSafe: number;
   totalPages: number;
@@ -27,10 +34,10 @@ export type GestionVehiculosTablePaginationProps = {
 };
 
 export const GV_TABLE_SHELL_SURFACE_CLASS =
-  "overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900";
+  "rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900";
 
 export const GV_TABLE_SHELL_INNER_CLASS =
-  "flex min-h-0 flex-1 flex-col overflow-hidden bg-card dark:bg-zinc-900";
+  "flex flex-col bg-card dark:bg-zinc-900";
 
 export const GV_TABLE_TOOLBAR_CLASS =
   "w-full shrink-0 min-h-[5.0625rem] border-b border-border p-4 dark:border-zinc-700 lg:min-h-[5.0625rem] lg:h-auto";
@@ -52,21 +59,26 @@ export function GestionVehiculosTableShell({
   children,
   className,
   pagination,
-  visibleRows = GV_TABLE_DEFAULT_VISIBLE_ROWS,
+  visibleRows = GV_TABLE_RECORD_SCROLL,
 }: {
   toolbar?: ReactNode;
   kpiSlot?: ReactNode;
   children: ReactNode;
   className?: string;
   pagination?: GestionVehiculosTablePaginationProps;
-  visibleRows?: number | null;
+  visibleRows?: GvTableVisibleRows;
 }) {
   const hasToolbar = Boolean(toolbar);
   const hasPagination = Boolean(pagination);
   const hasKpiSlot = Boolean(kpiSlot);
-  const viewportFill = visibleRows === null;
-  const applySizing = visibleRows !== null;
-  const rows = visibleRows ?? GV_TABLE_DEFAULT_VISIBLE_ROWS;
+  const recordScroll =
+    visibleRows === GV_TABLE_RECORD_SCROLL || visibleRows === null;
+  const viewportFill = !recordScroll && visibleRows === GV_TABLE_VIEWPORT_FILL;
+  const applySizing = !recordScroll && visibleRows !== null && typeof visibleRows === "number";
+  const rows =
+    typeof visibleRows === "number"
+      ? visibleRows
+      : GV_TABLE_DEFAULT_VISIBLE_ROWS;
   const pageSizeRows = pagination?.pageSize ?? rows;
   const shellHeight = gvTableShellMinHeightPx({
     visibleRows: rows,
@@ -74,17 +86,19 @@ export function GestionVehiculosTableShell({
     hasPagination,
   });
   const bodyMinHeight = gvTableBodyMinHeightPxForShell(pageSizeRows, hasKpiSlot);
-  const shellStyle: CSSProperties | undefined = applySizing
-    ? ({
-        minHeight: shellHeight,
-        "--gv-table-shell-h": `${shellHeight}px`,
-        "--gv-table-body-min-h": `${bodyMinHeight}px`,
-      } as CSSProperties)
-    : viewportFill
+  const shellStyle: CSSProperties | undefined = recordScroll
+    ? undefined
+    : applySizing
       ? ({
+          minHeight: shellHeight,
+          "--gv-table-shell-h": `${shellHeight}px`,
           "--gv-table-body-min-h": `${bodyMinHeight}px`,
         } as CSSProperties)
-      : undefined;
+      : viewportFill
+        ? ({
+            "--gv-table-body-min-h": `${bodyMinHeight}px`,
+          } as CSSProperties)
+        : undefined;
 
   const toolbarBlock = toolbar ? (
     <div className={GV_TABLE_TOOLBAR_CLASS}>
@@ -97,15 +111,18 @@ export function GestionVehiculosTableShell({
   const bodyBlock = (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden lg:basis-0",
-        applySizing && "min-h-[var(--gv-table-body-min-h)]",
-        viewportFill && "min-h-0 flex-1 lg:min-h-0",
+        recordScroll && "w-full min-w-0 shrink-0",
+        !recordScroll && "flex min-h-0 flex-1 flex-col overflow-hidden lg:basis-0",
+        !recordScroll && applySizing && "min-h-[var(--gv-table-body-min-h)]",
+        !recordScroll && viewportFill && "min-h-0 flex-1 lg:min-h-0",
       )}
     >
       <div
         className={cn(
-          "flex min-h-0 flex-1 flex-col lg:basis-0 lg:overflow-hidden",
-          viewportFill ? "h-full max-lg:overflow-y-auto lg:min-h-0" : "overflow-hidden",
+          recordScroll && "w-full min-w-0",
+          !recordScroll && "flex min-h-0 flex-1 flex-col lg:basis-0 lg:overflow-hidden",
+          !recordScroll &&
+            (viewportFill ? "h-full max-lg:overflow-y-auto lg:min-h-0" : "overflow-hidden"),
         )}
       >
         {children}
@@ -118,20 +135,31 @@ export function GestionVehiculosTableShell({
   return (
     <div
       className={cn(
-        "flex min-h-0 w-full flex-1 flex-col overflow-hidden",
+        "flex w-full min-w-0 flex-col",
+        !recordScroll && "min-h-0 flex-1 overflow-hidden",
         GV_TABLE_SHELL_SURFACE_CLASS,
-        applySizing && "lg:h-[var(--gv-table-shell-h)]",
-        viewportFill && "min-h-0 flex-1 self-stretch lg:h-full lg:max-h-full lg:min-h-0 lg:basis-0",
+        !recordScroll && applySizing && "lg:h-[var(--gv-table-shell-h)]",
+        !recordScroll &&
+          viewportFill &&
+          "min-h-0 flex-1 self-stretch lg:h-full lg:max-h-full lg:min-h-0 lg:basis-0",
+        recordScroll && "shrink-0 overflow-visible",
         className,
       )}
       style={shellStyle}
     >
       {hasToolbar ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-celeste-trifinio pt-1 lg:h-full lg:min-h-0">
+        <div
+          className={cn(
+            "flex w-full min-w-0 flex-col bg-celeste-trifinio pt-1",
+            !recordScroll && "min-h-0 flex-1 overflow-hidden lg:h-full lg:min-h-0",
+          )}
+        >
           <div
             className={cn(
               GV_TABLE_SHELL_INNER_CLASS,
-              "min-h-0 flex-1 overflow-hidden rounded-t-2xl lg:h-full lg:min-h-0",
+              recordScroll
+                ? "overflow-visible rounded-t-2xl"
+                : "min-h-0 flex-1 overflow-hidden rounded-t-2xl lg:h-full lg:min-h-0",
             )}
           >
             {toolbarBlock}
@@ -153,15 +181,25 @@ export function GestionVehiculosTableShell({
 export function GestionVehiculosTableScroll({
   children,
   className,
+  pageScroll = true,
 }: {
   children: ReactNode;
   className?: string;
+  pageScroll?: boolean;
 }) {
+  if (pageScroll) {
+    return (
+      <div className={cn("w-full min-w-0 overflow-x-auto overflow-y-visible", className)}>
+        <div className="min-w-0 overflow-y-visible [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead_tr]:bg-sky-50 dark:[&_thead_tr]:bg-sky-950/95">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
-      <div
-        className="min-h-0 flex-1 overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead_tr]:bg-sky-50 dark:[&_thead_tr]:bg-sky-950/95"
-      >
+      <div className="min-h-0 flex-1 overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10 [&_thead_tr]:bg-sky-50 dark:[&_thead_tr]:bg-sky-950/95">
         {children}
       </div>
     </div>
@@ -176,8 +214,8 @@ export function GestionVehiculosTable({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <GestionVehiculosTableScroll>
+    <div className="w-full min-w-0">
+      <GestionVehiculosTableScroll pageScroll>
         <table
           className={cn(
             "w-full border-collapse text-sm",
@@ -253,7 +291,7 @@ export function GestionVehiculosTr({ cells }: { cells: GestionVehiculosTdCell[] 
 }
 
 export const GV_TABLE_BODY_CENTER_CLASS =
-  "flex w-full min-h-0 flex-1 flex-col items-center justify-center px-4 py-8 text-center";
+  "flex w-full min-h-[12rem] flex-col items-center justify-center px-4 py-8 text-center";
 
 export function GestionVehiculosTableEmpty({
   icon,

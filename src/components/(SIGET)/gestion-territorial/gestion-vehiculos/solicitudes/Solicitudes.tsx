@@ -21,7 +21,7 @@ import { SolicitudActionModal } from "./SolicitudActionModal";
 import {
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
-  GV_TABLE_VIEWPORT_FILL,
+  GV_TABLE_RECORD_SCROLL,
 } from "../lib/table-ui";
 
 import { useGvTablePagination } from "../lib/table-pagination";
@@ -284,8 +284,7 @@ export function Solicitudes() {
       <GvTableSectionMotion panelId="solicitudes">
 
         <GestionVehiculosTableShell
-          className="min-h-0 flex-1"
-          visibleRows={GV_TABLE_VIEWPORT_FILL}
+          visibleRows={GV_TABLE_RECORD_SCROLL}
 
           pagination={{
 

@@ -107,13 +107,6 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     animatedIcon: "unfvchvi",
   },
   {
-    id: "memoria-labores",
-    title: "Memoria de Labores",
-    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
-    href: "/siget/gestion-territorial/memoria-labores",
-    animatedIcon: "wvhscmei",
-  },
-  {
     id: "gestion-vehiculos",
     title: "Registro de Vehículos",
     desc: "Control y asignación de la flota vehicular de la institución.",
@@ -126,6 +119,13 @@ export const GESTION_TERRITORIAL_MENU_OPTIONS = [
     desc: "Solicitud, seguimiento y control de vales de combustible institucional.",
     href: "/siget/gestion-territorial/solicitud-combustible",
     animatedIcon: "cdxxgczv",
+  },
+  {
+    id: "memoria-labores",
+    title: "Memoria de Labores",
+    desc: "Formularios institucionales del Plan Trifinio para la memoria de labores semestral.",
+    href: "/siget/gestion-territorial/memoria-labores",
+    animatedIcon: "wvhscmei",
   },
 ] as const;
 

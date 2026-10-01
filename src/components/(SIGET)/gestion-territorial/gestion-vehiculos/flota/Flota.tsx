@@ -28,7 +28,7 @@ import {
   GestionVehiculosTableEmpty,
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
-  GV_TABLE_VIEWPORT_FILL,
+  GV_TABLE_RECORD_SCROLL,
 } from "../lib/table-ui";
 import { useGvTablePagination } from "../lib/table-pagination";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
@@ -206,8 +206,7 @@ export function Flota() {
     <>
       <GvTableSectionMotion panelId="flota">
         <GestionVehiculosTableShell
-          className="min-h-0 flex-1"
-          visibleRows={GV_TABLE_VIEWPORT_FILL}
+          visibleRows={GV_TABLE_RECORD_SCROLL}
           pagination={{
             pageSafe,
             totalPages,

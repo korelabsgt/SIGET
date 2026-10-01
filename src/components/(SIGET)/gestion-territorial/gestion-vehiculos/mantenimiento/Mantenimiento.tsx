@@ -15,7 +15,7 @@ import {
   GestionVehiculosTableShell,
   GvTableKpiSlot,
   GV_TABLE_BODY_CENTER_CLASS,
-  GV_TABLE_VIEWPORT_FILL,
+  GV_TABLE_RECORD_SCROLL,
 } from "../lib/table-ui";
 import {
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
@@ -225,8 +225,7 @@ export function Mantenimiento() {
     <>
       <GvTableSectionMotion panelId="mantenimiento">
       <GestionVehiculosTableShell
-        className="min-h-0 flex-1"
-        visibleRows={GV_TABLE_VIEWPORT_FILL}
+        visibleRows={GV_TABLE_RECORD_SCROLL}
         kpiSlot={
           canManage ? (
             <GvTableKpiSlot>

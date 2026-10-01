@@ -61,7 +61,7 @@ function GvPageChromeLayout({
   headerExtrasContainerRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <GvModuloPageFrame className="flex min-h-0 flex-1 flex-col overflow-hidden lg:h-full lg:min-h-0">
+    <GvModuloPageFrame className="flex w-full flex-col">
       {!hideChrome ? (
         <div className={GV_MODULO_HEADER_ROW_CLASS}>
           <div className="flex min-w-0 items-center gap-3 max-md:px-2.5 sm:flex-1">
@@ -80,7 +80,7 @@ function GvPageChromeLayout({
           </div>
         </div>
       ) : null}
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:basis-0 lg:overflow-hidden">
+      <div className="flex w-full min-w-0 flex-col">
         {children}
       </div>
     </GvModuloPageFrame>

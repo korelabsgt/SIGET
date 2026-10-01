@@ -30,8 +30,8 @@ export function VehiculosPanel({
   canDelete: boolean;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+    <div className="flex w-full flex-col">
+      <div className="hidden w-full flex-col lg:flex">
         <VehiculosList
           vehiculos={vehiculos}
           rowOffset={rowOffset}
@@ -45,7 +45,7 @@ export function VehiculosPanel({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+      <div className="flex w-full flex-col lg:hidden">
         <VehiculosCards
           vehiculos={vehiculos}
           onEdit={onEdit}

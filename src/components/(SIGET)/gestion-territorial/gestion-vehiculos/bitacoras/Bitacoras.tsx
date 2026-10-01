@@ -22,7 +22,7 @@ import {
   GestionVehiculosTableShell,
   GvTableKpiSlot,
   GV_TABLE_BODY_CENTER_CLASS,
-  GV_TABLE_VIEWPORT_FILL,
+  GV_TABLE_RECORD_SCROLL,
 } from "../lib/table-ui";
 import { cn } from "@/lib/utils";
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
@@ -191,8 +191,7 @@ export function Bitacoras() {
       />
       <GvTableSectionMotion panelId="bitacoras">
       <GestionVehiculosTableShell
-        className="min-h-0 flex-1"
-        visibleRows={GV_TABLE_VIEWPORT_FILL}
+        visibleRows={GV_TABLE_RECORD_SCROLL}
         kpiSlot={
           puedeVerMetricas ? (
             <GvTableKpiSlot>

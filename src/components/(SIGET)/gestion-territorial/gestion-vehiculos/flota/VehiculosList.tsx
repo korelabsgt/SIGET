@@ -281,8 +281,8 @@ export function VehiculosList({
   const col = anchosColumnasFlota(canManage);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <GestionVehiculosTableScroll>
+    <div className="w-full min-w-0">
+      <GestionVehiculosTableScroll pageScroll>
       <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr className="border-b border-border bg-sky-50/80 text-[10px] font-bold uppercase tracking-widest text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950/30">
