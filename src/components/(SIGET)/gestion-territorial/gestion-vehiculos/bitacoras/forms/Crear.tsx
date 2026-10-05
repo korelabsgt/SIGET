@@ -62,7 +62,6 @@ import { esBitacoraPendiente } from "../lib/bitacora-estado";
 import { type VehiculoRow } from "../../flota/lib/zod";
 import { ConsultaAveriaModal } from "./ConsultaAveriaModal";
 import { ReportarAveriaModal, type VehiculoAveriaFijo } from "../../mantenimiento/forms/ReportarAveriaModal";
-import { vehiculoTieneAveriaActiva } from "../../mantenimiento/lib/actions";
 import {
   getCombustibleAprobadoPorMision,
   getCombustibleAprobadoSinMisionPorVehiculo,
@@ -515,15 +514,6 @@ export function Crear({
 
       if (!huboAveria) {
         toast.success("Bitácora confirmada con éxito");
-        return "listo";
-      }
-
-      const yaReportada = await vehiculoTieneAveriaActiva(data.vehiculo_id);
-      if (yaReportada) {
-        toast.success("Bitácora confirmada con éxito");
-        toast.info(
-          "Este vehículo ya tiene un reporte de avería activo en mantenimiento.",
-        );
         return "listo";
       }
 

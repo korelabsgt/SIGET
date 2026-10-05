@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Eye } from "lucide";
-import { BookOpen, Fuel, Route } from "lucide-react";
+import { BookOpen, Fuel } from "lucide-react";
 import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { type BitacoraRow } from "./lib/zod";
 import {
@@ -15,8 +15,15 @@ import {
 } from "../lib/table-ui";
 import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
-import { esBitacoraPendiente } from "./lib/bitacora-estado";
+import { esBitacoraPendiente, formatEstadoBitacoraLabel } from "./lib/bitacora-estado";
 import { formatMontoCombustibleBitacora, nombreSolicitanteBitacora } from "./lib/helpers";
+import { formatVehiculoOpcion } from "../flota/lib/helpers";
+
+function textoVehiculoBitacora(bitacora: BitacoraRow): string {
+  const v = bitacora.ot_vehiculos;
+  if (!v?.placa?.trim()) return "Sin vehículo";
+  return formatVehiculoOpcion(v);
+}
 
 function BitacoraListRow({
   bitacora,
@@ -29,11 +36,20 @@ function BitacoraListRow({
 }) {
   const pendiente = esBitacoraPendiente(bitacora);
   const solicitanteNombre = nombreSolicitanteBitacora(bitacora);
+  const vehiculoLabel = textoVehiculoBitacora(bitacora);
   return (
     <GvTableMorphRow>
       <td className={gvTableBodyTdClass}>
         <p className="text-sm font-bold tabular-nums text-foreground">
           {formatFechaHoraGv(bitacora.fecha)}
+        </p>
+      </td>
+      <td className={gvTableBodyTdClass}>
+        <p
+          className="mx-auto max-w-[200px] truncate text-sm font-semibold text-foreground"
+          title={vehiculoLabel}
+        >
+          {vehiculoLabel}
         </p>
       </td>
       <td className={gvTableBodyTdClass}>
@@ -47,12 +63,11 @@ function BitacoraListRow({
       <td className={gvTableBodyTdClass}>
         {pendiente ? (
           <span className="inline-flex items-center rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-400">
-            Pendiente
+            {formatEstadoBitacoraLabel(bitacora.estado)}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50/80 px-2 py-1 text-xs font-semibold text-azul-trifinio dark:bg-sky-950/30">
-            <Route className="size-3" />
-            {bitacora.km_recorrido.toLocaleString("es-GT")} km
+          <span className="inline-flex items-center rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            {formatEstadoBitacoraLabel(bitacora.estado)}
           </span>
         )}
       </td>
@@ -111,12 +126,13 @@ export function BitacorasList({
   }
 
   return (
-    <GestionVehiculosTable minWidth={760}>
+    <GestionVehiculosTable minWidth={920}>
       <GestionVehiculosThead
         cells={[
           { key: "fecha", label: "Fecha" },
+          { key: "vehiculo", label: "Vehículo" },
           { key: "solicitante", label: "Solicitante" },
-          { key: "recorrido", label: "Estado" },
+          { key: "estado", label: "Estado" },
           { key: "combustible", label: "Combustible" },
           { key: "acciones", label: "Acciones", className: gvTableActionThClass },
         ]}

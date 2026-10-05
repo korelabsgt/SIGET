@@ -9,21 +9,25 @@ export function GvExportReporteButton({
   disabled = false,
   loading = false,
   className,
+  label = "Excel",
+  ariaLabel = "Exportar reporte",
 }: {
   onClick: () => void;
   disabled?: boolean;
   loading?: boolean;
   className?: string;
+  label?: string;
+  ariaLabel?: string;
 }) {
   return (
     <SigetActionButton
-      label="Excel"
+      label={label}
       accentColor={sigetAccent.excel}
       morphFrom={FileSpreadsheet}
       morphTo={ArrowDownToLine}
       onClick={onClick}
       disabled={disabled || loading}
-      ariaLabel="Exportar reporte"
+      ariaLabel={ariaLabel}
       className={cn("h-11 w-auto max-lg:w-full shrink-0 rounded-xl px-4", className)}
     />
   );

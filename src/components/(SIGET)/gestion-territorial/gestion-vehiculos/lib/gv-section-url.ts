@@ -15,7 +15,7 @@ export function parseGvSectionParam(value: string | null | undefined): GvSubmodu
 }
 
 export function gvSectionFromSearchParams(params: URLSearchParams): GvSubmoduloId {
-  return parseGvSectionParam(params.get(GV_SECTION_QUERY_KEY)) ?? "flota";
+  return parseGvSectionParam(params.get(GV_SECTION_QUERY_KEY)) ?? "solicitudes";
 }
 
 export function buildGvSectionHref(
@@ -24,7 +24,7 @@ export function buildGvSectionHref(
   currentParams?: URLSearchParams,
 ): string {
   const params = new URLSearchParams(currentParams?.toString() ?? "");
-  if (section === "flota") {
+  if (section === "solicitudes") {
     params.delete(GV_SECTION_QUERY_KEY);
   } else {
     params.set(GV_SECTION_QUERY_KEY, section);

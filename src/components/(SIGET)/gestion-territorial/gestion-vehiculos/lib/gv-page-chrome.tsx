@@ -70,7 +70,9 @@ function GvPageChromeLayout({
               Gestión de vehículos
             </h1>
           </div>
-          <div className="flex w-full min-w-0 shrink-0 flex-row items-center gap-2 max-md:px-2.5 sm:justify-end sm:gap-3 sm:w-auto">
+          <div
+            className="flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center justify-end gap-2 max-md:px-2.5 sm:gap-3 sm:w-auto"
+          >
             <GvSectionSelect />
             <GvCampanaNotificaciones />
             <div

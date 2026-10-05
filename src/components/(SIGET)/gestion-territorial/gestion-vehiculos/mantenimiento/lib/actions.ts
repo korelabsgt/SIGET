@@ -21,7 +21,12 @@ import {
 } from "../../lib/permissions";
 import { FALLAS_MANTENIMIENTO_SELECT } from "./fallas-query";
 import { esFallaServicioKmProgramado, getKmReferenciaServicio } from "../../flota/lib/helpers";
-import { vehiculoDisponibleParaReporteFalla, evidenciasFalla, normalizeFallaRow } from "./helpers";
+import {
+  ESTADOS_FALLA_ACTIVA,
+  evidenciasFalla,
+  normalizeFallaRow,
+  severidadAveriaInmovilizaFlota,
+} from "./helpers";
 import { roleFromAuthUser } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 
@@ -67,7 +72,6 @@ export async function getVehiculosParaFallas(): Promise<VehiculoFallaOption[]> {
   const { data, error } = await supabase
     .from("ot_vehiculos")
     .select("id, placa, marca, modelo, estado")
-    .neq("estado", "EN_MANTENIMIENTO")
     .order("placa", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -88,22 +92,6 @@ export async function getMecanicos(): Promise<MecanicoOption[]> {
   return (data ?? []) as MecanicoOption[];
 }
 
-export async function vehiculoTieneAveriaActiva(vehiculoId: string): Promise<boolean> {
-  try {
-    const { supabase } = await requireAuth();
-    const { count, error } = await supabase
-      .from(TABLE)
-      .select("id", { count: "exact", head: true })
-      .eq("vehiculo_id", vehiculoId)
-      .in("estado", ["PENDIENTE", "EN_REPARACION"]);
-
-    if (error) return false;
-    return (count ?? 0) > 0;
-  } catch {
-    return false;
-  }
-}
-
 export async function createFalla(input: FallaMantenimientoFormData): Promise<void> {
   try {
     const { supabase, user } = await requireAuth();
@@ -115,30 +103,12 @@ export async function createFalla(input: FallaMantenimientoFormData): Promise<vo
 
     const { data: vehiculo, error: vehiculoError } = await supabase
       .from("ot_vehiculos")
-      .select("estado")
+      .select("id")
       .eq("id", parsed.data.vehiculo_id)
       .maybeSingle();
 
     if (vehiculoError || !vehiculo) {
       throw new Error("Vehículo no encontrado.");
-    }
-
-    if (!vehiculoDisponibleParaReporteFalla(vehiculo.estado)) {
-      throw new Error("Este vehículo ya está en mantenimiento.");
-    }
-
-    const { count: fallasActivas, error: fallasError } = await supabase
-      .from(TABLE)
-      .select("id", { count: "exact", head: true })
-      .eq("vehiculo_id", parsed.data.vehiculo_id)
-      .in("estado", ["PENDIENTE", "EN_REPARACION"]);
-
-    if (fallasError) {
-      throw new Error("No se pudo verificar el estado del vehículo.");
-    }
-
-    if ((fallasActivas ?? 0) > 0) {
-      throw new Error("Este vehículo ya tiene una avería activa.");
     }
 
     const { error } = await supabase.from(TABLE).insert([
@@ -183,12 +153,26 @@ export async function atenderFalla(input: AtenderFallaFormData): Promise<void> {
   if (parsed.data.mecanico_id) payload.mecanico_id = parsed.data.mecanico_id;
   if (parsed.data.taller_externo) payload.taller_externo = parsed.data.taller_externo;
 
+  const { data: falla, error: fetchError } = await supabase
+    .from(TABLE)
+    .select("vehiculo_id, severidad")
+    .eq("id", parsed.data.falla_id)
+    .maybeSingle();
+
+  if (fetchError || !falla) {
+    throw new Error("No se encontró la avería.");
+  }
+
   const { error } = await supabase
     .from(TABLE)
     .update(payload)
     .eq("id", parsed.data.falla_id);
 
   if (error) throw new Error(error.message);
+
+  if (severidadAveriaInmovilizaFlota(falla.severidad)) {
+    await sincronizarEstadoFlotaVehiculo(supabase, falla.vehiculo_id);
+  }
 
   revalidatePath(REVALIDATE_ROUTE);
   revalidatePath(VEHICULOS_ROUTE);

@@ -55,6 +55,32 @@ function BloqueMotivoRechazo({
   );
 }
 
+function BloqueComentarioAprobacion({
+  solicitud,
+}: {
+  solicitud: Pick<SolicitudRow, "estado" | "comentarios">;
+}) {
+  if (solicitud.estado === "RECHAZADA" || solicitud.estado === "PENDIENTE") return null;
+  const texto = solicitud.comentarios?.trim();
+  if (!texto) return null;
+
+  return (
+    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/80 dark:bg-emerald-950/30">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">
+        Comentario de aprobación
+      </p>
+      <p
+        className={cn(
+          "mt-2 text-sm leading-relaxed text-emerald-950 dark:text-emerald-100",
+          GV_DETALLE_TEXTO_CLASS,
+        )}
+      >
+        {texto}
+      </p>
+    </div>
+  );
+}
+
 function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
     .toLowerCase()
@@ -402,6 +428,7 @@ function ContenidoDetalle({
         </div>
 
         <BloqueMotivoRechazo solicitud={solicitud} />
+        <BloqueComentarioAprobacion solicitud={solicitud} />
 
         <BloqueMisionYVehiculo
           justificacion={solicitud.justificacion}
@@ -449,8 +476,9 @@ function ContenidoDetalle({
         <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
         <BloqueMotivoRechazo solicitud={solicitud} />
+        <BloqueComentarioAprobacion solicitud={solicitud} />
       </div>
 
       <BloqueMisionYVehiculo

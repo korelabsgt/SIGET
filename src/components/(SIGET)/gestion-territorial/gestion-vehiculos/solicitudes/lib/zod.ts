@@ -100,6 +100,15 @@ export const rechazoSolicitudComentarioSchema = z
   .min(5, "Indique el motivo del rechazo (mín. 5 caracteres)")
   .max(2000, "El comentario es demasiado largo");
 
+export const aprobacionSolicitudComentarioOpcionalSchema = z
+  .string()
+  .trim()
+  .max(2000, "El comentario es demasiado largo")
+  .refine((s) => s.length === 0 || s.length >= 5, {
+    message: "Si escribe un comentario, use al menos 5 caracteres.",
+  })
+  .transform((s) => (s.length === 0 ? null : s));
+
 export interface SolicitudRow {
   id: string;
   solicitante_id: string;

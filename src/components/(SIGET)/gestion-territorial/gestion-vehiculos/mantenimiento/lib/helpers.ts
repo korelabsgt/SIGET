@@ -38,8 +38,12 @@ export function formatVehiculoFalla(falla: FallaRow) {
 
 export type TabMantenimientoFallas = "ACTIVAS" | "CRITICAS" | "SOLVENTADAS";
 
-export function vehiculoDisponibleParaReporteFalla(estado: string | null | undefined): boolean {
-  return estado !== "EN_MANTENIMIENTO";
+export const ESTADOS_FALLA_ACTIVA = ["PENDIENTE", "EN_REPARACION"] as const;
+
+export function severidadAveriaInmovilizaFlota(
+  severidad: string | null | undefined,
+): boolean {
+  return (severidad ?? "").trim().toUpperCase() === "ALTA";
 }
 
 export function evidenciasFalla(falla: Pick<FallaRow, "evidencia_url">): string[] {

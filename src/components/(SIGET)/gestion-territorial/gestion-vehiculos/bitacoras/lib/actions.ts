@@ -14,7 +14,11 @@ import { BITACORA_LIST_SELECT, evidenciasBitacora, normalizeBitacoraRow } from "
 import { loadMisionesVinculablesBitacora } from "./misiones-vinculables";
 import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-forzado";
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
-import { canExportBitacoraReporte, canViewAllBitacoras } from "../../lib/permissions";
+import {
+  canConfirmarBitacoraDeOtros,
+  canExportBitacoraReporte,
+  canViewAllBitacoras,
+} from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 import {
   combustibleAprobadoParaBitacora,
@@ -173,7 +177,11 @@ export async function confirmarBitacora(bitacoraId: string, input: BitacoraInput
       if (solicitudError || !solicitud) {
         return { success: false, error: "La misión vinculada no existe." };
       }
-      if (solicitud.solicitante_id !== user.id && bitacoraActual.conductor_id !== user.id) {
+      if (
+        solicitud.solicitante_id !== user.id &&
+        bitacoraActual.conductor_id !== user.id &&
+        !canConfirmarBitacoraDeOtros(role)
+      ) {
         return { success: false, error: "Solo puedes confirmar bitácoras de tus misiones." };
       }
       if (solicitud.estado !== "EN_MISION") {
@@ -611,6 +619,48 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
     return data;
   } catch (error) {
     console.error("Error fetching report data:", error);
+    return [];
+  }
+}
+
+export async function getDatosReporteComentariosBitacora(
+  mes: number,
+  anio: number,
+  vehiculo_id: string,
+): Promise<BitacoraRow[]> {
+  try {
+    const { supabase, user, role } = await requireAuth();
+
+    if (!canExportBitacoraReporte(role)) {
+      return [];
+    }
+
+    const startDate = new Date(anio, mes - 1, 1, 0, 0, 0, 0).toISOString();
+    const endDate = new Date(anio, mes, 0, 23, 59, 59, 999).toISOString();
+
+    let query = supabase
+      .from(TABLE)
+      .select(BITACORA_LIST_SELECT)
+      .eq("estado", "CONFIRMADA")
+      .gte("fecha", startDate)
+      .lte("fecha", endDate)
+      .order("fecha", { ascending: true });
+
+    if (vehiculo_id && vehiculo_id !== "all") {
+      query = query.eq("vehiculo_id", vehiculo_id);
+    }
+
+    if (!canViewAllBitacoras(role)) {
+      query = query.eq("conductor_id", user.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => normalizeBitacoraRow(row as BitacoraRow));
+  } catch (error) {
+    console.error("Error fetching comentarios report data:", error);
     return [];
   }
 }

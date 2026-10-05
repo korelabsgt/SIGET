@@ -1,18 +1,25 @@
 "use client";
 
-import { CircleAlert, FileQuestion, Fuel } from "lucide";
+import { CircleAlert, FileQuestion, Fuel, NotebookPen } from "lucide";
 import { AlertTriangle } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GvNotificacionItem, type GvNotificacionesSeccion } from "../lib/gv-notificaciones-ui";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { cn } from "@/lib/utils";
 import { getBitacoraAlerts } from "./lib/helpers";
+import { esBitacoraPendiente } from "./lib/bitacora-estado";
 import { type BitacoraRow } from "./lib/zod";
+
+function esAlertaBitacoraPendiente(alerta: ReturnType<typeof getBitacoraAlerts>[number]): boolean {
+  return alerta.id.endsWith("-pendiente") || esBitacoraPendiente(alerta.bitacora);
+}
 
 export function bitacorasNotificacionesSeccion({
   bitacoras,
+  onAbrirPendiente,
 }: {
   bitacoras: BitacoraRow[];
+  onAbrirPendiente?: (bitacora: BitacoraRow) => void;
 }): GvNotificacionesSeccion {
   const alertas = getBitacoraAlerts(bitacoras);
   const total = alertas.length;
@@ -29,8 +36,23 @@ export function bitacorasNotificacionesSeccion({
                 Alertas de bitácoras
               </p>
             </li>
-            {alertas.map((alerta) => (
-              <GvNotificacionItem key={alerta.id} tone={alerta.severidad === "error" ? "critical" : "warn"}>
+            {alertas.map((alerta) => {
+              const esPendiente = esAlertaBitacoraPendiente(alerta);
+              return (
+              <GvNotificacionItem
+                key={alerta.id}
+                tone={alerta.severidad === "error" ? "critical" : "warn"}
+                onClick={
+                  esPendiente && onAbrirPendiente
+                    ? () => onAbrirPendiente(alerta.bitacora)
+                    : undefined
+                }
+                ariaLabel={
+                  esPendiente && onAbrirPendiente
+                    ? `Confirmar bitácora pendiente ${alerta.bitacora.ot_vehiculos?.placa ?? ""}`
+                    : undefined
+                }
+              >
                 <div
                   className={cn(
                     "flex size-8 shrink-0 items-center justify-center rounded-lg",
@@ -41,6 +63,8 @@ export function bitacorasNotificacionesSeccion({
                 >
                   {alerta.severidad === "error" ? (
                     <AlertTriangle className="size-4 shrink-0" />
+                  ) : esPendiente ? (
+                    <GvMorphIcon icon={NotebookPen} hoverIcon={CircleAlert} size={16} />
                   ) : alerta.titulo.includes("combustible") ? (
                     <GvMorphIcon icon={Fuel} hoverIcon={CircleAlert} size={16} />
                   ) : (
@@ -60,7 +84,11 @@ export function bitacorasNotificacionesSeccion({
                           : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
                       )}
                     >
-                      {alerta.severidad === "error" ? "Crítico" : "Medio"}
+                      {alerta.severidad === "error"
+                        ? "Crítico"
+                        : esPendiente
+                          ? "Pendiente"
+                          : "Medio"}
                     </span>
                   </div>
                   <p className="text-xs font-semibold text-foreground">{alerta.titulo}</p>
@@ -70,7 +98,8 @@ export function bitacorasNotificacionesSeccion({
                   </p>
                 </div>
               </GvNotificacionItem>
-            ))}
+              );
+            })}
           </>
         );
 

@@ -136,6 +136,10 @@ export function canViewAllBitacoras(role: string | null | undefined): boolean {
   return canManageFlota(role);
 }
 
+export function canConfirmarBitacoraDeOtros(role: string | null | undefined): boolean {
+  return canViewAllBitacoras(role);
+}
+
 export function canViewBitacoraMetricas(role: string | null | undefined): boolean {
   return canManageFlota(role);
 }

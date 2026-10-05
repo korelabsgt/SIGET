@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { estadoVehiculoConReservaFija, estadoVehiculoNormalizado } from "../flota/lib/helpers";
 import {
+  ESTADOS_FALLA_ACTIVA,
+  severidadAveriaInmovilizaFlota,
+} from "../mantenimiento/lib/helpers";
+import {
   vehiculoReservadoFlotaEnDiaCalendario,
   type SolicitudCalendarioRef,
 } from "../solicitudes/lib/calendario-reservas";
@@ -13,24 +17,27 @@ const VEHICULOS_TABLE = "ot_vehiculos";
 const FALLAS_TABLE = "ot_fallas_mantenimiento";
 const SOLICITUDES_TABLE = "ot_solicitudes";
 
-const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
 const SOLICITUDES_RESERVA_FLOTA = ["APROBADA", "EN_MISION"] as const;
 
 export async function sincronizarEstadoFlotaVehiculo(
   supabase: SupabaseServer,
   vehiculoId: string,
 ): Promise<void> {
-  const { count: fallasActivas, error: fallasError } = await supabase
+  const { data: fallasActivas, error: fallasError } = await supabase
     .from(FALLAS_TABLE)
-    .select("id", { count: "exact", head: true })
+    .select("severidad")
     .eq("vehiculo_id", vehiculoId)
-    .in("estado", [...FALLAS_ACTIVAS]);
+    .in("estado", [...ESTADOS_FALLA_ACTIVA]);
 
   if (fallasError) {
     throw new Error("No se pudieron verificar las averías del vehículo.");
   }
 
-  if ((fallasActivas ?? 0) > 0) {
+  const inmovilizaPorAveriaAlta = (fallasActivas ?? []).some((f) =>
+    severidadAveriaInmovilizaFlota(f.severidad),
+  );
+
+  if (inmovilizaPorAveriaAlta) {
     const { error } = await supabase
       .from(VEHICULOS_TABLE)
       .update({ estado: "EN_MANTENIMIENTO" })

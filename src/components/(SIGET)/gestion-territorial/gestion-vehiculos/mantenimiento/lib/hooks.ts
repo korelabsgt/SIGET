@@ -18,7 +18,7 @@ import {
   fetchVehiculos,
 } from "../../lib/client-db";
 import { GV_QUERY_OPTIONS, shareInflight } from "../../lib/query";
-import { vehiculoDisponibleParaReporteFalla } from "./helpers";
+import { listarVehiculosCatalogoFlota } from "../../flota/lib/helpers";
 
 export const FALLAS_KEY = ["ter-fallas-mantenimiento"];
 
@@ -35,15 +35,13 @@ export function useVehiculosParaFallas(enabled = true) {
     queryKey: VEHICULOS_KEY,
     queryFn: () => shareInflight("ter-vehiculos", fetchVehiculos),
     select: (vehiculos) =>
-      vehiculos
-        .filter((v) => vehiculoDisponibleParaReporteFalla(v.estado))
-        .map((v) => ({
-          id: v.id ?? "",
-          placa: v.placa,
-          marca: v.marca,
-          modelo: v.modelo,
-          estado: v.estado,
-        })),
+      listarVehiculosCatalogoFlota(vehiculos).map((v) => ({
+        id: v.id ?? "",
+        placa: v.placa,
+        marca: v.marca,
+        modelo: v.modelo,
+        estado: v.estado,
+      })),
     enabled,
     ...GV_QUERY_OPTIONS,
   });

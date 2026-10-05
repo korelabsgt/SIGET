@@ -7,8 +7,6 @@ import {
 import { sincronizarEstadoFlotaVehiculo } from "./sincronizar-estado-vehiculo";
 
 const FALLAS_TABLE = "ot_fallas_mantenimiento";
-const FALLAS_ACTIVAS = ["PENDIENTE", "EN_REPARACION"] as const;
-
 const VEHICULOS_TABLE = "ot_vehiculos";
 
 export async function aplicarMantenimientoForzadoPorKm(
@@ -35,22 +33,6 @@ export async function aplicarMantenimientoForzadoPorKm(
     return { aplicado: false, umbral: null };
   }
 
-  const { count: activas, error: activasError } = await supabase
-    .from(FALLAS_TABLE)
-    .select("id", { count: "exact", head: true })
-    .eq("vehiculo_id", params.vehiculoId)
-    .in("estado", [...FALLAS_ACTIVAS]);
-
-  if (activasError) {
-    console.error("Error verificando averías activas:", activasError);
-    return { aplicado: false, umbral: null };
-  }
-
-  if ((activas ?? 0) > 0) {
-    await sincronizarEstadoFlotaVehiculo(supabase, params.vehiculoId);
-    return { aplicado: false, umbral: null };
-  }
-
   for (const umbral of umbrales) {
     const prefix = `[SERVICIO-KM:${umbral}]`;
     const { count: existente, error: existenteError } = await supabase
@@ -68,7 +50,7 @@ export async function aplicarMantenimientoForzadoPorKm(
 
     const { error: insertError } = await supabase.from(FALLAS_TABLE).insert({
       vehiculo_id: params.vehiculoId,
-      severidad: "MEDIA",
+      severidad: "ALTA",
       descripcion: buildDescripcionFallaServicioKm(umbral),
       evidencia_url: [],
       reportado_por: params.reportadoPor,

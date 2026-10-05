@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Car, CarFront, Loader2, Plus } from "lucide";
+import { ZoomIn } from "lucide-react";
+import { GvImagenAmpliada } from "../lib/gv-imagen-ampliada";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GV_DETALLE_NESTED_CLASS } from "../lib/detalle-ui";
 import { type VehiculoRow } from "./lib/zod";
@@ -115,21 +117,26 @@ export function VehiculoGaleria({
           </div>
         ) : mostrarFoto ? (
           <>
-            <img
+            <GvImagenAmpliada
               src={fotoActiva?.src ?? ""}
               alt={
                 fotoActiva?.esTarjeta
                   ? `Tarjeta de circulación de ${vehiculo.placa}`
-                  : tituloVehiculo
+                  : `Fotografía de ${tituloVehiculo}`
               }
               onError={() => setFotoRota(true)}
-              className="size-full object-cover object-center"
+              fillParent
+              thumbClassName="absolute inset-0 size-full hover:opacity-100"
             />
             {fotoActiva?.esTarjeta ? (
-              <span className="absolute bottom-2 left-2 z-10 rounded-full bg-celeste-trifinio px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-celeste-trifinio px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                 Tarjeta de circulación
               </span>
             ) : null}
+            <span className="pointer-events-none absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+              <ZoomIn className="size-3 shrink-0" aria-hidden />
+              Ampliar
+            </span>
           </>
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-2 text-celeste-trifinio">

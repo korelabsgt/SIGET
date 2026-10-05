@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Loader2, Search, BookOpen } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -50,9 +50,12 @@ import {
   canViewBitacoraMetricas,
 } from "../lib/permissions";
 import { type BitacoraRow } from "./lib/zod";
+import { useGvPanelActionIntent } from "../lib/gv-panel-action-intent";
+import { esBitacoraPendiente } from "./lib/bitacora-estado";
 
 export function Bitacoras() {
   const gvRole = useGvPermissionRole();
+  const panelIntent = useGvPanelActionIntent();
   const canViewAll = canViewAllBitacoras(gvRole);
   const puedeVerMetricas = canViewBitacoraMetricas(gvRole);
   const puedeExportar = canExportBitacoraReporte(gvRole);
@@ -61,6 +64,7 @@ export function Bitacoras() {
   const [confirmarOpen, setConfirmarOpen] = useState(false);
   const [bitacoraAConfirmar, setBitacoraAConfirmar] = useState<BitacoraRow | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingComentarios, setIsExportingComentarios] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
   const [vehiculoFilter, setVehiculoFilter] = useState(GV_TODOS_VEHICULOS);
@@ -115,6 +119,42 @@ export function Bitacoras() {
     }
   };
 
+  const handleExportComentarios = async () => {
+    const vehiculoId =
+      vehiculoFilter === GV_TODOS_VEHICULOS ? "all" : vehiculoFilter;
+
+    setIsExportingComentarios(true);
+    try {
+      const { exportComentariosBitacoraExcel } = await import("./lib/bitacora-comentarios-excel");
+      const mesNorm = normalizarMesCalendario(periodoFilter) || mesCalendarioGt();
+      const [anioNum, mesNum] = mesNorm.split("-").map(Number);
+      const result = await exportComentariosBitacoraExcel({
+        vehiculos: vehiculosFlota,
+        vehiculoId,
+        mes: mesNum,
+        anio: anioNum,
+      });
+
+      if (result.ok) {
+        toast.success("Comentarios exportados exitosamente");
+        return;
+      }
+
+      if (result.reason === "no_data") {
+        toast.warning(
+          vehiculoId === "all"
+            ? "No hay comentarios de bitácoras confirmadas en el mes seleccionado."
+            : "No hay comentarios del vehículo seleccionado en el mes.",
+        );
+        return;
+      }
+
+      toast.error("Hubo un problema al exportar los comentarios.");
+    } finally {
+      setIsExportingComentarios(false);
+    }
+  };
+
   const bitacorasFiltradas = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return bitacoras.filter((b) => {
@@ -157,6 +197,23 @@ export function Bitacoras() {
   } = useGvTablePagination(bitacorasFiltradas, paginacionKey);
 
   useGvPanelChrome("bitacoras");
+
+  useEffect(() => {
+    const pendingId = panelIntent?.pendingBitacoraId;
+    if (!pendingId || loading) return;
+    const bitacora = bitacoras.find((b) => b.id === pendingId);
+    if (!bitacora || !esBitacoraPendiente(bitacora)) {
+      panelIntent?.clearPendingBitacora();
+      return;
+    }
+    abrirConfirmacionBitacora(bitacora);
+    panelIntent?.clearPendingBitacora();
+  }, [
+    loading,
+    bitacoras,
+    panelIntent?.pendingBitacoraId,
+    panelIntent?.clearPendingBitacora,
+  ]);
 
   const vehiculoFiltroTriggerClass = cn(
     canViewAll
@@ -237,12 +294,22 @@ export function Bitacoras() {
                   className="hidden shrink-0 lg:inline-flex"
                 />
                 {puedeExportar ? (
-                  <GvExportReporteButton
-                    onClick={handleExportReporte}
-                    disabled={loading}
-                    loading={isExporting}
-                    className="max-lg:h-11"
-                  />
+                  <>
+                    <GvExportReporteButton
+                      onClick={handleExportReporte}
+                      disabled={loading}
+                      loading={isExporting}
+                      className="max-lg:h-11 lg:w-[10.5rem]"
+                    />
+                    <GvExportReporteButton
+                      label="Comentarios"
+                      ariaLabel="Exportar comentarios de bitácoras a Excel"
+                      onClick={handleExportComentarios}
+                      disabled={loading}
+                      loading={isExportingComentarios}
+                      className="max-lg:h-11 lg:w-[10.5rem]"
+                    />
+                  </>
                 ) : null}
               </div>
             </div>

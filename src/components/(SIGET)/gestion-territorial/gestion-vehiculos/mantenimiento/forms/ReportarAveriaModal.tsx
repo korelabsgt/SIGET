@@ -277,13 +277,13 @@ export function ReportarAveriaModal({
                       </FormControl>
                       <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
                         <SelectItem value="BAJA" className={GV_MODAL_SELECT_ITEM_CLASS}>
-                          Baja (Mantenimiento menor)
+                          Baja (el vehículo sigue operativo)
                         </SelectItem>
                         <SelectItem value="MEDIA" className={GV_MODAL_SELECT_ITEM_CLASS}>
-                          Media (Revisión necesaria)
+                          Media (el vehículo sigue operativo)
                         </SelectItem>
                         <SelectItem value="ALTA" className={GV_MODAL_SELECT_ITEM_CLASS}>
-                          Alta (Inmovilizar vehículo)
+                          Alta (pasa a mantenimiento e inmoviliza)
                         </SelectItem>
                       </SelectContent>
                     </Select>

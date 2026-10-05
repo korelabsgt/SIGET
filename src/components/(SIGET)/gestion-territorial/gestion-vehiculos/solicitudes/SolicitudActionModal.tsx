@@ -51,7 +51,12 @@ import { cn } from "@/lib/utils";
 
 import { cambiarEstadoSolicitud, cancelarMisionAprobadaSolicitud } from "./lib/actions";
 
-import { ESTADOS_SOLICITUD, rechazoSolicitudComentarioSchema, type SolicitudRow } from "./lib/zod";
+import {
+  ESTADOS_SOLICITUD,
+  aprobacionSolicitudComentarioOpcionalSchema,
+  rechazoSolicitudComentarioSchema,
+  type SolicitudRow,
+} from "./lib/zod";
 
 import { formatEstadoLabel } from "./lib/helpers";
 
@@ -103,7 +108,8 @@ const ACTION_META: Record<
 
     title: "Aprobar solicitud",
 
-    description: "Asigne un vehículo disponible para confirmar la aprobación.",
+    description:
+      "Asigne un vehículo libre o reservado. Si ya tiene misión otro día, puede usarlo si las fechas de esta solicitud no coinciden.",
 
     confirmLabel: "Aprobar",
 
@@ -214,6 +220,7 @@ export function SolicitudActionModal({
 
   const [selectedVehiculo, setSelectedVehiculo] = useState("");
   const [comentarioRechazo, setComentarioRechazo] = useState("");
+  const [comentarioAprobacion, setComentarioAprobacion] = useState("");
 
   const cargarLibres = open && actionType === "APROBAR";
 
@@ -247,8 +254,18 @@ export function SolicitudActionModal({
     }
   }, [open, actionType]);
 
+  useEffect(() => {
+    if (!open || actionType !== "APROBAR") {
+      setComentarioAprobacion("");
+    }
+  }, [open, actionType]);
+
   const comentarioRechazoValido = rechazoSolicitudComentarioSchema.safeParse(
     comentarioRechazo,
+  ).success;
+
+  const comentarioAprobacionValido = aprobacionSolicitudComentarioOpcionalSchema.safeParse(
+    comentarioAprobacion,
   ).success;
 
   const vehiculoPreferido = solicitud?.vehiculo ?? null;
@@ -382,6 +399,18 @@ export function SolicitudActionModal({
 
     }
 
+    if (actionType === "APROBAR") {
+      const parsedComentario = aprobacionSolicitudComentarioOpcionalSchema.safeParse(
+        comentarioAprobacion,
+      );
+      if (!parsedComentario.success) {
+        toast.error(
+          parsedComentario.error.issues[0]?.message ?? "El comentario no es válido.",
+        );
+        return;
+      }
+    }
+
     if (actionType === "RECHAZAR") {
       const parsed = rechazoSolicitudComentarioSchema.safeParse(comentarioRechazo);
       if (!parsed.success) {
@@ -406,7 +435,10 @@ export function SolicitudActionModal({
 
         const payload =
           actionType === "APROBAR"
-            ? { vehiculo_id: selectedVehiculo }
+            ? {
+                vehiculo_id: selectedVehiculo,
+                comentarios: comentarioAprobacion,
+              }
             : {
                 comentarios: rechazoSolicitudComentarioSchema.parse(comentarioRechazo),
               };
@@ -452,7 +484,10 @@ export function SolicitudActionModal({
     solicitudEstadoInvalido ||
 
     (actionType === "APROBAR" &&
-      (loadingVehiculos || vehiculosParaAprobar.length === 0 || !selectedVehiculo)) ||
+      (loadingVehiculos ||
+        vehiculosParaAprobar.length === 0 ||
+        !selectedVehiculo ||
+        !comentarioAprobacionValido)) ||
     ((actionType === "RECHAZAR" || actionType === "CANCELAR") && !comentarioRechazoValido);
 
 
@@ -622,7 +657,7 @@ export function SolicitudActionModal({
 
                   <SelectTrigger className="h-11 w-full cursor-pointer rounded-xl border border-celeste-trifinio/30 bg-white shadow-none dark:border-zinc-600 dark:bg-zinc-800">
 
-                    <SelectValue placeholder="Seleccione un vehículo disponible" />
+                    <SelectValue placeholder="Seleccione un vehículo" />
 
                   </SelectTrigger>
 
@@ -668,6 +703,25 @@ export function SolicitudActionModal({
 
               )}
 
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comentario_aprobacion_solicitud">
+                  Comentario (opcional)
+                </Label>
+                <Textarea
+                  id="comentario_aprobacion_solicitud"
+                  rows={3}
+                  value={comentarioAprobacion}
+                  onChange={(e) => setComentarioAprobacion(e.target.value)}
+                  placeholder="Indicaciones para el solicitante o notas de la asignación…"
+                  className="resize-none bg-white dark:bg-zinc-950"
+                />
+                {!comentarioAprobacionValido && comentarioAprobacion.trim().length > 0 ? (
+                  <p className="text-xs text-red-500">
+                    Si escribe un comentario, use al menos 5 caracteres.
+                  </p>
+                ) : null}
               </div>
 
             </div>

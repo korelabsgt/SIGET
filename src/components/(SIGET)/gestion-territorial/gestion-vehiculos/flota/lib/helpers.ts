@@ -558,10 +558,11 @@ export function esVehiculoOperableParaIniciarMision(
 export function esVehiculoSeleccionableParaSolicitud(
   vehiculo: Pick<VehiculoRow, "estado">,
 ): boolean {
-  if (estadoVehiculoNormalizado(vehiculo.estado) === "RESERVA_INDIVIDUAL") {
+  const estado = estadoVehiculoNormalizado(vehiculo.estado);
+  if (estado === "RESERVA_INDIVIDUAL" || estado === "EN_MANTENIMIENTO") {
     return false;
   }
-  return esVehiculoDisponible(vehiculo);
+  return estado === "LIBRE" || estado === "DISPONIBLE" || estado === "RESERVADO";
 }
 
 export function aplicarEstadoFlotaOperativoHoy(

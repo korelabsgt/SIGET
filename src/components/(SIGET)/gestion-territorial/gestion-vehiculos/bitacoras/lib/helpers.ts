@@ -122,13 +122,6 @@ export type BitacoraAlertItem = {
   detalle: string;
 };
 
-export function bitacoraSinCombustible(bitacora: BitacoraRow): boolean {
-  if ((bitacora.km_recorrido ?? 0) <= 0) return false;
-  const monto = Number(bitacora.monto_combustible) || 0;
-  const vale = bitacora.vale_combustible?.trim();
-  return monto <= 0 && !vale;
-}
-
 export function bitacoraSinSolicitud(bitacora: BitacoraRow): boolean {
   return !bitacora.solicitud_id && (bitacora.km_recorrido ?? 0) > 0;
 }
@@ -137,17 +130,21 @@ export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[]
   const alertas: BitacoraAlertItem[] = [];
 
   for (const bitacora of bitacoras) {
-    if (esBitacoraPendiente(bitacora)) continue;
-    if (bitacoraSinCombustible(bitacora)) {
+    if (esBitacoraPendiente(bitacora)) {
       const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
+      const destino = bitacora.destino?.trim() || "Sin destino";
+      const responsable = nombreSolicitanteBitacora(bitacora);
       alertas.push({
-        id: `${bitacora.id}-combustible`,
+        id: `${bitacora.id}-pendiente`,
         bitacora,
-        severidad: (bitacora.km_recorrido ?? 0) >= 100 ? "error" : "warn",
-        titulo: "Sin combustible registrado",
-        detalle: `${placa} · ${bitacora.km_recorrido} km sin vale ni monto`,
+        severidad: "warn",
+        titulo: "Bitácora pendiente de confirmar",
+        detalle: `${placa} · ${destino}${responsable ? ` · ${responsable}` : ""}`,
       });
-    } else if (bitacoraSinSolicitud(bitacora)) {
+      continue;
+    }
+
+    if (bitacoraSinSolicitud(bitacora)) {
       const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
       alertas.push({
         id: `${bitacora.id}-solicitud`,

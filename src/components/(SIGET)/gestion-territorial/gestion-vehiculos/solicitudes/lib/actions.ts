@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import {
-  esVehiculoDisponible,
   esVehiculoOperableParaIniciarMision,
+  esVehiculoSeleccionableParaSolicitud,
 } from "../../flota/lib/helpers";
 import {
   asegurarBitacorasPendientesMisionesEnCurso,
@@ -37,6 +37,7 @@ import {
 import { formatFechaCalendarioGt, formatFechaHoraGt } from "@/lib/fechas-gt";
 import {
   type SolicitudInput,
+  aprobacionSolicitudComentarioOpcionalSchema,
   rechazoSolicitudComentarioSchema,
   solicitudInputSchema,
   type SolicitudRow,
@@ -220,11 +221,11 @@ export async function createSolicitud(input: SolicitudInput) {
       if (!vehiculo) {
         return { success: false, error: "El vehículo seleccionado no existe." };
       }
-      if (!esVehiculoDisponible(vehiculo)) {
+      if (!esVehiculoSeleccionableParaSolicitud(vehiculo)) {
         return {
           success: false,
           error:
-            "Solo puede preferir vehículos en estado Libre. Elija otro o deje sin preferencia.",
+            "No puede preferir vehículos en mantenimiento o reserva individual. Elija otro o deje sin preferencia.",
         };
       }
 
@@ -387,10 +388,11 @@ export async function cambiarEstadoSolicitud(
       }
 
       if (nuevoEstado === "APROBADA") {
-        if (!esVehiculoDisponible(vehiculo)) {
+        if (!esVehiculoSeleccionableParaSolicitud(vehiculo)) {
           return {
             success: false,
-            error: "Solo puede asignar vehículos en estado Libre. Elija otro.",
+            error:
+              "No puede asignar vehículos en mantenimiento o reserva individual. Elija otro.",
           };
         }
       } else if (!esVehiculoOperableParaIniciarMision(vehiculo)) {
@@ -449,7 +451,18 @@ export async function cambiarEstadoSolicitud(
     }
 
     if (nuevoEstado === "APROBADA") {
-      updateData.comentarios = null;
+      const parsedComentarioAprobacion = aprobacionSolicitudComentarioOpcionalSchema.safeParse(
+        payload?.comentarios ?? "",
+      );
+      if (!parsedComentarioAprobacion.success) {
+        return {
+          success: false,
+          error:
+            parsedComentarioAprobacion.error.issues[0]?.message ??
+            "El comentario de aprobación no es válido.",
+        };
+      }
+      updateData.comentarios = parsedComentarioAprobacion.data;
     }
 
     if (payload?.vehiculo_id) {

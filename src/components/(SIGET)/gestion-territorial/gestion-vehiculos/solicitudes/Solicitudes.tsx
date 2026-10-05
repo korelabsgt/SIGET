@@ -368,7 +368,7 @@ export function Solicitudes() {
                     }
                     setFormOpen(true);
                   }}
-                  className="max-lg:order-1 h-11 max-lg:h-11 max-lg:w-full lg:order-2 lg:h-9 lg:w-auto"
+                  className="max-lg:order-1 h-11 max-lg:h-11 max-lg:w-full lg:order-2 lg:h-11 lg:w-[10.5rem] lg:shrink-0"
                 />
 
                 <GvMonthPicker

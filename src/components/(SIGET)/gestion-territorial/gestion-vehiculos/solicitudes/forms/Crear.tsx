@@ -253,8 +253,12 @@ export function Crear({
 
           <div className="space-y-1.5">
             <Label>Justificación de la Misión</Label>
+            <p className="text-xs text-muted-foreground">
+              Indique el motivo del viaje. Si la misión abarca más de un día, menciónelo en la
+              justificación.
+            </p>
             <Textarea
-              placeholder="Detalle el motivo del viaje..."
+              placeholder="Detalle el motivo del viaje e indique si la misión es de más de un día..."
               {...register("justificacion")}
               rows={2}
             />

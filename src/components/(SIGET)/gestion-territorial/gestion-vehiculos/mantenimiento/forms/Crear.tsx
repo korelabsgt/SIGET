@@ -25,8 +25,8 @@ export function Crear({ compact = false }: { compact?: boolean }) {
         morphTo={OctagonAlert}
         onClick={() => setOpen(true)}
         className={cn(
-          "h-11 shrink-0 max-lg:w-full lg:h-9 lg:w-auto",
-          compact && "lg:px-3",
+          "h-11 shrink-0 max-lg:w-full lg:h-11",
+          compact ? "lg:w-[9.75rem]" : "lg:w-[10.5rem]",
         )}
       />
 

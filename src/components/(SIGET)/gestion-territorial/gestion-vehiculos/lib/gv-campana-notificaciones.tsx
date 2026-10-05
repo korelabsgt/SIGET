@@ -52,7 +52,7 @@ function metaCampanaVista(
       return {
         titulo: "Alertas de bitácoras",
         ariaBase: "Alertas de bitácoras",
-        vacio: "No hay viajes con datos incompletos ni pendientes de revisión.",
+        vacio: "No hay bitácoras pendientes de confirmar ni otras alertas.",
       };
     case "mantenimiento":
       return {
@@ -111,9 +111,12 @@ export function GvCampanaNotificaciones() {
       })
     : { total: 0, criticas: 0, key: "", content: null };
 
-  const bitacorasSeccion = puedeVerGestion
-    ? bitacorasNotificacionesSeccion({ bitacoras })
-    : SECCION_VACIA;
+  const bitacorasSeccion = bitacorasNotificacionesSeccion({
+    bitacoras,
+    onAbrirPendiente: (bitacora) => {
+      panelIntent?.openBitacoraPendiente(bitacora.id);
+    },
+  });
 
   const activa: GvNotificacionesSeccion = (() => {
     switch (section) {
@@ -122,7 +125,7 @@ export function GvCampanaNotificaciones() {
       case "flota":
         return puedeVerGestion ? flotaSeccion : SECCION_VACIA;
       case "bitacoras":
-        return puedeVerGestion ? bitacorasSeccion : SECCION_VACIA;
+        return bitacorasSeccion;
       case "mantenimiento":
         return puedeVerGestion ? mantenimientoSeccion : SECCION_VACIA;
       default:
