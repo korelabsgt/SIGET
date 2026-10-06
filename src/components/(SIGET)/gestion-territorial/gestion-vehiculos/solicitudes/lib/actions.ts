@@ -515,7 +515,6 @@ export async function cambiarEstadoSolicitud(
           id: data.id,
           destino: data.destino,
           vehiculo_id: data.vehiculo_id,
-          piloto: actual.piloto,
           solicitante_id: data.solicitante_id ?? actual.solicitante_id,
         });
       } catch (bitacoraErr) {
