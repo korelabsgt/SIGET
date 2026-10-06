@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { parseFechaHoraManualToIso } from "../../lib/fechas-input";
+import { parseFechaManualGt } from "@/lib/fechas-gt";
 import {
-  esMinutoCuartoSolicitud,
-  validarFechaInicioMisionNoAnteriorAHoyGt,
-} from "./calendario-reservas";
-import { partesFechaHoraGt } from "@/lib/fechas-gt";
+  parseFechaManualToIsoGtFinDia,
+  parseFechaManualToIsoGtInicioDia,
+} from "../../lib/fechas-input";
+import { validarFechasMisionSoloDiaCalendarioGt } from "./calendario-reservas";
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",
@@ -14,35 +14,34 @@ export const ESTADOS_SOLICITUD = [
   "FINALIZADA",
 ] as const;
 
-const fechaHoraManual = (requerido: string) =>
+const fechaManualSolicitud = (requerido: string, modo: "inicio" | "fin") =>
   z
     .string()
     .trim()
     .min(1, requerido)
     .superRefine((val, ctx) => {
-      const iso = parseFechaHoraManualToIso(val);
-      if (!iso) {
+      if (!parseFechaManualGt(val)) {
         ctx.addIssue({
           code: "custom",
-          message: "Fecha inválida. Escriba DD/MM/AAAA HH:mm",
-        });
-        return;
-      }
-      const { minute } = partesFechaHoraGt(new Date(iso));
-      if (!esMinutoCuartoSolicitud(minute)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Los minutos deben ser 00, 15, 30 o 45",
+          message: "Fecha inválida. Escriba DD/MM/AAAA",
         });
       }
     })
-    .transform((val) => parseFechaHoraManualToIso(val));
+    .transform((val) =>
+      modo === "inicio"
+        ? parseFechaManualToIsoGtInicioDia(val)
+        : parseFechaManualToIsoGtFinDia(val),
+    );
 
 export const PILOTO_MODO = ["solicitante", "otro"] as const;
 
 export const solicitudInputSchema = z
   .object({
-    fecha_inicio: fechaHoraManual("La fecha de inicio es requerida"),
+    fecha_inicio: fechaManualSolicitud("La fecha de salida es requerida", "inicio"),
+    fecha_fin_estimada: fechaManualSolicitud(
+      "La fecha estimada de retorno es requerida",
+      "fin",
+    ),
     destino: z.string().min(3, "El destino debe tener al menos 3 caracteres"),
     justificacion: z.string().min(10, "La justificación debe ser detallada (min 10 caracteres)"),
     pasajeros: z.string().optional(),
@@ -52,7 +51,10 @@ export const solicitudInputSchema = z
     solicitante_id: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    const fechas = validarFechaInicioMisionNoAnteriorAHoyGt(data.fecha_inicio);
+    const fechas = validarFechasMisionSoloDiaCalendarioGt(
+      data.fecha_inicio,
+      data.fecha_fin_estimada,
+    );
     if (!fechas.ok) {
       ctx.addIssue({
         code: "custom",

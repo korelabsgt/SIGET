@@ -189,6 +189,22 @@ export function fechaManualToTimestamptz(
   return iso ? `${iso}T12:00:00.000Z` : null;
 }
 
+export function parseFechaManualToIsoGtInicioDia(
+  value: string | null | undefined,
+): string {
+  if (!value?.trim()) return "";
+  const iso = parseFechaManualGt(value.trim());
+  return iso ? `${iso}T00:00:00-06:00` : "";
+}
+
+export function parseFechaManualToIsoGtFinDia(
+  value: string | null | undefined,
+): string {
+  if (!value?.trim()) return "";
+  const iso = parseFechaManualGt(value.trim());
+  return iso ? `${iso}T23:59:00-06:00` : "";
+}
+
 export function parseFechaHoraManualToIso(
   value: string | null | undefined,
 ): string {

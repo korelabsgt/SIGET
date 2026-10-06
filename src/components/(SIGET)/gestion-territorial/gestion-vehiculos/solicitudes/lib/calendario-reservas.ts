@@ -113,6 +113,47 @@ export function esRetornoMisionPendiente(
   return fin <= inicio;
 }
 
+export function validarFechasMisionSoloDiaCalendarioGt(
+  fechaInicioIso: string,
+  fechaFinIso: string,
+):
+  | { ok: true }
+  | {
+      ok: false;
+      path: "fecha_inicio" | "fecha_fin_estimada";
+      message: string;
+    } {
+  const hoy = fechaCalendarioGt();
+  const diaInicio = fechaCalendarioDesdeIso(fechaInicioIso);
+  const diaFin = fechaCalendarioDesdeIso(fechaFinIso);
+
+  if (!diaInicio || diaInicio < hoy) {
+    return {
+      ok: false,
+      path: "fecha_inicio",
+      message: "La fecha de salida no puede ser anterior a hoy.",
+    };
+  }
+
+  if (!diaFin || diaFin < hoy) {
+    return {
+      ok: false,
+      path: "fecha_fin_estimada",
+      message: "La fecha estimada de retorno no puede ser anterior a hoy.",
+    };
+  }
+
+  if (!diaInicio || !diaFin || diaFin < diaInicio) {
+    return {
+      ok: false,
+      path: "fecha_fin_estimada",
+      message: "El retorno estimado no puede ser anterior a la fecha de salida.",
+    };
+  }
+
+  return { ok: true };
+}
+
 export function validarFechaInicioMisionNoAnteriorAHoyGt(fechaInicioIso: string):
   | { ok: true }
   | {

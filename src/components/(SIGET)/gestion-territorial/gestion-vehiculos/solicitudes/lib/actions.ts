@@ -26,15 +26,23 @@ import {
   fetchBitacoraPendienteBloqueos,
   mensajeBloqueoNuevaSolicitudVehiculo,
 } from "../../lib/bitacora-pendiente-bloqueo";
-import { COMENTARIO_PREFIJO_MISION_CANCELADA, formatEstadoLabel } from "./helpers";
+import {
+  COMENTARIO_PREFIJO_MISION_CANCELADA,
+  formatEstadoLabel,
+  formatFechaSolicitudGv,
+} from "./helpers";
 import {
   esRetornoMisionPendiente,
-  fechaFinEstimadaPendienteDesdeInicio,
+  validarFechasMisionSoloDiaCalendarioGt,
   findConflictoDiaVehiculo,
-  validarFechaInicioMisionNoAnteriorAHoyGt,
   type SolicitudCalendarioRef,
 } from "./calendario-reservas";
-import { formatFechaCalendarioGt, formatFechaHoraGt } from "@/lib/fechas-gt";
+import {
+  mapaConflictosPreferenciaVehiculo,
+  type ConflictoPreferenciaVehiculo,
+  type SolicitudCalendarioConSolicitante,
+} from "./preferencia-vehiculo";
+import { formatFechaCalendarioGt } from "@/lib/fechas-gt";
 import {
   type SolicitudInput,
   aprobacionSolicitudComentarioOpcionalSchema,
@@ -66,6 +74,53 @@ async function fetchSolicitudesCalendario(
   return (data ?? []) as SolicitudCalendarioRef[];
 }
 
+async function fetchSolicitudesCalendarioConSolicitante(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<SolicitudCalendarioConSolicitante[]> {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select(
+      "id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, solicitante:profiles!solicitante_id(nombre, email)",
+    )
+    .in("estado", [...ESTADOS_CALENDARIO])
+    .not("vehiculo_id", "is", null);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SolicitudCalendarioConSolicitante[];
+}
+
+export async function getConflictosPreferenciaVehiculo(
+  fechaInicioIso: string,
+  fechaFinIso: string,
+): Promise<Record<string, ConflictoPreferenciaVehiculo>> {
+  try {
+    await requireAuth();
+
+    const fechas = validarFechasMisionSoloDiaCalendarioGt(fechaInicioIso, fechaFinIso);
+    if (!fechas.ok) return {};
+
+    const admin = createAdminClient();
+    const { data: vehiculos, error: vehiculosError } = await admin
+      .from("ot_vehiculos")
+      .select("id, estado")
+      .order("placa", { ascending: true });
+
+    if (vehiculosError) throw vehiculosError;
+
+    const ids = (vehiculos ?? [])
+      .filter((row) => typeof row.id === "string" && esVehiculoSeleccionableParaSolicitud(row))
+      .map((row) => row.id as string);
+
+    if (ids.length === 0) return {};
+
+    const solicitudes = await fetchSolicitudesCalendarioConSolicitante(admin);
+    return mapaConflictosPreferenciaVehiculo(ids, fechaInicioIso, fechaFinIso, solicitudes);
+  } catch (error) {
+    console.error("getConflictosPreferenciaVehiculo:", error);
+    return {};
+  }
+}
+
 function mensajeConflictoDiaVehiculo(
   dia: string,
   estado?: SolicitudCalendarioRef["estado"],
@@ -78,8 +133,8 @@ function mensajeConflictoDiaVehiculo(
   });
   const rangoBloqueo = bloqueo
     ? esRetornoMisionPendiente(bloqueo.fecha_inicio, bloqueo.fecha_fin_estimada)
-      ? ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)})`
-      : ` (salida ${formatFechaHoraGt(bloqueo.fecha_inicio)}, retorno ${formatFechaHoraGt(bloqueo.fecha_fin_estimada)})`
+      ? ` (salida ${formatFechaSolicitudGv(bloqueo.fecha_inicio)})`
+      : ` (salida ${formatFechaSolicitudGv(bloqueo.fecha_inicio)}, retorno ${formatFechaSolicitudGv(bloqueo.fecha_fin_estimada)})`
     : "";
 
   if (estado === "APROBADA") {
@@ -152,18 +207,24 @@ export async function createSolicitud(input: SolicitudInput) {
 
     const parsed = solicitudInputSchema.parse(input);
 
-    const { vehiculo_id, piloto_modo, piloto_id, solicitante_id, ...rest } = parsed;
+    const {
+      vehiculo_id,
+      piloto_modo,
+      piloto_id,
+      solicitante_id,
+      fecha_inicio,
+      fecha_fin_estimada,
+      ...rest
+    } = parsed;
 
     const puedeElegirSolicitante = canElegirSolicitanteAlCrearSolicitudVehiculo(role);
     const solicitanteIdSolicitado = solicitante_id?.trim() || user.id;
     const solicitanteId = puedeElegirSolicitante ? solicitanteIdSolicitado : user.id;
 
-    const fechasHoy = validarFechaInicioMisionNoAnteriorAHoyGt(rest.fecha_inicio);
-    if (!fechasHoy.ok) {
-      return { success: false, error: fechasHoy.message };
+    const fechas = validarFechasMisionSoloDiaCalendarioGt(fecha_inicio, fecha_fin_estimada);
+    if (!fechas.ok) {
+      return { success: false, error: fechas.message };
     }
-
-    const fecha_fin_estimada = fechaFinEstimadaPendienteDesdeInicio(rest.fecha_inicio);
 
     const supabase = await createClient();
 
@@ -233,7 +294,7 @@ export async function createSolicitud(input: SolicitudInput) {
       const conflicto = findConflictoDiaVehiculo(
         {
           vehiculo_id,
-          fecha_inicio: rest.fecha_inicio,
+          fecha_inicio,
           fecha_fin_estimada,
         },
         calendario,
@@ -252,7 +313,7 @@ export async function createSolicitud(input: SolicitudInput) {
         {
           solicitante_id: solicitanteId,
           vehiculo_id: vehiculo_id || null,
-          fecha_inicio: rest.fecha_inicio,
+          fecha_inicio,
           fecha_fin_estimada,
           destino: rest.destino,
           justificacion: rest.justificacion,

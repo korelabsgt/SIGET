@@ -1,6 +1,7 @@
 import { differenceInMinutes } from "date-fns";
+import { formatFechaManualGt } from "@/lib/fechas-gt";
 import { formatFechaHoraGv } from "../../lib/gv-fechas";
-import { esRetornoMisionPendiente } from "./calendario-reservas";
+import { esRetornoMisionPendiente, fechaCalendarioDesdeIso } from "./calendario-reservas";
 import { type SolicitudRow } from "./zod";
 
 export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
@@ -43,6 +44,13 @@ export function nombrePilotoSolicitud(
   return solicitud.solicitante?.nombre?.trim() || "No especificado";
 }
 
+export function formatFechaSolicitudGv(iso: string): string {
+  const dia = fechaCalendarioDesdeIso(iso);
+  if (!dia) return formatFechaHoraGv(iso);
+  const manual = formatFechaManualGt(dia);
+  return manual || dia;
+}
+
 export function retornoMisionRegistrado(
   solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio" | "fecha_fin_estimada">,
 ): boolean {
@@ -53,8 +61,16 @@ export function retornoMisionRegistrado(
 export function textoRetornoMision(
   solicitud: Pick<SolicitudRow, "estado" | "fecha_inicio" | "fecha_fin_estimada">,
 ): string {
-  if (!retornoMisionRegistrado(solicitud)) return "Pendiente";
-  return formatFechaHoraGv(solicitud.fecha_fin_estimada);
+  if (esRetornoMisionPendiente(solicitud.fecha_inicio, solicitud.fecha_fin_estimada)) {
+    return "Pendiente";
+  }
+  return formatFechaSolicitudGv(solicitud.fecha_fin_estimada);
+}
+
+export function textoSalidaMision(
+  solicitud: Pick<SolicitudRow, "fecha_inicio">,
+): string {
+  return formatFechaSolicitudGv(solicitud.fecha_inicio);
 }
 
 export function textoDuracionMision(

@@ -21,6 +21,7 @@ import {
   estadoBadgeClass,
   textoDuracionMision,
   textoRetornoMision,
+  textoSalidaMision,
   formatEstadoLabel,
   nombrePilotoSolicitud,
 } from "./lib/helpers";
@@ -306,7 +307,7 @@ function AccionesSolicitud({
           )}
         >
           Podrá iniciar la misión a partir del{" "}
-          <span className="font-bold">{formatFechaHoraGv(solicitud.fecha_inicio)}</span>.
+          <span className="font-bold">{textoSalidaMision(solicitud)}</span>.
         </p>
       ) : null;
 
@@ -422,7 +423,7 @@ function ContenidoDetalle({
         {tieneAcciones ? <div>{acciones}</div> : null}
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <StatResumen label="Salida" value={formatFechaHoraGv(solicitud.fecha_inicio)} />
+          <StatResumen label="Salida" value={textoSalidaMision(solicitud)} />
           <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
           <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
         </div>
@@ -471,7 +472,7 @@ function ContenidoDetalle({
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <StatResumen label="Salida" value={formatFechaHoraGv(solicitud.fecha_inicio)} />
+        <StatResumen label="Salida" value={textoSalidaMision(solicitud)} />
         <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
         <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
       </div>

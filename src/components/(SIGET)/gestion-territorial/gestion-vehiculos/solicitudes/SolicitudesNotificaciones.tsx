@@ -4,7 +4,7 @@ import { CalendarClock, Clock } from "lucide";
 import { AlertTriangle, Play } from "lucide-react";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { GvNotificacionItem, type GvNotificacionesSeccion } from "../lib/gv-notificaciones-ui";
-import { formatFechaHoraGv } from "../lib/gv-fechas";
+import { textoSalidaMision } from "./lib/helpers";
 import { cn } from "@/lib/utils";
 import {
   solicitudMisionAprobadaSinIniciarVencida,
@@ -89,7 +89,7 @@ function SolicitudNotificacionFila({
             vencida ? "font-semibold text-red-600 dark:text-red-400" : "text-muted-foreground",
           )}
         >
-          Salida programada: {formatFechaHoraGv(solicitud.fecha_inicio)}
+          Salida programada: {textoSalidaMision(solicitud)}
         </p>
       </div>
     </GvNotificacionItem>

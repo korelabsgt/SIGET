@@ -3,7 +3,7 @@
 import { ArrowRight, Car, CarFront, Eye, MapPin, MapPinned } from "lucide";
 import { GvSigetActionButton, sigetAccent } from "../lib/gv-siget-action-button";
 import { GvMorphIcon } from "../lib/morph-icon";
-import { formatFechaHoraGv } from "../lib/gv-fechas";
+import { textoSalidaMision } from "./lib/helpers";
 import {
   GvMobileRecordBadge,
   GvMobileRecordFooter,
@@ -84,7 +84,7 @@ export function SolicitudCard({
         left={
           <>
             <span className="tabular-nums font-semibold text-foreground">
-              {formatFechaHoraGv(solicitud.fecha_inicio)}
+              {textoSalidaMision(solicitud)}
             </span>
           </>
         }

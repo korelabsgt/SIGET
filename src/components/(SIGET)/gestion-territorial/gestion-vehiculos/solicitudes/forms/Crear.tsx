@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
@@ -33,9 +33,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { solicitudInputSchema, type SolicitudInput } from "../lib/zod";
-import { useCrearSolicitud, useVehiculosParaSolicitud } from "../lib/hooks";
+import {
+  useConflictosPreferenciaVehiculo,
+  useCrearSolicitud,
+  useVehiculosParaSolicitud,
+} from "../lib/hooks";
+import { validarFechasMisionSoloDiaCalendarioGt } from "../lib/calendario-reservas";
+import { mensajeVehiculoYaReservado } from "../lib/preferencia-vehiculo";
 import { formatVehiculoOpcion } from "../../flota/lib/helpers";
-import { GvFechaHoraPickerInput } from "../../lib/gv-fecha-input";
+import { GvFechaInput } from "../../lib/gv-fecha-input";
+import {
+  parseFechaManualToIsoGtFinDia,
+  parseFechaManualToIsoGtInicioDia,
+} from "../../lib/fechas-input";
+import { cn } from "@/lib/utils";
 import {
   mensajeBloqueoNuevaSolicitudVehiculo,
 } from "../../lib/bitacora-pendiente-bloqueo";
@@ -73,11 +84,13 @@ export function Crear({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SolicitudInput>({
     resolver: zodResolver(solicitudInputSchema) as never,
     defaultValues: {
       fecha_inicio: "",
+      fecha_fin_estimada: "",
       destino: "",
       justificacion: "",
       pasajeros: "",
@@ -90,7 +103,31 @@ export function Crear({
 
   const pilotoModo = watch("piloto_modo");
   const solicitanteId = watch("solicitante_id") || user?.id || "";
+  const fechaInicioManual = watch("fecha_inicio");
+  const fechaFinManual = watch("fecha_fin_estimada");
+  const vehiculoPreferidoId = watch("vehiculo_id");
   const solicitanteEsUsuarioActual = Boolean(user?.id && solicitanteId === user.id);
+
+  const rangoMisionIso = useMemo(() => {
+    const inicio = parseFechaManualToIsoGtInicioDia(fechaInicioManual);
+    const fin = parseFechaManualToIsoGtFinDia(fechaFinManual);
+    if (!inicio || !fin) return null;
+    const validacion = validarFechasMisionSoloDiaCalendarioGt(inicio, fin);
+    if (!validacion.ok) return null;
+    return { inicio, fin };
+  }, [fechaInicioManual, fechaFinManual]);
+
+  const { data: conflictosPreferencia = {} } = useConflictosPreferenciaVehiculo(
+    rangoMisionIso?.inicio ?? "",
+    rangoMisionIso?.fin ?? "",
+    open,
+  );
+
+  useEffect(() => {
+    const id = vehiculoPreferidoId?.trim();
+    if (!id || !conflictosPreferencia[id]) return;
+    setValue("vehiculo_id", "");
+  }, [vehiculoPreferidoId, conflictosPreferencia, setValue]);
 
   const { data: bloqueos } = useQuery({
     queryKey: ["gv-bitacora-pendiente-bloqueos", solicitanteId],
@@ -104,6 +141,7 @@ export function Crear({
     if (open) {
       reset({
         fecha_inicio: "",
+        fecha_fin_estimada: "",
         destino: "",
         justificacion: "",
         pasajeros: "",
@@ -180,16 +218,21 @@ export function Crear({
             ) : null}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="fecha_inicio">Fecha y Hora de Inicio</Label>
-            <GvFechaHoraPickerInput
-              id="fecha_inicio"
-              solicitudNoPasadaGt
-              {...register("fecha_inicio")}
-            />
-            {errors.fecha_inicio && (
-              <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="fecha_inicio">Fecha de salida</Label>
+              <GvFechaInput id="fecha_inicio" {...register("fecha_inicio")} />
+              {errors.fecha_inicio ? (
+                <p className="text-xs text-red-500">{errors.fecha_inicio.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fecha_fin_estimada">Fecha estimada de retorno</Label>
+              <GvFechaInput id="fecha_fin_estimada" {...register("fecha_fin_estimada")} />
+              {errors.fecha_fin_estimada ? (
+                <p className="text-xs text-red-500">{errors.fecha_fin_estimada.message}</p>
+              ) : null}
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -254,11 +297,10 @@ export function Crear({
           <div className="space-y-1.5">
             <Label>Justificación de la Misión</Label>
             <p className="text-xs text-muted-foreground">
-              Indique el motivo del viaje. Si la misión abarca más de un día, menciónelo en la
-              justificación.
+              Indique el motivo del viaje y cualquier detalle relevante para la aprobación.
             </p>
             <Textarea
-              placeholder="Detalle el motivo del viaje e indique si la misión es de más de un día..."
+              placeholder="Detalle el motivo del viaje..."
               {...register("justificacion")}
               rows={2}
             />
@@ -272,6 +314,10 @@ export function Crear({
               <Car className="size-3.5" />
               Vehículo preferido (Opcional)
             </Label>
+            <p className="text-xs text-muted-foreground">
+              Se listan vehículos libres y reservados. La disponibilidad se revisa entre la fecha
+              de salida y la fecha estimada de retorno.
+            </p>
             <Controller
               control={control}
               name="vehiculo_id"
@@ -293,15 +339,34 @@ export function Crear({
                       Sin preferencia de vehículo
                     </SelectItem>
                     {vehiculosBase.filter((v) => v.id).map((v) => {
+                      const id = v.id as string;
                       const label = formatVehiculoOpcion(v);
+                      const conflicto = rangoMisionIso
+                        ? conflictosPreferencia[id]
+                        : undefined;
+                      const bloqueado = Boolean(conflicto);
+                      const itemLabel = bloqueado
+                        ? `${label} — ${mensajeVehiculoYaReservado(conflicto!.solicitanteNombre)}`
+                        : label;
                       return (
                         <SelectItem
-                          key={v.id}
-                          value={v.id as string}
-                          textValue={label}
-                          className={selectItemClass}
+                          key={id}
+                          value={id}
+                          textValue={itemLabel}
+                          disabled={bloqueado}
+                          className={cn(
+                            selectItemClass,
+                            bloqueado && "cursor-not-allowed opacity-60",
+                          )}
                         >
-                          {label}
+                          <span className="block text-left">
+                            <span className="block">{label}</span>
+                            {bloqueado ? (
+                              <span className="mt-0.5 block text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                                {mensajeVehiculoYaReservado(conflicto!.solicitanteNombre)}
+                              </span>
+                            ) : null}
+                          </span>
                         </SelectItem>
                       );
                     })}

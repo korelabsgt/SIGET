@@ -12,7 +12,7 @@ import { fetchVehiculosDisponibles } from "../../lib/client-db";
 
 import { VEHICULOS_KEY } from "../../flota/lib/hooks";
 
-import { createSolicitud, getSolicitudes } from "./actions";
+import { createSolicitud, getConflictosPreferenciaVehiculo, getSolicitudes } from "./actions";
 
 import type { SolicitudInput } from "./zod";
 
@@ -74,6 +74,28 @@ export function useVehiculosParaSolicitud(enabled: boolean) {
 
 
 
+export function useConflictosPreferenciaVehiculo(
+  fechaInicioIso: string,
+  fechaFinIso: string,
+  enabled: boolean,
+) {
+  const listo =
+    enabled && fechaInicioIso.length > 0 && fechaFinIso.length > 0;
+
+  return useQuery({
+    queryKey: [
+      "gv-conflictos-preferencia-vehiculo",
+      fechaInicioIso,
+      fechaFinIso,
+    ],
+    queryFn: () =>
+      getConflictosPreferenciaVehiculo(fechaInicioIso, fechaFinIso),
+    enabled: listo,
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 export function useCrearSolicitud() {
 
   const qc = useQueryClient();
@@ -89,6 +111,7 @@ export function useCrearSolicitud() {
       qc.invalidateQueries({ queryKey: SOLICITUDES_KEY });
 
       qc.invalidateQueries({ queryKey: VEHICULOS_DISPONIBLES_KEY });
+      qc.invalidateQueries({ queryKey: ["gv-conflictos-preferencia-vehiculo"] });
 
       qc.invalidateQueries({ queryKey: VEHICULOS_KEY, refetchType: "all" });
 

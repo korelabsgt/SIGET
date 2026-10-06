@@ -15,7 +15,7 @@ import {
 } from "../lib/table-ui";
 import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import { cn } from "@/lib/utils";
-import { formatFechaHoraGv } from "../lib/gv-fechas";
+import { textoSalidaMision } from "./lib/helpers";
 import { estadoBadgeClass, formatEstadoLabel } from "./lib/helpers";
 
 function SolicitudListRow({
@@ -39,7 +39,7 @@ function SolicitudListRow({
       </td>
       <td className={gvTableBodyTdClass}>
         <p className="text-sm font-bold tabular-nums text-foreground">
-          {formatFechaHoraGv(solicitud.fecha_inicio)}
+          {textoSalidaMision(solicitud)}
         </p>
       </td>
       <td className={cn(gvTableBodyTdClass, "whitespace-nowrap")}>
