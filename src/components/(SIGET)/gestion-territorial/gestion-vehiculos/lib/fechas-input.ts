@@ -205,6 +205,23 @@ export function parseFechaManualToIsoGtFinDia(
   return iso ? `${iso}T23:59:00-06:00` : "";
 }
 
+export function coerceFechaSolicitudIsoGt(
+  value: string | null | undefined,
+  modo: "inicio" | "fin",
+): string {
+  const t = value?.trim() ?? "";
+  if (!t) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
+    const ms = new Date(t).getTime();
+    return Number.isNaN(ms) ? "" : t;
+  }
+
+  return modo === "inicio"
+    ? parseFechaManualToIsoGtInicioDia(t)
+    : parseFechaManualToIsoGtFinDia(t);
+}
+
 export function parseFechaHoraManualToIso(
   value: string | null | undefined,
 ): string {

@@ -1,9 +1,5 @@
 import { z } from "zod";
-import { parseFechaManualGt } from "@/lib/fechas-gt";
-import {
-  parseFechaManualToIsoGtFinDia,
-  parseFechaManualToIsoGtInicioDia,
-} from "../../lib/fechas-input";
+import { coerceFechaSolicitudIsoGt } from "../../lib/fechas-input";
 import { validarFechasMisionSoloDiaCalendarioGt } from "./calendario-reservas";
 
 export const ESTADOS_SOLICITUD = [
@@ -20,18 +16,14 @@ const fechaManualSolicitud = (requerido: string, modo: "inicio" | "fin") =>
     .trim()
     .min(1, requerido)
     .superRefine((val, ctx) => {
-      if (!parseFechaManualGt(val)) {
+      if (!coerceFechaSolicitudIsoGt(val, modo)) {
         ctx.addIssue({
           code: "custom",
           message: "Fecha inválida. Escriba DD/MM/AAAA",
         });
       }
     })
-    .transform((val) =>
-      modo === "inicio"
-        ? parseFechaManualToIsoGtInicioDia(val)
-        : parseFechaManualToIsoGtFinDia(val),
-    );
+    .transform((val) => coerceFechaSolicitudIsoGt(val, modo));
 
 export const PILOTO_MODO = ["solicitante", "otro"] as const;
 

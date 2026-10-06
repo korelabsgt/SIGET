@@ -205,7 +205,15 @@ export async function createSolicitud(input: SolicitudInput) {
   try {
     const { user, role } = await requireAuth();
 
-    const parsed = solicitudInputSchema.parse(input);
+    const parsedResult = solicitudInputSchema.safeParse(input);
+    if (!parsedResult.success) {
+      const issue = parsedResult.error.issues[0];
+      return {
+        success: false,
+        error: issue?.message ?? "Revise los datos de la solicitud.",
+      };
+    }
+    const parsed = parsedResult.data;
 
     const {
       vehiculo_id,
