@@ -28,6 +28,26 @@ export function formatValeLoteFecha(value: string): string {
   return formatFechaHoraGv(value);
 }
 
+export function valeLoteCoincideBusqueda(row: ValeLoteRow, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const candidatos = [
+    formatFondoLabel(row.fondo),
+    formatDenominacion(row.denominacion),
+    formatRangoCupones(row.cupon_del, row.cupon_al),
+    String(row.cupon_del),
+    String(row.cupon_al),
+    String(row.disponibles),
+    String(row.cantidad),
+    row.ultimo_entregado != null ? String(row.ultimo_entregado) : "",
+    formatValeLoteFecha(row.created_at),
+    formatValeLoteResumen(row),
+  ];
+
+  return candidatos.some((texto) => texto.toLowerCase().includes(q));
+}
+
 export function cuponesDisponiblesVale(row: ValeLoteRow): number {
   return Math.max(0, row.disponibles);
 }

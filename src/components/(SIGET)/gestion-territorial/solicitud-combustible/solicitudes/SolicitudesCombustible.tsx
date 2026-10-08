@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Car, CarFront, CirclePlus, Loader2, Plus } from "lucide";
+import { Car, CarFront, CirclePlus, Loader2, Plus, ScanSearch, Search } from "lucide";
 import { toast } from "react-toastify";
 
 import {
@@ -16,12 +16,14 @@ import {
   GV_TABLE_BODY_CENTER_CLASS,
   GV_TABLE_RECORD_SCROLL,
 } from "../../gestion-vehiculos/lib/table-ui";
-import { GvTabFilter } from "../../gestion-vehiculos/lib/gv-tab-filter";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
+import { GvToolbarSelect } from "../../gestion-vehiculos/lib/gv-toolbar-select";
 import { GvMorphIcon } from "../../gestion-vehiculos/lib/morph-icon";
 import {
   GV_FILTRO_FIELD_CLASS,
+  GV_TABLE_SEARCH_INPUT_CLASS,
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+  GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
   GV_TABLE_TOOLBAR_PRIMARY_CLASS,
   GV_TABLE_TOOLBAR_ROW_CLASS,
   GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
@@ -56,16 +58,18 @@ import { ResolverSolicitudCombustibleModal } from "./forms/ResolverModal";
 import { useSolicitudesCombustible } from "./lib/hooks";
 import { useBitacoraPendienteBloqueos } from "../../gestion-vehiculos/lib/bitacora-pendiente-hooks";
 import { mensajeBloqueoNuevaSolicitudCombustible } from "../../gestion-vehiculos/lib/bitacora-pendiente-bloqueo";
+import { solicitudCombustibleCoincideBusqueda } from "./lib/helpers";
 import type { SolicitudCombustibleRow } from "./lib/zod";
 
-const TABS = ["TODAS", "PENDIENTES", "RECHAZADAS"] as const;
-type TabSolicitudCombustible = (typeof TABS)[number];
+const ESTADO_FILTROS = ["TODAS", "PENDIENTES", "APROBADAS", "RECHAZADAS"] as const;
+type EstadoFiltroSolicitudCombustible = (typeof ESTADO_FILTROS)[number];
 
-const TAB_OPTIONS = TABS.map((tab) => ({
-  value: tab,
-  label:
-    tab === "TODAS" ? "Todas" : tab === "PENDIENTES" ? "Pendientes" : "Rechazadas",
-}));
+const ESTADO_FILTRO_LABELS: Record<EstadoFiltroSolicitudCombustible, string> = {
+  TODAS: "Todas",
+  PENDIENTES: "Pendientes",
+  APROBADAS: "Aprobadas",
+  RECHAZADAS: "Rechazadas",
+};
 
 const filtroTriggerClass = cn(
   GV_FILTRO_FIELD_CLASS,
@@ -101,7 +105,8 @@ export function SolicitudesCombustible() {
     [vehiculosFlota],
   );
 
-  const [tabActiva, setTabActiva] = useState<TabSolicitudCombustible>("TODAS");
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltroSolicitudCombustible>("TODAS");
+  const [searchQuery, setSearchQuery] = useState("");
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
   const [vehiculoFilter, setVehiculoFilter] = useState(TODOS_VEHICULOS_REQUISICION);
   const [formOpen, setFormOpen] = useState(false);
@@ -130,14 +135,14 @@ export function SolicitudesCombustible() {
       vehiculoFilter,
     );
     return porPeriodoYVehiculo.filter((row) => {
-      if (tabActiva === "TODAS") return true;
-      if (tabActiva === "PENDIENTES") return row.estado === "PENDIENTE";
-      if (tabActiva === "RECHAZADAS") return row.estado === "RECHAZADO";
-      return true;
+      if (estadoFiltro === "PENDIENTES" && row.estado !== "PENDIENTE") return false;
+      if (estadoFiltro === "APROBADAS" && row.estado !== "APROBADO") return false;
+      if (estadoFiltro === "RECHAZADAS" && row.estado !== "RECHAZADO") return false;
+      return solicitudCombustibleCoincideBusqueda(row, searchQuery);
     });
-  }, [solicitudes, tabActiva, periodoFilter, vehiculoFilter]);
+  }, [solicitudes, estadoFiltro, periodoFilter, vehiculoFilter, searchQuery]);
 
-  const paginacionKey = `${tabActiva}|${periodoFilter}|${vehiculoFilter}`;
+  const paginacionKey = `${estadoFiltro}|${periodoFilter}|${vehiculoFilter}|${searchQuery}`;
 
   const {
     pageItems,
@@ -148,8 +153,8 @@ export function SolicitudesCombustible() {
     setPageSize,
   } = useGvTablePagination(solicitudesFiltradas, paginacionKey);
 
-  const handleTabChange = (tab: TabSolicitudCombustible) => {
-    setTabActiva(tab);
+  const handleEstadoFiltroChange = (value: EstadoFiltroSolicitudCombustible) => {
+    setEstadoFiltro(value);
     setPage(1);
   };
 
@@ -302,35 +307,45 @@ export function SolicitudesCombustible() {
         visibleRows={GV_TABLE_RECORD_SCROLL}
         toolbar={
           <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
-            <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
-              <GvTabFilter
-                value={tabActiva}
-                onChange={handleTabChange}
-                options={TAB_OPTIONS}
-                layoutId="combustible-solicitudes-tabs"
-                compact
-                className="min-w-0 w-full flex-1 lg:w-auto"
+            <div className={cn(GV_TABLE_TOOLBAR_PRIMARY_CLASS, "max-lg:flex-col max-lg:items-stretch")}>
+              <div className="relative min-w-0 w-full lg:flex-1" data-morph-hover-scope>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-celeste-trifinio">
+                  <GvMorphIcon icon={Search} hoverIcon={ScanSearch} size={16} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Buscar solicitante, misión o placa..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
+                />
+              </div>
+              <GvToolbarSelect
+                value={estadoFiltro}
+                onChange={handleEstadoFiltroChange}
+                ariaLabel="Filtrar solicitudes de combustible por estado"
+                options={ESTADO_FILTROS.map((value) => ({
+                  value,
+                  label: ESTADO_FILTRO_LABELS[value],
+                }))}
               />
               <div className={vehiculoFiltroWrapClass}>{vehiculoSelect}</div>
-              <GvMonthPicker
-                value={periodoFilter}
-                onChange={handlePeriodoChange}
-                className="!h-11 min-w-0 w-full shrink-0 text-xs sm:w-[10.5rem] lg:hidden"
-              />
             </div>
-            <div className={cn(GV_TABLE_TOOLBAR_ACTIONS_CLASS, "max-lg:justify-end")}>
+            <div
+              className={cn(
+                GV_TABLE_TOOLBAR_ACTIONS_CLASS,
+                GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
+                "min-w-0 w-full max-lg:col-span-full max-lg:justify-end",
+              )}
+            >
               <GvMonthPicker
                 value={periodoFilter}
                 onChange={handlePeriodoChange}
-                className="hidden lg:inline-flex"
+                className="!h-11 min-w-0 w-full shrink-0 text-xs lg:hidden"
               />
-              {canExport ? (
-                <GvExportReporteButton
-                  onClick={() => void handleExportAllExcel()}
-                  disabled={isLoading || requisicionesAprobadas.length === 0}
-                  loading={exportingAll}
-                />
-              ) : null}
               <GvSigetActionButton
                 label="Solicitar"
                 accentColor={sigetAccent.crear}
@@ -349,7 +364,20 @@ export function SolicitudesCombustible() {
                   setFormOpen(true);
                 }}
                 ariaLabel="Nueva solicitud de combustible"
-                className="h-11 w-auto shrink-0 rounded-xl px-4"
+                className="h-11 w-auto max-lg:h-11 max-lg:w-full shrink-0 rounded-xl px-4 lg:order-3"
+              />
+              {canExport ? (
+                <GvExportReporteButton
+                  onClick={() => void handleExportAllExcel()}
+                  disabled={isLoading || requisicionesAprobadas.length === 0}
+                  loading={exportingAll}
+                  className="lg:order-2"
+                />
+              ) : null}
+              <GvMonthPicker
+                value={periodoFilter}
+                onChange={handlePeriodoChange}
+                className="hidden shrink-0 lg:order-1 lg:inline-flex"
               />
             </div>
           </div>

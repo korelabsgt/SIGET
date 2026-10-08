@@ -278,6 +278,32 @@ export function formatMontoEntregaCombustible(row: SolicitudCombustibleRow): str
   return formatDenominacion(monto);
 }
 
+export function solicitudCombustibleCoincideBusqueda(
+  row: SolicitudCombustibleRow,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const estado = formatEstadoSolicitudCombustible(row.estado).toLowerCase();
+  const mision = formatMisionVinculadaCombustible(row).toLowerCase();
+  const solicitante = formatSolicitanteNombre(row).toLowerCase();
+  const email = row.solicitante?.email?.trim().toLowerCase() ?? "";
+  const placa = row.vehiculo?.placa?.trim().toLowerCase() ?? "";
+  const marca = row.vehiculo?.marca?.trim().toLowerCase() ?? "";
+  const modelo = row.vehiculo?.modelo?.trim().toLowerCase() ?? "";
+
+  return (
+    solicitante.includes(q) ||
+    email.includes(q) ||
+    mision.includes(q) ||
+    placa.includes(q) ||
+    marca.includes(q) ||
+    modelo.includes(q) ||
+    estado.includes(q)
+  );
+}
+
 export function estadoBadgeClassCombustible(estado: EstadoSolicitudCombustible): string {
   switch (estado) {
     case "PENDIENTE":
