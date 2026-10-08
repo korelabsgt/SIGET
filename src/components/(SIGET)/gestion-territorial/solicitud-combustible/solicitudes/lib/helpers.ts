@@ -88,20 +88,10 @@ export function pilotoRequisicionCombustible(row: SolicitudCombustibleRow): stri
 
   const nombre = nombrePilotoSolicitud({
     piloto: mision.piloto,
-    piloto_profile: pilotoProfile
-      ? {
-          id: pilotoProfile.id,
-          nombre: pilotoProfile.nombre ?? "",
-          email: pilotoProfile.email ?? "",
-        }
-      : undefined,
+    piloto_profile: pilotoProfile ?? undefined,
     solicitante_id: mision.solicitante_id,
     solicitante: solicitanteMision
-      ? {
-          id: solicitanteMision.id,
-          nombre: solicitanteMision.nombre ?? "",
-          email: solicitanteMision.email ?? "",
-        }
+      ? { nombre: solicitanteMision.nombre }
       : undefined,
   });
 
