@@ -7,7 +7,6 @@ import { GvModuloPageFrame } from "../gestion-vehiculos/lib/gv-modulo-page-frame
 import { GvTabFilter } from "../gestion-vehiculos/lib/gv-tab-filter";
 import {
   GV_MODULO_HEADER_ROW_CLASS,
-  GV_MODULO_SCROLL_INNER_CLASS,
   GV_MODULO_SCROLL_OUTER_CLASS,
   GV_TABLE_AREA_CLASS,
 } from "../gestion-vehiculos/lib/page-shell";
@@ -54,7 +53,7 @@ export function CombustibleShell() {
   if (!allowed) return null;
 
   return (
-    <GvModuloPageFrame className="min-h-0 flex-1 overflow-hidden">
+    <GvModuloPageFrame className="flex w-full flex-col">
       <div className={GV_MODULO_HEADER_ROW_CLASS}>
         <div className="flex min-w-0 items-center gap-3 sm:flex-1">
           <GvBackToTerritorial morph className="self-auto" />
@@ -84,13 +83,9 @@ export function CombustibleShell() {
         </div>
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:basis-0 lg:overflow-hidden">
-        <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
-          <div className={GV_MODULO_SCROLL_INNER_CLASS}>
-            <div className={GV_TABLE_AREA_CLASS}>
-              {seccion === "vales" && puedeVerVales ? <Vales /> : <SolicitudesCombustible />}
-            </div>
-          </div>
+      <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
+        <div className={GV_TABLE_AREA_CLASS}>
+          {seccion === "vales" && puedeVerVales ? <Vales /> : <SolicitudesCombustible />}
         </div>
       </div>
     </GvModuloPageFrame>

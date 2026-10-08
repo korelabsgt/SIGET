@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, RotateCw, X } from "lucide-react";
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 4;
+const MAX_SCALE = 5;
 
 function getTouchDistance(touches: TouchList) {
   if (touches.length < 2) return 0;
@@ -21,6 +21,13 @@ function getTouchCenter(touches: TouchList) {
   };
 }
 
+type TransformState = {
+  scale: number;
+  panX: number;
+  panY: number;
+  rotation: number;
+};
+
 export function GvImagenZoomViewer({
   src,
   alt,
@@ -30,139 +37,175 @@ export function GvImagenZoomViewer({
   alt: string;
   onClose: () => void;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const sizerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const scaleRef = useRef(1);
+  const transformRef = useRef<TransformState>({
+    scale: MIN_SCALE,
+    panX: 0,
+    panY: 0,
+    rotation: 0,
+  });
   const pinchStart = useRef<{ distance: number; scale: number } | null>(null);
-  const baseSizeRef = useRef({ w: 0, h: 0 });
+  const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(
+    null,
+  );
   const [ready, setReady] = useState(false);
 
-  const syncSizer = useCallback((nextScale: number) => {
-    const { w, h } = baseSizeRef.current;
-    const content = contentRef.current;
-    const sizer = sizerRef.current;
-    if (!w || !h || !content || !sizer) return;
-    content.style.transform = `scale(${nextScale})`;
-    content.style.transformOrigin = "center center";
-    sizer.style.width = `${w * nextScale}px`;
-    sizer.style.height = `${h * nextScale}px`;
+  const applyTransformToDom = useCallback((t: TransformState) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    stage.style.transform = `translate(calc(-50% + ${t.panX}px), calc(-50% + ${t.panY}px)) rotate(${t.rotation}deg) scale(${t.scale})`;
   }, []);
 
-  const applyScale = useCallback(
-    (nextScale: number, scrollEl?: HTMLDivElement | null) => {
-      const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
-      scaleRef.current = clamped;
-      syncSizer(clamped);
-      if (clamped === MIN_SCALE && scrollEl) {
-        scrollEl.scrollLeft = 0;
-        scrollEl.scrollTop = 0;
-      }
-      return clamped;
+  const setTransform = useCallback(
+    (patch: Partial<TransformState> | ((prev: TransformState) => TransformState)) => {
+      const next =
+        typeof patch === "function"
+          ? patch(transformRef.current)
+          : { ...transformRef.current, ...patch };
+      transformRef.current = next;
+      applyTransformToDom(next);
+      return next;
     },
-    [syncSizer],
+    [applyTransformToDom],
   );
 
-  const measureBase = useCallback(() => {
-    const img = imgRef.current;
-    if (!img || img.offsetWidth <= 0 || img.offsetHeight <= 0) return;
-    baseSizeRef.current = { w: img.offsetWidth, h: img.offsetHeight };
-    syncSizer(scaleRef.current);
-    setReady(true);
-  }, [syncSizer]);
+  const resetView = useCallback(() => {
+    setTransform({ scale: MIN_SCALE, panX: 0, panY: 0 });
+  }, [setTransform]);
+
+  const zoomAtViewportPoint = useCallback(
+    (nextScale: number, focalX: number, focalY: number) => {
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const fx = focalX - rect.left - cx;
+      const fy = focalY - rect.top - cy;
+      const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
+      setTransform((prev) => {
+        const oldScale = prev.scale;
+        if (clamped === MIN_SCALE && oldScale === MIN_SCALE) {
+          return { ...prev, panX: 0, panY: 0 };
+        }
+        const ix = (fx - prev.panX) / oldScale;
+        const iy = (fy - prev.panY) / oldScale;
+        const panX = clamped <= MIN_SCALE ? 0 : fx - ix * clamped;
+        const panY = clamped <= MIN_SCALE ? 0 : fy - iy * clamped;
+        return { ...prev, scale: clamped, panX, panY };
+      });
+    },
+    [setTransform],
+  );
 
   useEffect(() => {
-    scaleRef.current = MIN_SCALE;
-    baseSizeRef.current = { w: 0, h: 0 };
+    transformRef.current = { scale: MIN_SCALE, panX: 0, panY: 0, rotation: 0 };
     setReady(false);
-  }, [src]);
+    applyTransformToDom(transformRef.current);
+  }, [src, applyTransformToDom]);
+
+  const onImageReady = useCallback(() => {
+    resetView();
+    setReady(true);
+  }, [resetView]);
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !ready) return;
+    const viewport = viewportRef.current;
+    if (!viewport || !ready) return;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const factor = 1 - e.deltaY * 0.002;
-      const next = scaleRef.current * factor;
-      const rect = el.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-      const oldScale = scaleRef.current;
-      const contentX = (el.scrollLeft + offsetX) / oldScale;
-      const contentY = (el.scrollTop + offsetY) / oldScale;
-      applyScale(next, el);
-      el.scrollLeft = contentX * scaleRef.current - offsetX;
-      el.scrollTop = contentY * scaleRef.current - offsetY;
+      zoomAtViewportPoint(transformRef.current.scale * factor, e.clientX, e.clientY);
     };
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        panStart.current = null;
         pinchStart.current = {
           distance: getTouchDistance(e.touches),
-          scale: scaleRef.current,
+          scale: transformRef.current.scale,
+        };
+        return;
+      }
+      if (e.touches.length === 1 && transformRef.current.scale > MIN_SCALE + 0.02) {
+        pinchStart.current = null;
+        panStart.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          panX: transformRef.current.panX,
+          panY: transformRef.current.panY,
         };
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2 || !pinchStart.current) return;
-      e.preventDefault();
-      const distance = getTouchDistance(e.touches);
-      if (distance <= 0 || pinchStart.current.distance <= 0) return;
-      const ratio = distance / pinchStart.current.distance;
-      const nextScale = Math.min(
-        MAX_SCALE,
-        Math.max(MIN_SCALE, pinchStart.current.scale * ratio),
-      );
-      const rect = el.getBoundingClientRect();
-      const center = getTouchCenter(e.touches);
-      const offsetX = center.x - rect.left;
-      const offsetY = center.y - rect.top;
-      const oldScale = scaleRef.current;
-      const contentX = (el.scrollLeft + offsetX) / oldScale;
-      const contentY = (el.scrollTop + offsetY) / oldScale;
-      applyScale(nextScale, el);
-      el.scrollLeft = contentX * scaleRef.current - offsetX;
-      el.scrollTop = contentY * scaleRef.current - offsetY;
+      if (e.touches.length === 2 && pinchStart.current) {
+        e.preventDefault();
+        const distance = getTouchDistance(e.touches);
+        if (distance <= 0 || pinchStart.current.distance <= 0) return;
+        const ratio = distance / pinchStart.current.distance;
+        const nextScale = pinchStart.current.scale * ratio;
+        const center = getTouchCenter(e.touches);
+        zoomAtViewportPoint(nextScale, center.x, center.y);
+        return;
+      }
+      if (e.touches.length === 1 && panStart.current) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - panStart.current.x;
+        const dy = e.touches[0].clientY - panStart.current.y;
+        setTransform({
+          panX: panStart.current.panX + dx,
+          panY: panStart.current.panY + dy,
+        });
+      }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length >= 2) return;
       pinchStart.current = null;
-      if (scaleRef.current < 1.02) {
-        applyScale(MIN_SCALE, el);
+      panStart.current = null;
+      if (transformRef.current.scale < MIN_SCALE + 0.02) {
+        resetView();
       }
     };
 
-    el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    viewport.addEventListener("touchstart", onTouchStart, { passive: false });
+    viewport.addEventListener("touchmove", onTouchMove, { passive: false });
+    viewport.addEventListener("touchend", onTouchEnd, { passive: true });
+    viewport.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     return () => {
-      el.removeEventListener("wheel", onWheel);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchEnd);
+      viewport.removeEventListener("wheel", onWheel);
+      viewport.removeEventListener("touchstart", onTouchStart);
+      viewport.removeEventListener("touchmove", onTouchMove);
+      viewport.removeEventListener("touchend", onTouchEnd);
+      viewport.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [ready, applyScale]);
+  }, [ready, zoomAtViewportPoint, setTransform, resetView]);
 
   const zoomStep = (factor: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const offsetX = rect.width / 2;
-    const offsetY = rect.height / 2;
-    const oldScale = scaleRef.current;
-    const contentX = (el.scrollLeft + offsetX) / oldScale;
-    const contentY = (el.scrollTop + offsetY) / oldScale;
-    applyScale(oldScale * factor, el);
-    el.scrollLeft = contentX * scaleRef.current - offsetX;
-    el.scrollTop = contentY * scaleRef.current - offsetY;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const rect = viewport.getBoundingClientRect();
+    zoomAtViewportPoint(
+      transformRef.current.scale * factor,
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+  };
+
+  const rotateImage = () => {
+    const nextRotation = (transformRef.current.rotation + 90) % 360;
+    setTransform({
+      rotation: nextRotation,
+      scale: MIN_SCALE,
+      panX: 0,
+      panY: 0,
+    });
   };
 
   return (
@@ -181,61 +224,81 @@ export function GvImagenZoomViewer({
         <X size={22} strokeWidth={2.25} />
       </button>
 
-      <div className="pointer-events-none absolute bottom-4 left-1/2 z-20 max-w-[90vw] -translate-x-1/2 text-center text-[11px] font-medium text-white/75">
-        Pellizca o usa la rueda para acercar · arrastra si está ampliada
+      <div className="pointer-events-none absolute bottom-4 left-1/2 z-20 max-w-[90vw] -translate-x-1/2 px-2 text-center text-[11px] font-medium leading-snug text-white/75">
+        <span className="md:hidden">
+          Pellizca donde quieras acercar · arrastra · girar
+        </span>
+        <span className="hidden md:inline">
+          Rueda o botones para zoom · arrastra si está ampliada
+        </span>
       </div>
 
-      <div className="absolute bottom-4 right-4 z-20 flex gap-2">
+      <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 md:flex-row md:items-center">
         <button
           type="button"
-          onClick={() => zoomStep(1 / 1.2)}
+          onClick={rotateImage}
           className="flex size-10 cursor-pointer items-center justify-center rounded-full border-0 bg-black/50 text-white hover:bg-black/70 disabled:opacity-40"
-          aria-label="Alejar"
+          aria-label="Girar imagen"
           disabled={!ready}
         >
-          <Minus size={20} strokeWidth={2.25} />
+          <RotateCw size={20} strokeWidth={2.25} />
         </button>
-        <button
-          type="button"
-          onClick={() => zoomStep(1.2)}
-          className="flex size-10 cursor-pointer items-center justify-center rounded-full border-0 bg-black/50 text-white hover:bg-black/70 disabled:opacity-40"
-          aria-label="Acercar"
-          disabled={!ready}
-        >
-          <Plus size={20} strokeWidth={2.25} />
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => zoomStep(1 / 1.25)}
+            className="flex size-10 cursor-pointer items-center justify-center rounded-full border-0 bg-black/50 text-white hover:bg-black/70 disabled:opacity-40"
+            aria-label="Alejar"
+            disabled={!ready}
+          >
+            <Minus size={20} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomStep(1.25)}
+            className="flex size-10 cursor-pointer items-center justify-center rounded-full border-0 bg-black/50 text-white hover:bg-black/70 disabled:opacity-40"
+            aria-label="Acercar"
+          >
+            <Plus size={20} strokeWidth={2.25} />
+          </button>
+        </div>
       </div>
 
       <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-auto overscroll-contain touch-pan-x touch-pan-y [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        ref={viewportRef}
+        className="relative min-h-0 flex-1 touch-none overflow-hidden"
         onClick={(event) => {
           if (event.target === event.currentTarget) onClose();
         }}
       >
-        <div className="flex min-h-full min-w-full items-center justify-center p-4">
-          <div ref={sizerRef} className="relative shrink-0">
-            <div ref={contentRef} className="flex items-center justify-center">
-              <img
-                ref={imgRef}
-                src={src}
-                alt={alt}
-                onLoad={measureBase}
-                onClick={(event) => event.stopPropagation()}
-                onDoubleClick={() => {
-                  const el = scrollRef.current;
-                  if (!el) return;
-                  if (scaleRef.current > 1.05) {
-                    applyScale(MIN_SCALE, el);
-                    return;
-                  }
-                  zoomStep(2.2);
-                }}
-                className="max-h-[92dvh] max-w-[min(92vw,64rem)] select-none object-contain"
-                draggable={false}
-              />
-            </div>
-          </div>
+        <div
+          ref={stageRef}
+          className="absolute left-1/2 top-1/2 max-h-[92dvh] max-w-[min(92vw,64rem)] will-change-transform"
+          style={{ transformOrigin: "center center" }}
+        >
+          <img
+            ref={imgRef}
+            src={src}
+            alt={alt}
+            onLoad={onImageReady}
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={() => {
+              if (transformRef.current.scale > MIN_SCALE + 0.05) {
+                resetView();
+                return;
+              }
+              const viewport = viewportRef.current;
+              if (!viewport) return;
+              const rect = viewport.getBoundingClientRect();
+              zoomAtViewportPoint(
+                2.2,
+                rect.left + rect.width / 2,
+                rect.top + rect.height / 2,
+              );
+            }}
+            className="max-h-[92dvh] max-w-[min(92vw,64rem)] select-none object-contain"
+            draggable={false}
+          />
         </div>
       </div>
     </div>

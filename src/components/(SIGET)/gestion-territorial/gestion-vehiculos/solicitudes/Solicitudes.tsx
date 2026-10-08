@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Loader2 } from "lucide-react";
-import { FilePlus, Plus } from "lucide";
+import { FilePlus, Plus, ScanSearch, Search } from "lucide";
+import { GvMorphIcon } from "../lib/morph-icon";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 
 import { toast } from "react-toastify";
@@ -26,7 +27,7 @@ import {
 
 import { useGvTablePagination } from "../lib/table-pagination";
 
-import { GvTabFilter } from "../lib/gv-tab-filter";
+import { GvToolbarSelect } from "../lib/gv-toolbar-select";
 
 
 
@@ -36,9 +37,10 @@ import { cambiarEstadoSolicitud } from "./lib/actions";
 
 import { type SolicitudRow } from "./lib/zod";
 
-import { formatEstadoLabel } from "./lib/helpers";
+import { compararSolicitudesTabla, formatEstadoLabel } from "./lib/helpers";
 
 import {
+  GV_TABLE_SEARCH_INPUT_CLASS,
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
   GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
   GV_TABLE_TOOLBAR_PRIMARY_CLASS,
@@ -81,9 +83,9 @@ const TAB_LABELS: Record<TabSolicitud, string> = {
 
   PENDIENTES: "Pendientes",
 
-  ACTIVAS: "Activas",
+  ACTIVAS: "Aprobadas",
 
-  HISTORIAL: "Historial",
+  HISTORIAL: "Finalizadas",
 
 };
 
@@ -104,6 +106,8 @@ export function Solicitudes() {
   const canAprobarRechazar = canAprobarRechazarSolicitudes(gvRole);
 
   const [tabActiva, setTabActiva] = useState<TabSolicitud>("TODAS");
+
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [periodoFilter, setPeriodoFilter] = useState(mesCalendarioGt);
 
@@ -222,26 +226,45 @@ export function Solicitudes() {
 
 
   const filtradas = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
 
-    return solicitudesDelMes.filter((sol) => {
+    const filtradas = solicitudesDelMes.filter((sol) => {
+      if (tabActiva === "PENDIENTES" && sol.estado !== "PENDIENTE") return false;
+      if (
+        tabActiva === "ACTIVAS" &&
+        sol.estado !== "APROBADA" &&
+        sol.estado !== "EN_MISION"
+      ) {
+        return false;
+      }
+      if (
+        tabActiva === "HISTORIAL" &&
+        sol.estado !== "FINALIZADA" &&
+        sol.estado !== "RECHAZADA"
+      ) {
+        return false;
+      }
 
-      if (tabActiva === "TODAS") return true;
+      if (!q) return true;
 
-      if (tabActiva === "PENDIENTES") return sol.estado === "PENDIENTE";
-
-      if (tabActiva === "ACTIVAS") return sol.estado === "APROBADA" || sol.estado === "EN_MISION";
-
-      if (tabActiva === "HISTORIAL") return sol.estado === "FINALIZADA" || sol.estado === "RECHAZADA";
-
-      return true;
-
+      const estado = formatEstadoLabel(sol.estado).toLowerCase();
+      return (
+        (sol.solicitante?.nombre?.toLowerCase().includes(q) ?? false) ||
+        (sol.solicitante?.email?.toLowerCase().includes(q) ?? false) ||
+        sol.destino.toLowerCase().includes(q) ||
+        (sol.vehiculo?.placa.toLowerCase().includes(q) ?? false) ||
+        (sol.vehiculo?.marca.toLowerCase().includes(q) ?? false) ||
+        (sol.vehiculo?.modelo.toLowerCase().includes(q) ?? false) ||
+        estado.includes(q)
+      );
     });
 
-  }, [solicitudesDelMes, tabActiva]);
+    return [...filtradas].sort(compararSolicitudesTabla);
+  }, [solicitudesDelMes, tabActiva, searchQuery]);
 
 
 
-  const paginacionKey = `${tabActiva}|${periodoFilter}`;
+  const paginacionKey = `${tabActiva}|${periodoFilter}|${searchQuery}`;
 
   const {
 
@@ -310,41 +333,49 @@ export function Solicitudes() {
 
             <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
 
-              <div className={cn(GV_TABLE_TOOLBAR_PRIMARY_CLASS, "max-lg:order-2 lg:order-1")}>
+              <div className={cn(GV_TABLE_TOOLBAR_PRIMARY_CLASS, "max-lg:flex-col max-lg:items-stretch")}>
+                <div className="relative min-w-0 w-full lg:flex-1" data-morph-hover-scope>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-celeste-trifinio">
+                    <GvMorphIcon icon={Search} hoverIcon={ScanSearch} size={16} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Buscar solicitante, destino o placa..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
+                  />
+                </div>
 
-                <GvTabFilter
-
+                <GvToolbarSelect
                   value={tabActiva}
-
-                  onChange={(val) => setTabActiva(val as TabSolicitud)}
-
-                  layoutId="gv-solicitudes-tabs"
-
-                  compact
-
-                  className="min-w-0 w-full flex-1 lg:w-auto"
-
+                  onChange={setTabActiva}
+                  ariaLabel="Filtrar solicitudes por estado"
                   options={TABS.map((tab) => ({
-
                     value: tab,
-
                     label: TAB_LABELS[tab],
-
                   }))}
-
                 />
-
               </div>
-
-
 
               <div
                 className={cn(
                   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
                   GV_TABLE_TOOLBAR_ACTIONS_PAIR_CLASS,
-                  "max-lg:order-1 lg:order-2",
+                  "min-w-0 w-full max-lg:col-span-full",
                 )}
               >
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="!h-11 min-w-0 w-full text-sm lg:hidden"
+                />
+
+                <GvMonthPicker
+                  value={periodoFilter}
+                  onChange={setPeriodoFilter}
+                  className="hidden shrink-0 lg:inline-flex"
+                />
 
                 <SigetActionButton
                   type="button"
@@ -368,29 +399,8 @@ export function Solicitudes() {
                     }
                     setFormOpen(true);
                   }}
-                  className="max-lg:order-1 h-11 max-lg:h-11 max-lg:w-full lg:order-2 lg:h-11 lg:w-[10.5rem] lg:shrink-0"
+                  className="h-11 w-auto max-lg:h-11 max-lg:w-full shrink-0 lg:w-[10.5rem]"
                 />
-
-                <GvMonthPicker
-
-                  value={periodoFilter}
-
-                  onChange={setPeriodoFilter}
-
-                  className="max-lg:order-2 !h-11 min-w-0 w-full text-sm lg:hidden"
-
-                />
-
-                <GvMonthPicker
-
-                  value={periodoFilter}
-
-                  onChange={setPeriodoFilter}
-
-                  className="hidden lg:order-1 lg:inline-flex"
-
-                />
-
               </div>
 
             </div>

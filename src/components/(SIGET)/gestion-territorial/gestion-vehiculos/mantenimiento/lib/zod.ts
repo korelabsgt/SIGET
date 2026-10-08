@@ -1,7 +1,12 @@
 import { z } from "zod";
 
+export const TIPOS_REGISTRO_MANTENIMIENTO = ["AVERIA", "SERVICIO"] as const;
+
 export const FallaMantenimientoSchema = z.object({
   vehiculo_id: z.string().uuid("Debe seleccionar un vehículo válido."),
+  tipo_registro: z.enum(TIPOS_REGISTRO_MANTENIMIENTO, {
+    message: "Seleccione el tipo de registro.",
+  }),
   severidad: z.enum(["BAJA", "MEDIA", "ALTA"], {
     message: "La severidad es obligatoria.",
   }),

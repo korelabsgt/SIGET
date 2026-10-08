@@ -596,7 +596,10 @@ export async function getDatosReporteBitacora(mes: number, anio: number, vehicul
         ot_vehiculos (placa, marca, modelo),
         profiles:conductor_id (nombre),
         ot_solicitudes (
-          solicitante:profiles!solicitante_id (nombre)
+          piloto,
+          solicitante_id,
+          solicitante:profiles!solicitante_id (nombre),
+          piloto_profile:profiles!piloto (nombre)
         )
       `)
       .eq("estado", "CONFIRMADA")

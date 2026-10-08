@@ -6,7 +6,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { fetchProfileBasico, searchProfiles } from "./lib/actions";
+import { useProfileBasico, useSearchProfiles } from "./lib/hooks";
 
 type ProfileOption = { id: string; nombre: string; email: string };
 
@@ -30,9 +30,18 @@ export function PilotoSelect({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [options, setOptions] = React.useState<ProfileOption[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [selected, setSelected] = React.useState<ProfileOption | null>(null);
+
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
+
+  const { data: profileLoaded, isFetching: loadingProfile } = useProfileBasico(
+    value,
+    Boolean(value.trim()),
+  );
 
   React.useEffect(() => {
     if (!value.trim()) {
@@ -40,42 +49,18 @@ export function PilotoSelect({
       return;
     }
     if (selected?.id === value) return;
+    if (!profileLoaded) return;
+    setSelected(profileLoaded);
+    setQuery(etiquetaUsuario(profileLoaded));
+  }, [value, selected?.id, profileLoaded]);
 
-    let cancelled = false;
-    void fetchProfileBasico(value).then((profile) => {
-      if (cancelled || !profile) return;
-      setSelected(profile);
-      setQuery(etiquetaUsuario(profile));
-    });
+  const { data: options = [], isFetching: loadingSearch } = useSearchProfiles(
+    debouncedQuery,
+    excludeUserId,
+    open && debouncedQuery.length >= 3,
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [value, selected?.id]);
-
-  React.useEffect(() => {
-    if (selected && query === etiquetaUsuario(selected)) return;
-    if (query.length < 3) {
-      setOptions([]);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const results = await searchProfiles(query, excludeUserId);
-        setOptions(results);
-        const match = results.find((item) => item.id === value);
-        if (match) setSelected(match);
-      } catch {
-        setOptions([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [query, value, selected, excludeUserId]);
+  const loading = loadingProfile || loadingSearch;
 
   const handleSelect = (profile: ProfileOption) => {
     setSelected(profile);
@@ -88,7 +73,6 @@ export function PilotoSelect({
   const handleClear = () => {
     setSelected(null);
     setQuery("");
-    setOptions([]);
     onChange("");
     setOpen(false);
     inputRef.current?.focus();
@@ -125,7 +109,7 @@ export function PilotoSelect({
             aria-expanded={showList}
             aria-autocomplete="list"
             disabled={disabled}
-            placeholder="Buscar por nombre o correo…"
+            placeholder="Buscar por nombre"
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => setOpen(true)}

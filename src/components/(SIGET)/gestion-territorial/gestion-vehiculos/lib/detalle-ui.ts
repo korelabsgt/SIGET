@@ -1,5 +1,5 @@
 export const GV_DETALLE_TEXTO_CLASS =
-  "min-w-0 max-w-full break-all [overflow-wrap:anywhere] sm:break-words";
+  "min-w-0 max-w-full break-words [overflow-wrap:break-word] [word-break:normal]";
 
 export const GV_DETALLE_CARD_CLASS =
   "rounded-2xl border border-celeste-trifinio/20 bg-card p-5 shadow-sm dark:bg-zinc-900/30 sm:p-6 lg:p-8";

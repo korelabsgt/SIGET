@@ -26,6 +26,7 @@ const fechaManualSolicitud = (requerido: string, modo: "inicio" | "fin") =>
     .transform((val) => coerceFechaSolicitudIsoGt(val, modo));
 
 export const PILOTO_MODO = ["solicitante", "otro"] as const;
+export type PilotoModo = (typeof PILOTO_MODO)[number];
 
 export const solicitudInputSchema = z
   .object({
@@ -87,6 +88,71 @@ export const solicitudInputSchema = z
   });
 
 export type SolicitudInput = z.infer<typeof solicitudInputSchema>;
+
+export const SOLICITUD_WIZARD_PASOS = 2;
+
+export const solicitudWizardPaso1Schema = z
+  .object({
+    solicitante_id: z.string().optional(),
+    vehiculo_id: z.string().uuid("Seleccione un vehículo de la flota"),
+    fecha_inicio: fechaManualSolicitud("La fecha de salida es requerida", "inicio"),
+    fecha_fin_estimada: fechaManualSolicitud(
+      "La fecha estimada de retorno es requerida",
+      "fin",
+    ),
+  })
+  .superRefine((data, ctx) => {
+    const id = data.solicitante_id?.trim() ?? "";
+    if (!id) return;
+    if (!z.string().uuid().safeParse(id).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Solicitante inválido",
+        path: ["solicitante_id"],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    const fechas = validarFechasMisionSoloDiaCalendarioGt(
+      data.fecha_inicio,
+      data.fecha_fin_estimada,
+    );
+    if (!fechas.ok) {
+      ctx.addIssue({
+        code: "custom",
+        message: fechas.message,
+        path: [fechas.path],
+      });
+    }
+  });
+
+export const solicitudWizardPaso2Schema = z
+  .object({
+    destino: z.string().min(3, "El destino debe tener al menos 3 caracteres"),
+    piloto_modo: z.enum(PILOTO_MODO),
+    piloto_id: z.string().optional(),
+    justificacion: z.string().min(10, "La justificación debe ser detallada (min 10 caracteres)"),
+    pasajeros: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.piloto_modo !== "otro") return;
+    const id = data.piloto_id?.trim() ?? "";
+    if (!id) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Busque y seleccione al piloto",
+        path: ["piloto_id"],
+      });
+      return;
+    }
+    if (!z.string().uuid().safeParse(id).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Piloto inválido",
+        path: ["piloto_id"],
+      });
+    }
+  });
 
 export const rechazoSolicitudComentarioSchema = z
   .string()

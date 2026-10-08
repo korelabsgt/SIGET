@@ -144,7 +144,12 @@ export function GvSwitchGroup({
   columns?: 3 | 4;
 }) {
   const tabsTrackClass =
-    "flex flex-nowrap items-stretch gap-0 border-b border-border dark:border-zinc-700";
+    layout === "responsive-grid"
+      ? cn(
+          "grid w-full grid-cols-2 items-stretch gap-0 border-b border-border dark:border-zinc-700",
+          "sm:inline-flex sm:w-max sm:min-w-0 sm:flex-nowrap",
+        )
+      : "flex flex-nowrap items-stretch gap-0 border-b border-border dark:border-zinc-700";
 
   const layoutClass =
     variant === "tabs"

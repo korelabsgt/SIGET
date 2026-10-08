@@ -6,7 +6,7 @@ import { Check, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { searchProfiles } from "./lib/actions";
+import { useSearchProfiles } from "./lib/hooks";
 
 type ProfileOption = { id: string; nombre: string; email: string };
 
@@ -25,8 +25,7 @@ export function PasajerosSelect({ value, onChange }: PasajerosSelectProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [options, setOptions] = React.useState<ProfileOption[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [selected, setSelected] = React.useState<ProfileOption[]>([]);
 
   React.useEffect(() => {
@@ -54,26 +53,15 @@ export function PasajerosSelect({ value, onChange }: PasajerosSelectProps) {
   }, [value]);
 
   React.useEffect(() => {
-    if (query.length < 3) {
-      setOptions([]);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const results = await searchProfiles(query);
-        setOptions(results);
-      } catch (error) {
-        console.error("Error searching profiles", error);
-        setOptions([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
+    const delayDebounceFn = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
+
+  const { data: options = [], isFetching: loading } = useSearchProfiles(
+    debouncedQuery,
+    undefined,
+    open && debouncedQuery.length >= 3,
+  );
 
   const commitSelection = (next: ProfileOption[]) => {
     setSelected(next);

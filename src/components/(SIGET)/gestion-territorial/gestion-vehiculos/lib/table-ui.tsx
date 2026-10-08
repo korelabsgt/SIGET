@@ -33,11 +33,13 @@ export type GestionVehiculosTablePaginationProps = {
   hidden?: boolean;
 };
 
+export const GV_TABLE_ACCENT_BAR_CLASS = "h-1 w-full shrink-0 bg-celeste-trifinio";
+
 export const GV_TABLE_SHELL_SURFACE_CLASS =
-  "rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900";
+  "overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40";
 
 export const GV_TABLE_SHELL_INNER_CLASS =
-  "flex flex-col bg-card dark:bg-zinc-900";
+  "flex min-h-0 flex-1 flex-col bg-card dark:bg-zinc-900/40";
 
 export const GV_TABLE_TOOLBAR_CLASS =
   "w-full shrink-0 min-h-[5.0625rem] border-b border-border p-4 dark:border-zinc-700 lg:min-h-[5.0625rem] lg:h-auto";
@@ -132,48 +134,35 @@ export function GestionVehiculosTableShell({
 
   const paginationBlock = pagination ? <GestionVehiculosTablePagination {...pagination} /> : null;
 
+  const innerShellClass = cn(
+    GV_TABLE_SHELL_INNER_CLASS,
+    "overflow-hidden",
+    !recordScroll && "lg:h-full lg:min-h-0",
+    !hasToolbar && !recordScroll && "flex-1",
+  );
+
   return (
     <div
       className={cn(
         "flex w-full min-w-0 flex-col",
-        !recordScroll && "min-h-0 flex-1 overflow-hidden",
         GV_TABLE_SHELL_SURFACE_CLASS,
+        !recordScroll && "min-h-0 flex-1",
         !recordScroll && applySizing && "lg:h-[var(--gv-table-shell-h)]",
         !recordScroll &&
           viewportFill &&
           "min-h-0 flex-1 self-stretch lg:h-full lg:max-h-full lg:min-h-0 lg:basis-0",
-        recordScroll && "shrink-0 overflow-visible",
+        recordScroll && "shrink-0",
         className,
       )}
       style={shellStyle}
     >
-      {hasToolbar ? (
-        <div
-          className={cn(
-            "flex w-full min-w-0 flex-col bg-celeste-trifinio pt-1",
-            !recordScroll && "min-h-0 flex-1 overflow-hidden lg:h-full lg:min-h-0",
-          )}
-        >
-          <div
-            className={cn(
-              GV_TABLE_SHELL_INNER_CLASS,
-              recordScroll
-                ? "overflow-visible rounded-t-2xl"
-                : "min-h-0 flex-1 overflow-hidden rounded-t-2xl lg:h-full lg:min-h-0",
-            )}
-          >
-            {toolbarBlock}
-            {kpiBlock}
-            {bodyBlock}
-            {paginationBlock}
-          </div>
-        </div>
-      ) : (
-        <div className={cn(GV_TABLE_SHELL_INNER_CLASS, "flex-1")}>
-          {bodyBlock}
-          {paginationBlock}
-        </div>
-      )}
+      <div className={GV_TABLE_ACCENT_BAR_CLASS} aria-hidden />
+      <div className={innerShellClass}>
+        {toolbarBlock}
+        {kpiBlock}
+        {bodyBlock}
+        {paginationBlock}
+      </div>
     </div>
   );
 }

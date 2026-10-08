@@ -27,8 +27,8 @@ function SolicitudListRow({
 }) {
   return (
     <GvTableMorphRow>
-      <td className={gvTableBodyTdClass}>
-        <div className="min-w-0 max-w-full text-center">
+      <td className={cn(gvTableBodyTdClass, "!text-left")}>
+        <div className="min-w-0 max-w-full">
           <p className="truncate font-semibold text-foreground">
             {solicitud.solicitante?.nombre || "Desconocido"}
           </p>

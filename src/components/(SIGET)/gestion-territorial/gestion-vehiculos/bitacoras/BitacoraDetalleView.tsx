@@ -18,7 +18,7 @@ import {
 import { GV_DETALLE_TEXTO_CLASS } from "../lib/detalle-ui";
 import { BitacoraEvidenciaDetalle } from "./BitacoraEvidenciaDetalle";
 import { type BitacoraRow } from "./lib/zod";
-import { evidenciasBitacora } from "./lib/helpers";
+import { evidenciasBitacora, nombrePilotoBitacora } from "./lib/helpers";
 
 function formatMontoCombustible(monto: number) {
   if (monto <= 0) return "Sin recarga";
@@ -37,7 +37,7 @@ function ContenidoBitacora({
   embedded: boolean;
   onClose?: () => void;
 }) {
-  const conductor = bitacora.profiles?.nombre?.trim() || "Desconocido";
+  const piloto = nombrePilotoBitacora(bitacora);
   const placa = bitacora.ot_vehiculos?.placa ?? "—";
   const marca = bitacora.ot_vehiculos?.marca;
   const modelo = bitacora.ot_vehiculos?.modelo;
@@ -55,20 +55,23 @@ function ContenidoBitacora({
             <div className="min-w-0 flex-1">
               <h1
                 className={cn(
-                  "text-2xl font-black capitalize tracking-tight text-foreground md:text-[1.65rem]",
+                  "text-2xl font-black capitalize tracking-tight text-pretty text-foreground md:text-[1.65rem]",
                   GV_DETALLE_TEXTO_CLASS,
                 )}
               >
                 {bitacora.destino}
               </h1>
-              <p className={cn("mt-1.5 text-sm text-muted-foreground", GV_DETALLE_TEXTO_CLASS)}>
-                Conductor {conductor} · Registrado el {formatFechaHoraGv(bitacora.fecha)}
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                <span className={cn("min-w-0 break-words", GV_DETALLE_TEXTO_CLASS)}>Registrado el</span>{" "}
+                <span className="inline-block whitespace-nowrap">
+                  {formatFechaHoraGv(bitacora.fecha)}
+                </span>
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:gap-2">
           <GvDetalleStat label="Km inicial" value={bitacora.km_inicial.toLocaleString("es-GT")} />
           <GvDetalleStat label="Km final" value={bitacora.km_final.toLocaleString("es-GT")} />
           <GvDetalleStat
@@ -84,6 +87,7 @@ function ContenidoBitacora({
             <GvDetalleTarjetaAnidada>
               <GvDetalleEncabezadoVehiculo marca={marca} modelo={modelo} placa={placa} />
               <div className="mt-3">
+                <GvDetalleFilaVehiculo label="Piloto" value={piloto} />
                 <GvDetalleFilaVehiculo
                   label="Combustible"
                   value={formatMontoCombustible(Number(bitacora.monto_combustible))}
@@ -117,14 +121,19 @@ function ContenidoBitacora({
           <span className="mt-1 shrink-0 text-celeste-trifinio">
             <MapPin size={28} strokeWidth={2.25} />
           </span>
-          <span className="min-w-0 capitalize">{bitacora.destino}</span>
+          <span className={cn("min-w-0 capitalize text-pretty", GV_DETALLE_TEXTO_CLASS)}>
+            {bitacora.destino}
+          </span>
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Conductor <span className="font-semibold text-celeste-trifinio">{conductor}</span>
+          Registrado el{" "}
+          <span className="whitespace-nowrap font-semibold text-celeste-trifinio">
+            {formatFechaHoraGv(bitacora.fecha)}
+          </span>
         </p>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-3 gap-1.5 sm:gap-2">
         <GvDetalleStat label="Km inicial" value={bitacora.km_inicial.toLocaleString("es-GT")} />
         <GvDetalleStat label="Km final" value={bitacora.km_final.toLocaleString("es-GT")} />
         <GvDetalleStat
@@ -140,6 +149,7 @@ function ContenidoBitacora({
           <GvDetalleTarjetaAnidada>
             <GvDetalleEncabezadoVehiculo marca={marca} modelo={modelo} placa={placa} />
             <div className="mt-4">
+              <GvDetalleFilaVehiculo label="Piloto" value={piloto} />
               <GvDetalleFilaVehiculo
                 label="Combustible"
                 value={formatMontoCombustible(Number(bitacora.monto_combustible))}

@@ -126,6 +126,8 @@ export function getAlertStatusClasses(estado: AlertStatus) {
 
 export const KM_INTERVALO_SERVICIO = 5000;
 export const KM_MARGEN_MANTENIMIENTO_FORZADO = 500;
+export const KM_ALERTA_MANTENIMIENTO_AMARILLO = 1000;
+export const KM_ALERTA_MANTENIMIENTO_ROJO = 500;
 export const PREFIJO_FALLA_SERVICIO_KM = "[SERVICIO-KM:";
 
 export function getKmReferenciaServicio(vehiculo: Pick<VehiculoRow, "kilometraje_actual" | "km_referencia_servicio">): number {
@@ -136,8 +138,12 @@ export function getKmReferenciaServicio(vehiculo: Pick<VehiculoRow, "kilometraje
   return Math.max(0, referencia);
 }
 
+export function getOdometroObjetivoServicioKm(kmReferenciaServicio: number): number {
+  return kmReferenciaServicio + KM_INTERVALO_SERVICIO;
+}
+
 export function getOdometroProximoServicioForzado(kmReferenciaServicio: number): number {
-  return kmReferenciaServicio + KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
+  return getOdometroObjetivoServicioKm(kmReferenciaServicio) + KM_MARGEN_MANTENIMIENTO_FORZADO;
 }
 
 export function getUmbralesMantenimientoForzadoAlcanzados(
@@ -208,29 +214,18 @@ export function getMantenimientoAlertStatus(
   kmActual: number,
   kmReferenciaServicio: number,
 ): { estado: AlertStatus; kmFaltantes: number; siguienteServicio: number } {
-  const siguienteServicio = getOdometroProximoServicioForzado(kmReferenciaServicio);
-  const kmFaltantes = siguienteServicio - kmActual;
-
-
+  const odometroServicio = getOdometroObjetivoServicioKm(kmReferenciaServicio);
+  const kmFaltantes = odometroServicio - kmActual;
 
   let estado: AlertStatus = "VERDE";
 
-
-
-  if (kmFaltantes <= 0) {
-
+  if (kmFaltantes <= KM_ALERTA_MANTENIMIENTO_ROJO) {
     estado = "ROJO";
-
-  } else if (kmFaltantes <= KM_MARGEN_MANTENIMIENTO_FORZADO) {
-
+  } else if (kmFaltantes <= KM_ALERTA_MANTENIMIENTO_AMARILLO) {
     estado = "AMARILLO";
-
   }
 
-
-
-  return { estado, kmFaltantes, siguienteServicio };
-
+  return { estado, kmFaltantes, siguienteServicio: odometroServicio };
 }
 
 

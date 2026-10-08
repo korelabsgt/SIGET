@@ -1,7 +1,7 @@
 import { differenceInMinutes } from "date-fns";
-import { formatFechaManualGt } from "@/lib/fechas-gt";
+import { formatFechaTablaGt } from "@/lib/fechas-gt";
 import { formatFechaHoraGv } from "../../lib/gv-fechas";
-import { esRetornoMisionPendiente, fechaCalendarioDesdeIso } from "./calendario-reservas";
+import { esRetornoMisionPendiente } from "./calendario-reservas";
 import { type SolicitudRow } from "./zod";
 
 export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
@@ -29,11 +29,26 @@ export function formatEstadoLabel(estado: SolicitudRow["estado"]) {
   return estado.replace("_", " ");
 }
 
+const ORDEN_ESTADO_SOLICITUD_TABLA: Record<SolicitudRow["estado"], number> = {
+  PENDIENTE: 0,
+  EN_MISION: 1,
+  APROBADA: 2,
+  FINALIZADA: 3,
+  RECHAZADA: 4,
+};
+
+export function compararSolicitudesTabla(a: SolicitudRow, b: SolicitudRow): number {
+  const porEstado =
+    ORDEN_ESTADO_SOLICITUD_TABLA[a.estado] - ORDEN_ESTADO_SOLICITUD_TABLA[b.estado];
+  if (porEstado !== 0) return porEstado;
+  return b.created_at.localeCompare(a.created_at);
+}
+
 export function nombrePilotoSolicitud(
-  solicitud: Pick<
-    SolicitudRow,
-    "piloto" | "piloto_profile" | "solicitante_id" | "solicitante"
-  >,
+  solicitud: Pick<SolicitudRow, "piloto" | "solicitante_id"> & {
+    piloto_profile?: { nombre?: string | null } | null;
+    solicitante?: { nombre?: string | null };
+  },
 ): string {
   const desdePerfil = solicitud.piloto_profile?.nombre?.trim();
   if (desdePerfil) return desdePerfil;
@@ -45,10 +60,9 @@ export function nombrePilotoSolicitud(
 }
 
 export function formatFechaSolicitudGv(iso: string): string {
-  const dia = fechaCalendarioDesdeIso(iso);
-  if (!dia) return formatFechaHoraGv(iso);
-  const manual = formatFechaManualGt(dia);
-  return manual || dia;
+  const fecha = formatFechaTablaGt(iso);
+  if (fecha !== "\u2014") return fecha;
+  return formatFechaHoraGv(iso);
 }
 
 export function retornoMisionRegistrado(

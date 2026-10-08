@@ -107,7 +107,12 @@ export type BitacoraRow = {
     nombre: string;
   };
   ot_solicitudes?: {
+    piloto?: string | null;
+    solicitante_id?: string;
     solicitante?: {
+      nombre?: string | null;
+    } | null;
+    piloto_profile?: {
       nombre?: string | null;
     } | null;
   } | null;

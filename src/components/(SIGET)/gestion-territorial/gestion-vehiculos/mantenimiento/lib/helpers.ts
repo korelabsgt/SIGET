@@ -1,6 +1,34 @@
 import { type FallaRow } from "./zod";
 import { GV_DANGER_SOFT_BADGE_CLASS } from "../../lib/gv-danger-ui";
 import { normalizeVehiculoStoragePath } from "../../lib/storage";
+import {
+  KM_INTERVALO_SERVICIO,
+  KM_MARGEN_MANTENIMIENTO_FORZADO,
+} from "../../flota/lib/helpers";
+
+export const PREFIJO_REGISTRO_SERVICIO_MANTENIMIENTO = "[REGISTRO-SERVICIO]";
+
+export function esRegistroServicioMantenimiento(descripcion: string): boolean {
+  return descripcion.trimStart().startsWith(PREFIJO_REGISTRO_SERVICIO_MANTENIMIENTO);
+}
+
+export function descripcionRegistroServicioMantenimiento(detalle: string): string {
+  const texto = detalle.trim();
+  return `${PREFIJO_REGISTRO_SERVICIO_MANTENIMIENTO} ${texto}`;
+}
+
+export function descripcionVisibleFallaMantenimiento(descripcion: string): string {
+  const raw = descripcion.trim();
+  if (esRegistroServicioMantenimiento(raw)) {
+    return raw.slice(PREFIJO_REGISTRO_SERVICIO_MANTENIMIENTO.length).trim();
+  }
+  return raw;
+}
+
+export function etiquetaCicloServicioKm(): string {
+  const total = KM_INTERVALO_SERVICIO + KM_MARGEN_MANTENIMIENTO_FORZADO;
+  return `${total.toLocaleString("es-GT")} km`;
+}
 
 export const FALLA_BADGE_BASE_CLASS =
   "inline-flex w-[7.25rem] items-center justify-center rounded-full px-2.5 py-0.5 text-center text-[9px] font-bold uppercase tracking-wider";
@@ -77,7 +105,8 @@ export function getMantenimientoAlerts(fallas: FallaRow[]): FallaAlertItem[] {
     if (falla.estado === "SOLVENTADA") continue;
 
     const placa = falla.vehiculo?.placa?.trim() || "Vehículo";
-    const descripcion = falla.descripcion?.trim() || "Sin descripción";
+    const descripcion =
+      descripcionVisibleFallaMantenimiento(falla.descripcion?.trim() || "") || "Sin descripción";
 
     if (falla.severidad === "ALTA") {
       alertas.push({

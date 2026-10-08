@@ -23,7 +23,7 @@ import {
   GV_TABLE_TOOLBAR_PRIMARY_CLASS,
   GV_TABLE_TOOLBAR_ROW_CLASS,
 } from "../lib/gv-header-ui";
-import { GvTabFilter } from "../lib/gv-tab-filter";
+import { GvToolbarSelect } from "../lib/gv-toolbar-select";
 import {
   GestionVehiculosTableEmpty,
   GestionVehiculosTableShell,
@@ -232,12 +232,10 @@ export function Flota() {
                     className={cn(GV_TABLE_SEARCH_INPUT_CLASS, "pl-10")}
                   />
                 </div>
-                <GvTabFilter
+                <GvToolbarSelect
                   value={estadoFilter}
                   onChange={setEstadoFilter}
-                  layoutId="gv-flota-estado-tabs"
-                  fill={false}
-                  className="min-w-0 w-full max-w-full max-lg:-mx-4 max-lg:w-[calc(100%+2rem)] max-lg:px-4 lg:flex-1"
+                  ariaLabel="Filtrar flota por estado"
                   options={ESTADO_FILTER_OPTIONS}
                 />
               </div>

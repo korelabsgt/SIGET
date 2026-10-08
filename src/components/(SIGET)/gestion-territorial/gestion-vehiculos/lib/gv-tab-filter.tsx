@@ -17,6 +17,7 @@ export function GvTabFilter<T extends string>({
   onChange,
   options,
   layoutId,
+  layout = "flex",
   fill = true,
   compact = false,
   className,
@@ -31,7 +32,7 @@ export function GvTabFilter<T extends string>({
   className?: string;
   selectClassName?: string;
 }) {
-  const scrollable = !fill;
+  const scrollable = !fill && layout !== "responsive-grid";
 
   return (
     <div
@@ -43,8 +44,9 @@ export function GvTabFilter<T extends string>({
     >
       <GvSwitchGroup
         layoutId={layoutId}
+        layout={layout}
         variant="tabs"
-        className={scrollable ? "inline-flex w-max min-w-0" : "w-full"}
+        className={scrollable ? "inline-flex w-max min-w-0" : "w-full sm:w-auto"}
       >
         {options.map((option) => (
           <GvSwitchItem

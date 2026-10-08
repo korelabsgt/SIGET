@@ -22,7 +22,9 @@ import {
 import { FALLAS_MANTENIMIENTO_SELECT } from "./fallas-query";
 import { esFallaServicioKmProgramado, getKmReferenciaServicio } from "../../flota/lib/helpers";
 import {
+  descripcionRegistroServicioMantenimiento,
   ESTADOS_FALLA_ACTIVA,
+  esRegistroServicioMantenimiento,
   evidenciasFalla,
   normalizeFallaRow,
   severidadAveriaInmovilizaFlota,
@@ -111,9 +113,16 @@ export async function createFalla(input: FallaMantenimientoFormData): Promise<vo
       throw new Error("Vehículo no encontrado.");
     }
 
+    const esServicio = parsed.data.tipo_registro === "SERVICIO";
+    const descripcion = esServicio
+      ? descripcionRegistroServicioMantenimiento(parsed.data.descripcion)
+      : parsed.data.descripcion.trim();
+
     const { error } = await supabase.from(TABLE).insert([
       {
-        ...parsed.data,
+        vehiculo_id: parsed.data.vehiculo_id,
+        severidad: parsed.data.severidad,
+        descripcion,
         evidencia_url: evidenciasFalla(parsed.data),
         reportado_por: user.id,
         estado: "PENDIENTE",
@@ -222,7 +231,11 @@ export async function solventarFalla(input: SolventarFallaFormData): Promise<voi
     const vehiculoRow = Array.isArray(vehiculoRel) ? vehiculoRel[0] : vehiculoRel;
     const kmActual = vehiculoRow?.kilometraje_actual;
 
-    if (kmActual != null && esFallaServicioKmProgramado(falla.descripcion)) {
+    const reiniciarCicloServicioKm =
+      esFallaServicioKmProgramado(falla.descripcion) ||
+      esRegistroServicioMantenimiento(falla.descripcion);
+
+    if (kmActual != null && reiniciarCicloServicioKm) {
       const { error: refError } = await supabase
         .from("ot_vehiculos")
         .update({ km_referencia_servicio: kmActual })

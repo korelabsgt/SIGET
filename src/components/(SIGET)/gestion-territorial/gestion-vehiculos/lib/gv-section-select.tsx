@@ -1,91 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { GvTabFilter } from "./gv-tab-filter";
 import { GV_MENU_OPTIONS } from "./menu-options";
 import { useGvSection, type GvSubmoduloId } from "./tab-context";
 
-const wrapClass = "min-w-0 w-[11.5rem] max-w-full shrink-0";
-
-const triggerValueClass = "!text-base !leading-snug";
-
-const triggerClass =
-  "w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border border-border bg-card px-3 font-semibold text-foreground shadow-none transition-colors focus:border-celeste-trifinio focus:ring-2 focus:ring-celeste-trifinio/25 data-[size=default]:!h-10 dark:border-zinc-700 dark:bg-zinc-900 !h-10 min-h-10 py-0 !text-base leading-snug [&_svg]:!size-4";
-
-const contentClass =
-  "z-[200] min-w-[var(--radix-select-trigger-width)] max-h-[min(70dvh,28rem)] border border-border bg-card p-1 opacity-100 shadow-lg dark:border-zinc-700 dark:bg-zinc-900";
-
-const itemClass =
-  "cursor-pointer rounded-lg bg-card py-1.5 text-sm font-medium text-foreground focus:bg-sky-50/40 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:bg-sky-950/20";
-
-function GvSectionSelectPlaceholder({
-  className,
-  label,
-}: {
-  className?: string;
-  label: string;
-}) {
-  return (
-    <div
-      className={cn(triggerClass, className, "flex items-center justify-between gap-2")}
-      aria-hidden
-    >
-      <span className={cn("truncate", triggerValueClass)}>{label}</span>
-      <ChevronDown className="size-4 shrink-0 opacity-50" />
-    </div>
-  );
-}
-
 export function GvSectionSelect({ className }: { className?: string }) {
-  const [mounted, setMounted] = useState(false);
   const gvSection = useGvSection();
   const current = gvSection?.section ?? "solicitudes";
-  const currentTitle =
-    GV_MENU_OPTIONS.find((opt) => opt.id === current)?.title ?? "Área";
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className={wrapClass}>
-        <GvSectionSelectPlaceholder className={className} label={currentTitle} />
-      </div>
-    );
-  }
+  const options = useMemo(
+    () => GV_MENU_OPTIONS.map((opt) => ({ value: opt.id, label: opt.title })),
+    [],
+  );
 
   return (
-    <div className={wrapClass}>
-      <Select
+    <nav
+      className={cn("min-w-0 w-full max-w-full sm:w-auto", className)}
+      aria-label="Área de gestión vehicular"
+    >
+      <GvTabFilter
         value={current}
-        onValueChange={(value) => gvSection?.selectSection(value as GvSubmoduloId)}
-      >
-        <SelectTrigger
-          className={cn(triggerClass, className)}
-          aria-label={`Área de gestión vehicular: ${currentTitle}`}
-        >
-          <span className={cn("min-w-0 flex-1 truncate text-left", triggerValueClass)}>
-            {currentTitle}
-          </span>
-        </SelectTrigger>
-        <SelectContent
-          position="popper"
-          side="bottom"
-          align="start"
-          sideOffset={4}
-          avoidCollisions={false}
-          className={contentClass}
-        >
-          {GV_MENU_OPTIONS.map((opt) => (
-            <SelectItem key={opt.id} value={opt.id} className={itemClass}>
-              {opt.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+        onChange={(value) => gvSection?.selectSection(value as GvSubmoduloId)}
+        layoutId="gv-modulo-secciones"
+        layout="responsive-grid"
+        fill
+        className="min-w-0 w-full max-w-full max-md:px-2.5 sm:w-auto"
+        options={options}
+      />
+    </nav>
   );
 }

@@ -14,6 +14,7 @@ import {
 import {
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
+  GV_TABLE_RECORD_SCROLL,
 } from "../../gestion-vehiculos/lib/table-ui";
 import { GvTabFilter } from "../../gestion-vehiculos/lib/gv-tab-filter";
 import { GvSigetActionButton, sigetAccent } from "../../gestion-vehiculos/lib/gv-siget-action-button";
@@ -69,6 +70,14 @@ const TAB_OPTIONS = TABS.map((tab) => ({
 const filtroTriggerClass = cn(
   GV_FILTRO_FIELD_CLASS,
   GV_TABLE_TOOLBAR_SELECT_TRIGGER_CLASS,
+);
+
+const vehiculoFiltroWrapClass =
+  "min-w-0 w-full shrink-0 lg:w-max lg:min-w-[11.5rem] lg:max-w-[22rem]";
+
+const vehiculoFiltroTriggerClass = cn(
+  filtroTriggerClass,
+  "gap-2 max-lg:w-full lg:w-auto lg:max-w-[22rem] [&_[data-slot=select-value]]:lg:line-clamp-none [&_[data-slot=select-value]]:lg:whitespace-nowrap",
 );
 
 const filtroContentClass =
@@ -229,8 +238,8 @@ export function SolicitudesCombustible() {
 
   const vehiculoSelect = filtrosMontados ? (
     <Select value={vehiculoFilter} onValueChange={handleVehiculoChange}>
-      <SelectTrigger className={cn(filtroTriggerClass, "gap-2")} data-morph-hover-scope>
-        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+      <SelectTrigger className={vehiculoFiltroTriggerClass} data-morph-hover-scope>
+        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden lg:flex-none lg:overflow-visible">
           <GvMorphIcon
             icon={Car}
             hoverIcon={CarFront}
@@ -265,7 +274,7 @@ export function SolicitudesCombustible() {
     </Select>
   ) : (
     <div
-      className={cn(filtroTriggerClass, "flex items-center gap-2")}
+      className={cn(vehiculoFiltroTriggerClass, "flex items-center gap-2")}
       aria-hidden
     >
       <GvMorphIcon
@@ -290,8 +299,7 @@ export function SolicitudesCombustible() {
 
       <div className={GV_PANEL_STACK_CLASS}>
       <GestionVehiculosTableShell
-        className="min-h-0 flex-1"
-        visibleRows={null}
+        visibleRows={GV_TABLE_RECORD_SCROLL}
         toolbar={
           <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
             <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>
@@ -303,9 +311,7 @@ export function SolicitudesCombustible() {
                 compact
                 className="min-w-0 w-full flex-1 lg:w-auto"
               />
-              <div className="min-w-0 w-full lg:min-w-[12rem] lg:max-w-[min(26rem,32vw)]">
-                {vehiculoSelect}
-              </div>
+              <div className={vehiculoFiltroWrapClass}>{vehiculoSelect}</div>
               <GvMonthPicker
                 value={periodoFilter}
                 onChange={handlePeriodoChange}

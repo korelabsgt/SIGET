@@ -8,6 +8,7 @@ import { GvMorphIcon } from "../../gestion-vehiculos/lib/morph-icon";
 import {
   GestionVehiculosTableShell,
   GV_TABLE_BODY_CENTER_CLASS,
+  GV_TABLE_RECORD_SCROLL,
 } from "../../gestion-vehiculos/lib/table-ui";
 import {
   GV_TABLE_TOOLBAR_ACTIONS_CLASS,
@@ -86,8 +87,7 @@ export function Vales() {
 
       <div className={GV_PANEL_STACK_CLASS}>
       <GestionVehiculosTableShell
-        className="min-h-0 flex-1"
-        visibleRows={null}
+        visibleRows={GV_TABLE_RECORD_SCROLL}
         toolbar={
           <div className={GV_TABLE_TOOLBAR_ROW_CLASS}>
             <div className={GV_TABLE_TOOLBAR_PRIMARY_CLASS}>

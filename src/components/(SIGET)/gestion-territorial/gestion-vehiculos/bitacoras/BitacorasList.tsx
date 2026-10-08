@@ -17,13 +17,7 @@ import { GvTableMorphRow } from "../lib/gv-table-morph-row";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { esBitacoraPendiente, formatEstadoBitacoraLabel } from "./lib/bitacora-estado";
 import { formatMontoCombustibleBitacora, nombreSolicitanteBitacora } from "./lib/helpers";
-import { formatVehiculoOpcion } from "../flota/lib/helpers";
-
-function textoVehiculoBitacora(bitacora: BitacoraRow): string {
-  const v = bitacora.ot_vehiculos;
-  if (!v?.placa?.trim()) return "Sin vehículo";
-  return formatVehiculoOpcion(v);
-}
+import { cn } from "@/lib/utils";
 
 function BitacoraListRow({
   bitacora,
@@ -36,7 +30,7 @@ function BitacoraListRow({
 }) {
   const pendiente = esBitacoraPendiente(bitacora);
   const solicitanteNombre = nombreSolicitanteBitacora(bitacora);
-  const vehiculoLabel = textoVehiculoBitacora(bitacora);
+  const vehiculo = bitacora.ot_vehiculos;
   return (
     <GvTableMorphRow>
       <td className={gvTableBodyTdClass}>
@@ -45,16 +39,25 @@ function BitacoraListRow({
         </p>
       </td>
       <td className={gvTableBodyTdClass}>
-        <p
-          className="mx-auto max-w-[200px] truncate text-sm font-semibold text-foreground"
-          title={vehiculoLabel}
-        >
-          {vehiculoLabel}
-        </p>
+        {vehiculo?.placa?.trim() ? (
+          <div className="mx-auto min-w-0 max-w-[200px] text-center">
+            <p
+              className="truncate text-sm font-semibold text-foreground"
+              title={`${vehiculo.marca} ${vehiculo.modelo}`.trim()}
+            >
+              {vehiculo.marca} {vehiculo.modelo}
+            </p>
+            <p className="truncate text-xs text-muted-foreground" title={vehiculo.placa}>
+              {vehiculo.placa}
+            </p>
+          </div>
+        ) : (
+          <span className="text-xs italic text-muted-foreground">Sin vehículo</span>
+        )}
       </td>
-      <td className={gvTableBodyTdClass}>
+      <td className={cn(gvTableBodyTdClass, "!text-left")}>
         <p
-          className="mx-auto max-w-[180px] truncate font-semibold text-foreground"
+          className="min-w-0 max-w-full truncate font-semibold text-foreground"
           title={solicitanteNombre}
         >
           {solicitanteNombre}

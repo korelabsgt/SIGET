@@ -76,8 +76,9 @@ async function fetchSolicitudesCalendario(
 
 async function fetchSolicitudesCalendarioConSolicitante(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  vehiculoId?: string,
 ): Promise<SolicitudCalendarioConSolicitante[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from(TABLE)
     .select(
       "id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, solicitante:profiles!solicitante_id(nombre, email)",
@@ -85,8 +86,36 @@ async function fetchSolicitudesCalendarioConSolicitante(
     .in("estado", [...ESTADOS_CALENDARIO])
     .not("vehiculo_id", "is", null);
 
+  if (vehiculoId) {
+    query = query.eq("vehiculo_id", vehiculoId);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as SolicitudCalendarioConSolicitante[];
+}
+
+export async function getReservasCalendarioVehiculo(vehiculoId: string) {
+  try {
+    const { supabase } = await requireAuth();
+    const id = vehiculoId.trim();
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+      return {
+        success: false as const,
+        error: "Vehículo inválido",
+        data: [] as SolicitudCalendarioConSolicitante[],
+      };
+    }
+    const data = await fetchSolicitudesCalendarioConSolicitante(supabase, id);
+    return { success: true as const, data };
+  } catch (error) {
+    console.error("getReservasCalendarioVehiculo:", error);
+    return {
+      success: false as const,
+      error: "No se pudo cargar el calendario del vehículo.",
+      data: [] as SolicitudCalendarioConSolicitante[],
+    };
+  }
 }
 
 export async function getConflictosPreferenciaVehiculo(

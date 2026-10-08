@@ -43,15 +43,15 @@ export function SolicitudesCombustiblePanel({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
+      <div className="flex w-full flex-col">
+        <div className="hidden w-full flex-col lg:flex">
           <SolicitudesCombustibleList
             solicitudes={solicitudes}
             showSolicitante={showSolicitante}
             onDetail={setSelected}
           />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+        <div className="flex w-full flex-col lg:hidden">
           <SolicitudesCombustibleCards
             solicitudes={solicitudes}
             canResolver={canResolver}

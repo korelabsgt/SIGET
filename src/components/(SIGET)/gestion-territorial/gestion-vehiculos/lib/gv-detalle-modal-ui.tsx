@@ -31,9 +31,18 @@ export function GvDetalleStat({
   valueClassName?: string;
 }) {
   return (
-    <div className="rounded-xl bg-zinc-100 px-3 py-3 dark:bg-zinc-800/90">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 break-words text-sm font-bold leading-snug text-foreground", valueClassName)}>{value}</p>
+    <div className="min-w-0 rounded-xl bg-zinc-100 px-2 py-2.5 text-center dark:bg-zinc-800/90 sm:px-3 sm:py-3">
+      <p className="truncate text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px] sm:tracking-widest">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 truncate text-sm font-bold tabular-nums leading-snug text-foreground sm:text-base",
+          valueClassName,
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }

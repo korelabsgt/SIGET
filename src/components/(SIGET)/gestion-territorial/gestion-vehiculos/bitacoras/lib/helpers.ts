@@ -17,6 +17,7 @@ import {
 import { estadoVehiculoNormalizado } from "../../flota/lib/helpers";
 import type { VehiculoRow } from "../../flota/lib/zod";
 import { DESTINO_BITACORA_RESERVA_INDIVIDUAL_PENDIENTE } from "./crear-pendiente-reserva-individual";
+import { nombrePilotoSolicitud } from "../../solicitudes/lib/helpers";
 
 export const BITACORA_RECIBO_PENDIENTE = "__recibo_pendiente__";
 
@@ -187,7 +188,10 @@ export const BITACORA_LIST_SELECT = `
   ot_vehiculos (placa, marca, modelo),
   profiles:conductor_id (nombre),
   ot_solicitudes (
-    solicitante:profiles!solicitante_id (nombre)
+    piloto,
+    solicitante_id,
+    solicitante:profiles!solicitante_id (nombre),
+    piloto_profile:profiles!piloto (nombre)
   )
 `;
 
@@ -196,6 +200,23 @@ export function nombreSolicitanteBitacora(
 ): string {
   const desdeSolicitud = bitacora.ot_solicitudes?.solicitante?.nombre?.trim();
   if (desdeSolicitud) return desdeSolicitud;
+  return bitacora.profiles?.nombre?.trim() || "Desconocido";
+}
+
+export function nombrePilotoBitacora(
+  bitacora: Pick<BitacoraRow, "solicitud_id" | "profiles" | "ot_solicitudes">,
+): string {
+  const solicitud = bitacora.ot_solicitudes;
+  if (bitacora.solicitud_id && solicitud) {
+    const solicitanteId = solicitud.solicitante_id ?? "";
+    const nombreSolicitante = solicitud.solicitante?.nombre?.trim();
+    return nombrePilotoSolicitud({
+      piloto: solicitud.piloto ?? null,
+      piloto_profile: solicitud.piloto_profile ?? undefined,
+      solicitante_id: solicitanteId,
+      solicitante: nombreSolicitante ? { nombre: nombreSolicitante } : undefined,
+    });
+  }
   return bitacora.profiles?.nombre?.trim() || "Desconocido";
 }
 

@@ -12,7 +12,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { GvDetalleEncabezadoVehiculo } from "../lib/gv-detalle-modal-ui";
+import { GvDetalleEncabezadoVehiculo, GvDetalleStat } from "../lib/gv-detalle-modal-ui";
 import { GvMorphIcon } from "../lib/morph-icon";
 import { formatFechaHoraGv } from "../lib/gv-fechas";
 import { type SolicitudRow } from "./lib/zod";
@@ -86,15 +86,6 @@ function tituloEstado(estado: SolicitudRow["estado"]) {
   return formatEstadoLabel(estado)
     .toLowerCase()
     .replace(/\b\w/g, (letra) => letra.toUpperCase());
-}
-
-function StatResumen({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-zinc-100 px-3 py-3 text-center dark:bg-zinc-800/90">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words text-sm font-bold leading-snug text-foreground">{value}</p>
-    </div>
-  );
 }
 
 function FilaMision({
@@ -422,10 +413,10 @@ function ContenidoDetalle({
 
         {tieneAcciones ? <div>{acciones}</div> : null}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <StatResumen label="Salida" value={textoSalidaMision(solicitud)} />
-          <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
-          <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
+        <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:gap-2">
+          <GvDetalleStat label="Salida" value={textoSalidaMision(solicitud)} />
+          <GvDetalleStat label="Retorno" value={textoRetornoMision(solicitud)} />
+          <GvDetalleStat label="Duración" value={textoDuracionMision(solicitud)} />
         </div>
 
         <BloqueMotivoRechazo solicitud={solicitud} />
@@ -471,10 +462,10 @@ function ContenidoDetalle({
         {tieneAcciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <StatResumen label="Salida" value={textoSalidaMision(solicitud)} />
-        <StatResumen label="Retorno" value={textoRetornoMision(solicitud)} />
-        <StatResumen label="Duración" value={textoDuracionMision(solicitud)} />
+      <div className="mt-6 grid min-w-0 grid-cols-3 gap-1.5 sm:gap-2">
+        <GvDetalleStat label="Salida" value={textoSalidaMision(solicitud)} />
+        <GvDetalleStat label="Retorno" value={textoRetornoMision(solicitud)} />
+        <GvDetalleStat label="Duración" value={textoDuracionMision(solicitud)} />
       </div>
 
       <div className="mt-6 space-y-4">

@@ -83,6 +83,7 @@ export function ReportarAveriaModal({
     resolver: zodResolver(FallaMantenimientoSchema) as never,
     defaultValues: {
       vehiculo_id: "",
+      tipo_registro: "AVERIA",
       severidad: "MEDIA",
       descripcion: "",
       evidencia_url: [],
@@ -106,6 +107,7 @@ export function ReportarAveriaModal({
       setPreviewUrl(null);
       form.reset({
         vehiculo_id: "",
+        tipo_registro: "AVERIA",
         severidad: "MEDIA",
         descripcion: "",
         evidencia_url: [],
@@ -116,6 +118,7 @@ export function ReportarAveriaModal({
     const vehiculoId = vehiculoFijo?.id ?? vehiculoIdInicial ?? "";
     form.reset({
       vehiculo_id: vehiculoId,
+      tipo_registro: "AVERIA",
       severidad: "MEDIA",
       descripcion: "",
       evidencia_url: [],
@@ -177,9 +180,11 @@ export function ReportarAveriaModal({
 
       await crear.mutateAsync({ ...data, evidencia_url: evidenciaPaths });
       toast.success(
-        obligatorio
-          ? "Se agregó el vehículo a mantenimiento."
-          : "Avería reportada exitosamente.",
+        data.tipo_registro === "SERVICIO"
+          ? "Servicio registrado exitosamente."
+          : obligatorio
+            ? "Se agregó el vehículo a mantenimiento."
+            : "Avería reportada exitosamente.",
       );
       form.reset();
       clearFile();
@@ -258,6 +263,41 @@ export function ReportarAveriaModal({
                         </SelectContent>
                       </Select>
                     )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tipo_registro"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Servicio</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        if (val === "SERVICIO") {
+                          form.setValue("severidad", "BAJA");
+                        }
+                      }}
+                      disabled={obligatorio}
+                    >
+                      <FormControl>
+                        <SelectTrigger className={GV_MODAL_SELECT_TRIGGER_CLASS}>
+                          <SelectValue placeholder="Seleccione tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent position="popper" className={GV_MODAL_SELECT_CONTENT_CLASS}>
+                        <SelectItem value="AVERIA" className={GV_MODAL_SELECT_ITEM_CLASS}>
+                          Avería o fallo mecánico
+                        </SelectItem>
+                        <SelectItem value="SERVICIO" className={GV_MODAL_SELECT_ITEM_CLASS}>
+                          Servicio (cambio de aceite, filtros, etc.)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

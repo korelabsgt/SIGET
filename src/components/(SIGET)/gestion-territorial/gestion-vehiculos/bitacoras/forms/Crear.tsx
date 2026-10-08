@@ -580,10 +580,8 @@ export function Crear({
         onClose={handleClose}
         title={
           esReservaIndividualPendiente
-            ? "Confirmar bitácora de reserva individual"
-            : esConfirmacionPendiente
-              ? "Confirmar bitácora de viaje"
-              : "Bitácora de viaje"
+            ? "Bitácora de reserva individual"
+            : "Bitácora de viaje"
         }
         maxWidth="max-w-2xl"
       >
@@ -1045,7 +1043,7 @@ export function Crear({
                     </div>
                   ) : null}
                 </GvDetalleTarjetaAnidada>
-                <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:gap-2">
                   <GvDetalleStat
                     label="Km inicial"
                     value={Number(kmInicialFlota).toLocaleString("es-GT")}
