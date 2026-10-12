@@ -125,6 +125,13 @@ export function formatFechaTablaGt(value: string | null | undefined): string {
   return partesFechaHoraTablaGt(value)?.fecha ?? "\u2014";
 }
 
+export function formatFechaFilaTablaGt(value: string | null | undefined): string {
+  const fecha = normalizarFechaCalendario(value);
+  if (!fecha) return "\u2014";
+  const [y, m, d] = fecha.split("-").map(Number);
+  return formatFechaTablaGt(new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toISOString());
+}
+
 export function formatHoraTablaGt(value: string | null | undefined): string {
   return partesFechaHoraTablaGt(value)?.hora ?? "\u2014";
 }

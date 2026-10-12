@@ -15,21 +15,10 @@ import {
 import { AuroraText } from "@/components/ui/aurora-text";
 import OrganizacionesLogoCintillo from "./OrganizacionesLogoCintillo";
 import { createClient } from "@/utils/supabase/client";
+import { primerNombre, pickSaludoEntrada } from "@/lib/persona";
+import { pickSaludoMotivacional } from "@/components/(SIGET)/gestion-territorial/lib/saludos";
 
 const ROLES_WITH_PLANTILLAS = ["admin", "super", "admin-observatorio"];
-
-const FRASES_BIENVENIDA = [
-  "¡Qué bueno verte de nuevo! Todo está listo para continuar con la gestión técnica y el análisis regional.",
-  "¡Hola de nuevo! Tienes a tu disposición todas las herramientas estadísticas y datos del Observatorio.",
-  "¡Un saludo! El portal de recolección y análisis de datos está optimizado y listo para tu jornada.",
-  "¡Es un gusto saludarte! Accede a las herramientas clave para actualizar y visualizar el avance de la región.",
-  "¡Qué alegría tu presencia! Tu liderazgo técnico impulsa el desarrollo de la región con datos reales.",
-  "¡Es un placer saludarte de nuevo! Explora, gestiona y analiza libremente la información de movilidad regional.",
-  "¡Es un placer tenerte aquí hoy! Tu trabajo aquí hace más transparente la gestión de datos.",
-  "¡Hola! Que tengas una excelente y productiva jornada gestionando la información del Observatorio.",
-  "¡Excelente día para trabajar con datos! El portal está completamente listo para la actualización y el análisis.",
-  "¡Hola! Gracias por tu valioso aporte técnico al análisis continuo de la movilidad humana regional.",
-];
 
 export default function ObservatorioWeb() {
   const router = useRouter();
@@ -38,7 +27,8 @@ export default function ObservatorioWeb() {
   const metadata = user?.user_metadata || {};
 
   const [loading, setLoading] = useState(true);
-  const [genero, setGenero] = useState<string | null>(null);
+  const [saludoEntrada, setSaludoEntrada] = useState("¡Hola, ");
+  const [saludoMotivacional] = useState(() => pickSaludoMotivacional());
 
   const [typedText, setTypedText] = useState("");
 
@@ -46,6 +36,7 @@ export default function ObservatorioWeb() {
 
   useEffect(() => {
     if (!user) {
+      setSaludoEntrada(pickSaludoEntrada(null));
       setLoading(false);
       return;
     }
@@ -58,10 +49,13 @@ export default function ObservatorioWeb() {
           .eq("id", user.id)
           .single();
         if (data && !error) {
-          setGenero(data.genero);
+          setSaludoEntrada(pickSaludoEntrada(data.genero));
+        } else {
+          setSaludoEntrada(pickSaludoEntrada(null));
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
+        setSaludoEntrada(pickSaludoEntrada(null));
       } finally {
         setLoading(false);
       }
@@ -70,19 +64,17 @@ export default function ObservatorioWeb() {
   }, [user]);
 
   useEffect(() => {
-    const fraseAleatoria =
-      FRASES_BIENVENIDA[Math.floor(Math.random() * FRASES_BIENVENIDA.length)];
     let i = 0;
     const timeout = setTimeout(() => {
       const interval = setInterval(() => {
-        setTypedText(fraseAleatoria.substring(0, i + 1));
+        setTypedText(saludoMotivacional.substring(0, i + 1));
         i++;
-        if (i >= fraseAleatoria.length) clearInterval(interval);
+        if (i >= saludoMotivacional.length) clearInterval(interval);
       }, 30);
       return () => clearInterval(interval);
     }, 600);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [saludoMotivacional]);
 
   if (loading) {
     return (
@@ -92,12 +84,6 @@ export default function ObservatorioWeb() {
     );
   }
 
-  const welcomeText =
-    genero === "Femenino"
-      ? "¡Bienvenida, "
-      : genero === "Masculino"
-        ? "¡Bienvenido, "
-        : "¡Bienvenid@, ";
 
   return (
     <>
@@ -134,8 +120,8 @@ export default function ObservatorioWeb() {
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 className="text-2xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white leading-tight"
               >
-                {welcomeText}
-                <AuroraText>{metadata.nombre || "Usuario"}</AuroraText>!
+                {saludoEntrada}
+                <AuroraText>{primerNombre(metadata.nombre)}</AuroraText>!
               </motion.h2>
 
               <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 font-medium max-w-xl mx-auto leading-relaxed min-h-[56px] md:min-h-[60px]">

@@ -31,13 +31,27 @@ const sigetCrumbActive =
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const BREADCRUMB_LABELS: Record<string, string> = {
+  repositorio: "Repositorio",
+  noticias: "Noticias",
+  documentos: "Documentos",
+  noticia: "Noticias",
+  documento: "Documentos",
+  mis: "Listado",
+  nuevo: "Nuevo",
+  editar: "Editar",
+  "gestion-territorial": "Gestión territorial",
+};
+
 function formatBreadcrumbLabel(segment: string): string {
   if (UUID_SEGMENT.test(segment)) return "detalles";
+  const mapped = BREADCRUMB_LABELS[segment];
+  if (mapped) return mapped;
   return segment.replace(/-/g, " ");
 }
 
 const crumbRow =
-  "flex min-w-0 w-full max-h-[3.1em] flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-[10px] font-medium leading-tight text-muted-foreground md:pt-0.5 md:text-xs";
+  "flex min-w-0 w-full max-h-[3.1em] flex-wrap items-center gap-x-1 gap-y-0.5 overflow-hidden text-[10px] font-medium leading-tight text-muted-foreground md:text-xs";
 
 function SigetCrumb({ active = false }: { active?: boolean }) {
   if (active) {

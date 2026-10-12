@@ -1,12 +1,10 @@
 import type { IconNode } from "lucide";
 import {
-  BarChart3,
+  BookOpen,
   Briefcase,
-  Car,
-  ClipboardList,
   Globe2,
   LayoutDashboard,
-  PieChart,
+  Library,
   Telescope,
 } from "lucide";
 import { canManageUsers } from "@/components/(base)/(users)/usuarios/lib/permissions";
@@ -23,7 +21,6 @@ export type DashboardModule = {
   animatedIcon: string;
   morphIconFrom?: IconNode;
   morphIconTo?: IconNode;
-  morphIconCycle?: readonly [IconNode, IconNode, IconNode, IconNode];
   morphIconColor?: string;
   morphIconBg?: string;
   accentColor?: string;
@@ -37,12 +34,45 @@ export type DashboardModule = {
 
 export const DASHBOARD_MODULES: DashboardModule[] = [
   {
+    id: "gestion-territorial",
+    title: "Gestión",
+    subtitle: "Administrativa",
+    desc: "Actividades, reportes, productos, flota vehicular y gestión institucional.",
+    animatedIcon: "giblkgwf",
+    morphIconFrom: Briefcase,
+    morphIconTo: LayoutDashboard,
+    morphIconColor: "#1a95d3",
+    morphIconBg: "bg-sky-100 dark:bg-sky-950/50",
+    accentColor: "#1a95d3",
+    hoverGradientFrom: "#2c5f9b",
+    hoverGradientTo: "#1a95d3",
+    hoverBorderColor: "#2c5f9b",
+    href: "/siget/gestion-territorial",
+  },
+  {
+    id: "repositorio",
+    title: "Repositorio",
+    subtitle: "Digital",
+    desc: "Ingesta, revisión y difusión de documentos institucionales.",
+    animatedIcon: "wvhscmei",
+    morphIconFrom: BookOpen,
+    morphIconTo: Library,
+    morphIconColor: "#2c5f9b",
+    morphIconBg: "bg-sky-100 dark:bg-sky-950/50",
+    accentColor: "#2c5f9b",
+    hoverGradientFrom: "#2c5f9b",
+    hoverGradientTo: "#6f9fd4",
+    hoverBorderColor: "#2c5f9b",
+    href: "/siget/repositorio",
+  },
+  {
     id: "observatorio",
     title: "Observatorio",
     subtitle: "Web",
     desc: "Plataforma web de visualización de datos regionales.",
     animatedIcon: "qqvpjphn",
-    morphIconCycle: [Telescope, Globe2, BarChart3, PieChart],
+    morphIconFrom: Telescope,
+    morphIconTo: Globe2,
     morphIconColor: "#6366f1",
     morphIconBg: "bg-indigo-100 dark:bg-indigo-950/50",
     accentColor: "#6366f1",
@@ -51,22 +81,6 @@ export const DASHBOARD_MODULES: DashboardModule[] = [
     hoverBorderColor: "#6366f1",
     href: "/siget/observatorio",
     allowedRoles: ["super", "admin", "observatorio"],
-  },
-
-  {
-    id: "gestion-territorial",
-    title: "Gestión",
-    subtitle: "Administrativa",
-    desc: "Actividades, reportes, productos, flota vehicular y gestión institucional.",
-    animatedIcon: "giblkgwf",
-    morphIconCycle: [Briefcase, LayoutDashboard, ClipboardList, Car],
-    morphIconColor: "#1a95d3",
-    morphIconBg: "bg-sky-100 dark:bg-sky-950/50",
-    accentColor: "#1a95d3",
-    hoverGradientFrom: "#2c5f9b",
-    hoverGradientTo: "#1a95d3",
-    hoverBorderColor: "#2c5f9b",
-    href: "/siget/gestion-territorial",
   },
   {
     id: "perfil",

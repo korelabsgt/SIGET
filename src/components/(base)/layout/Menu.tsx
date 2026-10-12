@@ -16,6 +16,7 @@ import {
   Globe,
   Home,
   KeyRound,
+  Library,
   LogIn,
   LogOut,
   Settings,
@@ -69,6 +70,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   observatorio: Globe,
   perfil: User,
   admin: Settings,
+  repositorio: Library,
 };
 
 type MenuAccordionOption = {

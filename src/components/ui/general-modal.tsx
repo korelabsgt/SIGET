@@ -50,7 +50,7 @@ const modalInputBaseClass =
   "flex h-10 w-full rounded-lg bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:outline-none";
 
 const modalTextareaBaseClass =
-  "flex min-h-20 w-full resize-none rounded-lg bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:outline-none";
+  "field-sizing-content flex min-h-20 w-full resize-none overflow-hidden rounded-lg bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:outline-none";
 
 export function ModalForm({
   className,

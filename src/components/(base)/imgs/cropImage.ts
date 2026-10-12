@@ -31,7 +31,16 @@ export async function cropImage(
   imageSrc: string,
   pixelCrop: PixelCrop,
   rotation = 0,
+  options?: { fillWhite?: boolean },
 ): Promise<Blob> {
+  const fillWhite = options?.fillWhite !== false;
+  const px = {
+    x: Math.round(pixelCrop.x),
+    y: Math.round(pixelCrop.y),
+    width: Math.max(1, Math.round(pixelCrop.width)),
+    height: Math.max(1, Math.round(pixelCrop.height)),
+  };
+
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -58,25 +67,28 @@ export async function cropImage(
     throw new Error("No se pudo obtener el contexto del canvas recortado");
   }
 
-  croppedCanvas.width = pixelCrop.width;
-  croppedCanvas.height = pixelCrop.height;
+  croppedCanvas.width = px.width;
+  croppedCanvas.height = px.height;
 
-  croppedCtx.fillStyle = "#ffffff";
-  croppedCtx.fillRect(0, 0, pixelCrop.width, pixelCrop.height);
+  if (fillWhite) {
+    croppedCtx.fillStyle = "#ffffff";
+    croppedCtx.fillRect(0, 0, px.width, px.height);
+  }
 
   croppedCtx.drawImage(
     canvas,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    px.x,
+    px.y,
+    px.width,
+    px.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height,
+    px.width,
+    px.height,
   );
 
   return new Promise((resolve, reject) => {
+    const mime = fillWhite ? "image/jpeg" : "image/png";
     croppedCanvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -85,8 +97,8 @@ export async function cropImage(
         }
         resolve(blob);
       },
-      "image/jpeg",
-      0.92,
+      mime,
+      fillWhite ? 0.92 : undefined,
     );
   });
 }

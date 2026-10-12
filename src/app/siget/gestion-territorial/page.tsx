@@ -34,6 +34,7 @@ import { useUser, useUserContext } from "@/components/(base)/providers/UserProvi
 import { AuroraText } from "@/components/ui/aurora-text";
 import { createClient } from "@/utils/supabase/client";
 import { pickSaludoMotivacional } from "@/components/(SIGET)/gestion-territorial/lib/saludos";
+import { primerNombre, pickSaludoEntrada } from "@/lib/persona";
 import { canSeeFlotaYCombustible } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
 
 type GtCardFeature = {
@@ -203,7 +204,7 @@ export default function GestionTerritorialPage() {
   const metadata = user?.user_metadata || {};
 
   const [loading, setLoading] = useState(true);
-  const [genero, setGenero] = useState<string | null>(null);
+  const [saludoEntrada, setSaludoEntrada] = useState("¡Hola, ");
   const [saludoMotivacional] = useState(() => pickSaludoMotivacional());
   const [typedText, setTypedText] = useState("");
   const [headerHovered, setHeaderHovered] = useState(false);
@@ -216,6 +217,7 @@ export default function GestionTerritorialPage() {
 
   useEffect(() => {
     if (!user) {
+      setSaludoEntrada(pickSaludoEntrada(null));
       setLoading(false);
       return;
     }
@@ -228,10 +230,13 @@ export default function GestionTerritorialPage() {
           .eq("id", user.id)
           .single();
         if (data && !error) {
-          setGenero(data.genero);
+          setSaludoEntrada(pickSaludoEntrada(data.genero));
+        } else {
+          setSaludoEntrada(pickSaludoEntrada(null));
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
+        setSaludoEntrada(pickSaludoEntrada(null));
       } finally {
         setLoading(false);
       }
@@ -260,12 +265,6 @@ export default function GestionTerritorialPage() {
     );
   }
 
-  const welcomeText =
-    genero === "Femenino"
-      ? "¡Bienvenida, "
-      : genero === "Masculino"
-        ? "¡Bienvenido, "
-        : "¡Bienvenid@, ";
 
   return (
     <>
@@ -304,8 +303,8 @@ export default function GestionTerritorialPage() {
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 className="text-2xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white leading-tight"
               >
-                {welcomeText}
-                <AuroraText>{metadata.nombre || "Usuario"}</AuroraText>!
+                {saludoEntrada}
+                <AuroraText>{primerNombre(metadata.nombre)}</AuroraText>!
               </motion.h2>
 
               <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 font-medium max-w-xl mx-auto leading-relaxed min-h-[56px] md:min-h-[60px]">

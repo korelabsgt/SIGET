@@ -69,7 +69,9 @@ export default function Header() {
     setRefreshRotation(hovered ? 90 : 0);
   };
 
-  if (pathname.startsWith("/archivos")) return null;
+  if (pathname.startsWith("/archivos") || pathname.startsWith("/conocimiento/archivo")) {
+    return null;
+  }
 
   return (
     <>
@@ -78,7 +80,7 @@ export default function Header() {
         className="relative z-[100] w-full shrink-0 border-b border-border/40 bg-zinc-100 shadow-sm transition-all dark:bg-zinc-800"
       >
         <div className="mx-auto flex min-h-[var(--header-row-height)] flex-col px-1 py-1 md:px-2.5">
-          <div className="flex w-full items-center justify-between gap-2 py-2.5 md:py-0">
+          <div className="flex w-full items-center justify-between gap-2 py-2.5">
             <button
               type="button"
               id="observatorio-header-brand"
@@ -101,7 +103,7 @@ export default function Header() {
                   delay: 0.2,
                   ease: [0.25, 1, 0.5, 1],
                 }}
-                className="min-w-0 cursor-pointer border-l border-border/60 pl-1.5 text-left text-[6px] leading-[1.35] font-black tracking-[0.06em] text-celeste-trifinio uppercase sm:text-[7px] sm:leading-[1.4] sm:tracking-[0.08em] md:pl-1.5 md:text-[9px] md:leading-[1.45] md:tracking-[0.1em]"
+                className="min-w-0 cursor-pointer border-l border-border/60 pl-1.5 text-left text-[8px] leading-[1.35] font-black tracking-[0.06em] text-celeste-trifinio uppercase sm:text-[9px] sm:leading-[1.4] sm:tracking-[0.08em] md:pl-1.5 md:text-[11px] md:leading-[1.45] md:tracking-[0.1em]"
               >
                 SISTEMA INTEGRAL DE
                 <br />
@@ -160,7 +162,7 @@ export default function Header() {
           </div>
 
           {showBreadcrumb ? (
-            <div className="min-w-0 w-full px-1 py-2.5 md:py-0 md:pb-0.5 md:pt-0.5">
+            <div className="min-w-0 w-full px-1 py-2.5">
               <BreadcrumbNav />
             </div>
           ) : null}
