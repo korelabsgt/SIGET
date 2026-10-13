@@ -38,7 +38,7 @@ import {
   MAX_FOTOS_SEGURO,
   MAX_FOTOS_UNIDAD,
   MAX_FOTOS_VEHICULO,
-  MIN_FOTOS_VEHICULO,
+  MIN_IMAGENES_VEHICULO,
 } from "../lib/helpers";
 import {
   DocumentosVehiculoCampo,
@@ -49,7 +49,8 @@ import {
   resolveStorageDisplaySrc,
   useSignedStorageUrls,
 } from "../../lib/storage-hooks";
-import { PilotoSelect } from "../../solicitudes/PilotoSelect";
+import { ReservaUsuariosField } from "./ReservaUsuariosField";
+import { reservaUsuarioIdsDeVehiculo } from "../lib/helpers";
 
 export function VerEditar({
   open,
@@ -92,7 +93,7 @@ export function VerEditar({
       anio: new Date().getFullYear(),
       kilometraje_actual: 0,
       estado: "LIBRE",
-      reserva_usuario_id: null,
+      reserva_usuario_ids: [],
       vencimiento_seguro: "",
       vencimiento_circulacion: "",
       imagen_url: [],
@@ -108,7 +109,7 @@ export function VerEditar({
 
   useEffect(() => {
     if (!esReservaIndividual) {
-      setValue("reserva_usuario_id", null);
+      setValue("reserva_usuario_ids", []);
     }
   }, [esReservaIndividual, setValue]);
 
@@ -274,7 +275,7 @@ export function VerEditar({
           kilometraje_actual: initialData.kilometraje_actual,
           estado:
             estadoVehiculoNormalizado(estadoDb) === "RESERVADO" ? "LIBRE" : estadoDb,
-          reserva_usuario_id: initialData.reserva_usuario_id ?? null,
+          reserva_usuario_ids: reservaUsuarioIdsDeVehiculo(initialData),
           vencimiento_seguro: formatFechaManualInput(initialData.vencimiento_seguro),
           vencimiento_circulacion: formatFechaManualInput(
             initialData.vencimiento_circulacion,
@@ -293,7 +294,7 @@ export function VerEditar({
           anio: new Date().getFullYear(),
           kilometraje_actual: 0,
           estado: "LIBRE",
-          reserva_usuario_id: null,
+          reserva_usuario_ids: [],
           vencimiento_seguro: "",
           vencimiento_circulacion: "",
           imagen_url: [],
@@ -308,12 +309,11 @@ export function VerEditar({
       toast.warn("Espera a que terminen de subir las fotografías.");
       return;
     }
-    if (fotosUnidad.length < MIN_FOTOS_VEHICULO) {
-      toast.warn("Debes subir al menos una fotografía del vehículo.");
-      return;
-    }
-    if (esNuevo && fotosCirculacion.length < 1) {
-      toast.warn("Debes subir al menos una fotografía de la tarjeta de circulación.");
+    const imagenUrl = combinarFotosVehiculo(fotosUnidad, fotosCirculacion, fotoSeguro);
+    if (imagenUrl.length < MIN_IMAGENES_VEHICULO) {
+      toast.warn(
+        "Sube al menos una imagen: fotografía del vehículo o documento (circulación o seguro).",
+      );
       return;
     }
 
@@ -321,7 +321,7 @@ export function VerEditar({
     try {
       const payload: VehiculoInput = {
         ...data,
-        imagen_url: combinarFotosVehiculo(fotosUnidad, fotosCirculacion, fotoSeguro),
+        imagen_url: imagenUrl,
       };
 
       if (initialData?.id) {
@@ -403,30 +403,28 @@ export function VerEditar({
 
           {esReservaIndividual ? (
             <div className="space-y-2">
-              <Label htmlFor="reserva_usuario_id">
-                Usuario asignado
+              <Label htmlFor="reserva_usuario_ids">
+                Usuarios asignados
                 <span className="ml-1 text-red-500">*</span>
               </Label>
               <Controller
                 control={control}
-                name="reserva_usuario_id"
+                name="reserva_usuario_ids"
                 render={({ field }) => (
-                  <PilotoSelect
-                    value={field.value ?? ""}
-                    onChange={(profileId) => {
-                      field.onChange(profileId.trim() ? profileId : null);
-                    }}
+                  <ReservaUsuariosField
+                    value={Array.isArray(field.value) ? field.value : []}
+                    onChange={field.onChange}
                     disabled={isWorking}
                   />
                 )}
               />
-              {errors.reserva_usuario_id ? (
+              {errors.reserva_usuario_ids ? (
                 <p className="text-xs text-red-500">
-                  {errors.reserva_usuario_id.message}
+                  {errors.reserva_usuario_ids.message}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Solo aplica mientras el estado sea reserva individual.
+                  Al menos un usuario (puedes agregar más). Solo aplica mientras el estado sea reserva individual.
                 </p>
               )}
             </div>
@@ -518,7 +516,6 @@ export function VerEditar({
             }}
             disabled={isWorking}
             sinEspacio={sinEspacioParaDocumentos}
-            requeridaCirculacion={esNuevo}
           />
 
           </GvModalFormBody>

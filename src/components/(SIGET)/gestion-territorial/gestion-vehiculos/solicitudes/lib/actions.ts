@@ -14,6 +14,7 @@ import {
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import {
   canAprobarRechazarSolicitudes,
+  canCancelarMisionComoSolicitante,
   canElegirSolicitanteAlCrearSolicitudVehiculo,
   canIniciarMisionSolicitud,
   canManageSolicitudesVehiculos,
@@ -28,6 +29,7 @@ import {
 } from "../../lib/bitacora-pendiente-bloqueo";
 import {
   COMENTARIO_PREFIJO_MISION_CANCELADA,
+  COMENTARIO_PREFIJO_SOLICITUD_CANCELADA,
   formatEstadoLabel,
   formatFechaSolicitudGv,
 } from "./helpers";
@@ -62,7 +64,7 @@ async function fetchSolicitudesCalendario(
 ): Promise<SolicitudCalendarioRef[]> {
   let query = supabase
     .from(TABLE)
-    .select("id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada")
+    .select("id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, destino")
     .in("estado", [...ESTADOS_CALENDARIO]);
 
   if (vehiculoId) {
@@ -81,7 +83,7 @@ async function fetchSolicitudesCalendarioConSolicitante(
   let query = supabase
     .from(TABLE)
     .select(
-      "id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, solicitante:profiles!solicitante_id(nombre, email)",
+      "id, vehiculo_id, estado, fecha_inicio, fecha_fin_estimada, destino, solicitante:profiles!solicitante_id(nombre, email)",
     )
     .in("estado", [...ESTADOS_CALENDARIO])
     .not("vehiculo_id", "is", null);
@@ -633,6 +635,86 @@ export async function cambiarEstadoSolicitud(
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "No se pudo actualizar el estado de la solicitud.";
+    return { success: false, error: message };
+  }
+}
+
+export async function cancelarSolicitudVehiculoPorSolicitante(
+  id: string,
+  payload: { comentarios: string },
+) {
+  try {
+    const { user, role } = await requireAuth();
+
+    const parsedComentario = rechazoSolicitudComentarioSchema.safeParse(payload.comentarios);
+    if (!parsedComentario.success) {
+      return {
+        success: false,
+        error:
+          parsedComentario.error.issues[0]?.message ??
+          "Debe indicar el motivo de la cancelación.",
+      };
+    }
+
+    const supabase = await createClient();
+    const { data: actual, error: actualError } = await supabase
+      .from(TABLE)
+      .select("id, estado, vehiculo_id, solicitante_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (actualError || !actual) {
+      return { success: false, error: "No se encontró la solicitud." };
+    }
+
+    if (
+      !canCancelarMisionComoSolicitante(role, actual.solicitante_id ?? "", user.id)
+    ) {
+      return { success: false, error: "No tienes permisos para realizar esta acción." };
+    }
+
+    if (actual.estado !== "PENDIENTE" && actual.estado !== "APROBADA") {
+      return {
+        success: false,
+        error:
+          "Solo puede cancelar solicitudes pendientes o misiones aprobadas que no se han iniciado.",
+      };
+    }
+
+    const prefijo =
+      actual.estado === "PENDIENTE"
+        ? COMENTARIO_PREFIJO_SOLICITUD_CANCELADA
+        : COMENTARIO_PREFIJO_MISION_CANCELADA;
+
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from(TABLE)
+      .update({
+        estado: "RECHAZADA",
+        comentarios: `${prefijo} ${parsedComentario.data}`,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error cancelarSolicitudVehiculoPorSolicitante:", error);
+      return { success: false, error: "No se pudo cancelar la solicitud." };
+    }
+
+    if (actual.vehiculo_id) {
+      await sincronizarEstadoFlotaVehiculo(admin, actual.vehiculo_id);
+    }
+    if (data.vehiculo_id && data.vehiculo_id !== actual.vehiculo_id) {
+      await sincronizarEstadoFlotaVehiculo(admin, data.vehiculo_id);
+    }
+
+    revalidatePath(REVALIDATE_ROUTE);
+    revalidatePath(FLOTA_ROUTE);
+    return { success: true, data };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "No se pudo cancelar la solicitud.";
     return { success: false, error: message };
   }
 }

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { reservaUsuarioIdsDeVehiculo } from "../../flota/lib/helpers";
+
 const BITACORAS_TABLE = "ot_bitacoras";
 const VEHICULOS_TABLE = "ot_vehiculos";
 
@@ -7,7 +9,8 @@ export const DESTINO_BITACORA_RESERVA_INDIVIDUAL_PENDIENTE = "Por confirmar";
 
 type VehiculoReservaIndividualRef = {
   id: string;
-  reserva_usuario_id: string | null;
+  reserva_usuario_ids?: string[] | null;
+  reserva_usuario_id?: string | null;
   kilometraje_actual: number | null;
 };
 
@@ -16,7 +19,7 @@ export async function crearBitacoraPendienteReservaIndividual(
   vehiculo: VehiculoReservaIndividualRef,
 ): Promise<void> {
   const vehiculoId = vehiculo.id?.trim();
-  const conductorId = vehiculo.reserva_usuario_id?.trim();
+  const conductorId = reservaUsuarioIdsDeVehiculo(vehiculo)[0]?.trim() ?? "";
   if (!vehiculoId || !conductorId) return;
 
   const { data: existente, error: existenteError } = await supabase
@@ -60,7 +63,7 @@ export async function asegurarBitacorasPendientesReservaIndividual(
 ): Promise<number> {
   const { data: vehiculos, error: vehiculosError } = await supabase
     .from(VEHICULOS_TABLE)
-    .select("id, reserva_usuario_id, kilometraje_actual")
+    .select("id, reserva_usuario_id, reserva_usuario_ids, kilometraje_actual")
     .eq("estado", "RESERVA_INDIVIDUAL");
 
   if (vehiculosError) {
@@ -85,12 +88,19 @@ export async function asegurarBitacorasPendientesReservaIndividual(
     }
     if (existente?.id) continue;
 
-    const reservaUsuarioId =
-      typeof vehiculo.reserva_usuario_id === "string" ? vehiculo.reserva_usuario_id : null;
+    const ids = reservaUsuarioIdsDeVehiculo({
+      reserva_usuario_id:
+        typeof vehiculo.reserva_usuario_id === "string" ? vehiculo.reserva_usuario_id : null,
+      reserva_usuario_ids: Array.isArray(vehiculo.reserva_usuario_ids)
+        ? vehiculo.reserva_usuario_ids.filter((id): id is string => typeof id === "string")
+        : [],
+    });
+
+    if (ids.length === 0) continue;
 
     await crearBitacoraPendienteReservaIndividual(supabase, {
       id: vehiculo.id,
-      reserva_usuario_id: reservaUsuarioId,
+      reserva_usuario_ids: ids,
       kilometraje_actual:
         typeof vehiculo.kilometraje_actual === "number" ? vehiculo.kilometraje_actual : 0,
     });

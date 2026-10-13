@@ -123,10 +123,6 @@ export type BitacoraAlertItem = {
   detalle: string;
 };
 
-export function bitacoraSinSolicitud(bitacora: BitacoraRow): boolean {
-  return !bitacora.solicitud_id && (bitacora.km_recorrido ?? 0) > 0;
-}
-
 export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[] {
   const alertas: BitacoraAlertItem[] = [];
 
@@ -141,18 +137,6 @@ export function getBitacoraAlerts(bitacoras: BitacoraRow[]): BitacoraAlertItem[]
         severidad: "warn",
         titulo: "Bitácora pendiente de confirmar",
         detalle: `${placa} · ${destino}${responsable ? ` · ${responsable}` : ""}`,
-      });
-      continue;
-    }
-
-    if (bitacoraSinSolicitud(bitacora)) {
-      const placa = bitacora.ot_vehiculos?.placa ?? "Vehículo";
-      alertas.push({
-        id: `${bitacora.id}-solicitud`,
-        bitacora,
-        severidad: "warn",
-        titulo: "Viaje sin solicitud vinculada",
-        detalle: `${placa} · ${bitacora.destino}`,
       });
     }
   }

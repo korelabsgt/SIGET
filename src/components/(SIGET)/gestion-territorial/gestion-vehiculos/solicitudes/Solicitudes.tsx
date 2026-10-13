@@ -56,8 +56,12 @@ import { registroEnPeriodoCalendario } from "../lib/periodo-filtro";
 
 import { mesCalendarioGt } from "@/lib/fechas-gt";
 
-import { canAprobarRechazarSolicitudes } from "../lib/permissions";
+import {
+  canAprobarRechazarSolicitudes,
+  canCancelarMisionComoSolicitante,
+} from "../lib/permissions";
 
+import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import { useGvPermissionRole } from "../lib/gv-permissions-hook";
 
 import { useGvPanelChrome } from "../lib/gv-page-chrome";
@@ -97,6 +101,7 @@ export function Solicitudes() {
 
   const invalidate = useInvalidateSolicitudes();
 
+  const { user } = useUserContext();
   const gvRole = useGvPermissionRole();
 
   const { data: bloqueosBitacora } = useBitacoraPendienteBloqueos();
@@ -174,9 +179,17 @@ export function Solicitudes() {
       const fresh = solicitudes.find((item) => item.id === solicitud.id) ?? solicitud;
 
       if (action === "CANCELAR") {
-        if (fresh.estado !== "APROBADA") {
+        const cancelarComoSolicitante = canCancelarMisionComoSolicitante(
+          gvRole,
+          fresh.solicitante_id,
+          user?.id,
+        );
+        const estadoValidoCancelar = cancelarComoSolicitante
+          ? fresh.estado === "PENDIENTE" || fresh.estado === "APROBADA"
+          : fresh.estado === "APROBADA";
+        if (!estadoValidoCancelar) {
           toast.warn(
-            `Esta solicitud ya no está aprobada (${formatEstadoLabel(fresh.estado).toLowerCase()}).`,
+            `Esta solicitud ya no puede cancelarse (${formatEstadoLabel(fresh.estado).toLowerCase()}).`,
           );
           invalidate();
           return;
@@ -464,6 +477,16 @@ export function Solicitudes() {
         }
 
         actionType={actionType}
+
+        puedeCancelarComoSolicitante={
+          selectedSolicitud
+            ? canCancelarMisionComoSolicitante(
+                gvRole,
+                selectedSolicitud.solicitante_id,
+                user?.id,
+              )
+            : false
+        }
 
         onSaved={invalidate}
 

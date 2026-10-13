@@ -217,7 +217,6 @@ export function Crear({
   const valeCombustible = watch("vale_combustible");
   const montoCombustible = watch("monto_combustible");
   const solicitudCombustibleId = watch("solicitud_combustible_id")?.trim() ?? "";
-  const combustibleSinMisionSeleccionado = Boolean(solicitudCombustibleId);
   const kmInicial = watch("km_inicial");
   const kmFinal = watch("km_final");
   const kmInicialFlota =
@@ -425,6 +424,27 @@ export function Crear({
   ]);
 
   useEffect(() => {
+    if (!open || !esReservaIndividualPendiente || loadingCombustiblesSinMision) return;
+    if (!solicitudCombustibleId) return;
+    if (combustiblesSinMision.some((opcion) => opcion.id === solicitudCombustibleId)) return;
+    setValue("solicitud_combustible_id", "", { shouldValidate: true });
+    setValue("vale_combustible", "", { shouldValidate: true });
+    setValue("monto_combustible", 0, { shouldValidate: true });
+    setReciboCombustibleObligatorio(false);
+    setCombustibleMisionAviso(null);
+    clearEvidencia();
+    clearErrors("solicitud_combustible_id");
+  }, [
+    open,
+    esReservaIndividualPendiente,
+    loadingCombustiblesSinMision,
+    solicitudCombustibleId,
+    combustiblesSinMision,
+    setValue,
+    clearErrors,
+  ]);
+
+  useEffect(() => {
     if (!open || !vehiculoIdCombustible) return;
     const vehiculo = vehiculos.find((v) => v.id === vehiculoIdCombustible);
     if (!vehiculo) return;
@@ -436,6 +456,17 @@ export function Crear({
   }, [open, vehiculoIdCombustible, vehiculos, selectedMisionId, setValue]);
 
   const onFormValidated = (data: BitacoraInput) => {
+    if (
+      esReservaIndividualPendiente &&
+      combustiblesSinMision.length > 0 &&
+      !data.solicitud_combustible_id?.trim()
+    ) {
+      setError("solicitud_combustible_id", {
+        message: "Debe seleccionar un vale de combustible",
+      });
+      return;
+    }
+
     if (reciboCombustibleObligatorio) {
       const tieneRecibo =
         Boolean(evidenciaFile) ||
@@ -674,8 +705,13 @@ export function Crear({
                 {esReservaIndividualPendiente ? (
                   <>
                     <ModalField className="lg:col-span-2">
-                      <ModalLabel>Solicitud de combustible (sin misión)</ModalLabel>
-                      <input type="hidden" {...register("solicitud_combustible_id")} />
+                      <ModalLabel htmlFor="solicitud_combustible_id">Vale de combustible</ModalLabel>
+                      {combustiblesSinMision.length > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Seleccione un vale aprobado sin misión. Debe adjuntar el comprobante de
+                          carga al confirmar la bitácora (obligatorio).
+                        </p>
+                      ) : null}
                       <input type="hidden" {...register("vale_combustible")} />
                       <input type="hidden" {...register("monto_combustible")} />
                       {loadingCombustiblesSinMision ? (
@@ -683,7 +719,7 @@ export function Crear({
                           <ModalInput
                             readOnly
                             disabled
-                            value="Cargando solicitudes…"
+                            value="Cargando vales…"
                             className="pr-10 text-muted-foreground"
                             aria-busy
                           />
@@ -696,64 +732,72 @@ export function Crear({
                         <ModalInput
                           readOnly
                           disabled
-                          value="Sin vales aprobados sin misión"
+                          value="Sin vales disponibles para este vehículo"
                           className="text-muted-foreground"
                         />
                       ) : (
-                        <div className="flex flex-col gap-2" role="listbox" aria-label="Solicitudes de combustible">
-                          {combustiblesSinMision.map((opcion) => {
-                            const selected = solicitudCombustibleId === opcion.id;
-                            return (
-                              <button
-                                key={opcion.id}
-                                type="button"
-                                role="option"
-                                aria-selected={selected}
-                                onClick={() => aplicarCombustibleSinMision(opcion)}
+                        <Controller
+                          name="solicitud_combustible_id"
+                          control={control}
+                          rules={{
+                            validate: (value) => {
+                              if (combustiblesSinMision.length === 0) return true;
+                              const id = value?.trim();
+                              if (!id) return "Debe seleccionar un vale de combustible";
+                              if (!combustiblesSinMision.some((opcion) => opcion.id === id)) {
+                                return "El vale seleccionado ya no está disponible";
+                              }
+                              return true;
+                            },
+                          }}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value?.trim() ? field.value : ""}
+                              onValueChange={(nextId) => {
+                                const opcion = combustiblesSinMision.find(
+                                  (item) => item.id === nextId,
+                                );
+                                if (!opcion) return;
+                                field.onChange(nextId);
+                                aplicarCombustibleSinMision(opcion);
+                                clearErrors("solicitud_combustible_id");
+                              }}
+                            >
+                              <SelectTrigger
+                                id="solicitud_combustible_id"
                                 className={cn(
-                                  "w-full cursor-pointer rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-semibold leading-snug transition-[border-color,background-color,box-shadow] motion-reduce:transition-none",
-                                  selected
-                                    ? "border-celeste-trifinio bg-sky-50/90 text-foreground shadow-none ring-2 ring-celeste-trifinio/20 dark:bg-sky-950/35"
-                                    : "border-transparent bg-zinc-100 text-foreground hover:border-celeste-trifinio/40 hover:bg-sky-50/50 dark:bg-zinc-800/80 dark:hover:bg-sky-950/25",
+                                  GV_MODAL_SELECT_TRIGGER_CLASS,
+                                  "w-full [&_[data-slot=select-value]]:line-clamp-2",
                                 )}
+                                aria-label="Seleccionar vale de combustible"
                               >
-                                {opcion.etiqueta}
-                              </button>
-                            );
-                          })}
-                        </div>
+                                <SelectValue placeholder="Seleccionar vale" />
+                              </SelectTrigger>
+                              <SelectContent
+                                position="popper"
+                                className={GV_MODAL_SELECT_CONTENT_CLASS}
+                              >
+                                {combustiblesSinMision.map((opcion) => (
+                                  <SelectItem
+                                    key={opcion.id}
+                                    value={opcion.id}
+                                    textValue={opcion.etiqueta}
+                                    className={GV_MODAL_SELECT_ITEM_CLASS}
+                                  >
+                                    {opcion.etiqueta}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       )}
-                    </ModalField>
-                    {combustibleSinMisionSeleccionado ? (
-                      <div
-                        className={cn(
-                          "lg:col-span-2 rounded-2xl border border-celeste-trifinio/25 bg-sky-50/70 p-4 dark:border-celeste-trifinio/30 dark:bg-sky-950/25",
-                        )}
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-celeste-trifinio dark:text-sky-300">
-                          Vale seleccionado
+                      {errors.solicitud_combustible_id ? (
+                        <p className="text-xs text-red-500">
+                          {errors.solicitud_combustible_id.message}
                         </p>
-                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-muted-foreground">Vale de combustible</p>
-                            <p className="mt-1 break-words text-sm font-bold text-foreground">
-                              {valeCombustible?.trim() ? valeCombustible.trim() : "—"}
-                            </p>
-                          </div>
-                          <div className="min-w-0 sm:text-right">
-                            <p className="text-xs font-semibold text-muted-foreground">Monto (Q.)</p>
-                            <p className="mt-1 text-sm font-black tabular-nums text-foreground">
-                              {Number(montoCombustible) > 0
-                                ? `Q${Number(montoCombustible).toLocaleString("es-GT", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}`
-                                : "—"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+                      ) : null}
+                    </ModalField>
                   </>
                 ) : (
                   <>
@@ -883,7 +927,6 @@ export function Crear({
               </section>
               ) : null}
 
-              {!esReservaIndividualPendiente ? (
               <section className="min-w-0 space-y-4">
                 <GvDetalleSeccionTitulo>Comentarios</GvDetalleSeccionTitulo>
               <ModalField>
@@ -1006,7 +1049,6 @@ export function Crear({
                 </button>
               </ModalField>
               </section>
-              ) : null}
 
               <section className="min-w-0 space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-700/80">
                 <GvDetalleSeccionTitulo>Información del viaje</GvDetalleSeccionTitulo>

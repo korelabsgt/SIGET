@@ -217,9 +217,24 @@ export function coerceFechaSolicitudIsoGt(
     return Number.isNaN(ms) ? "" : t;
   }
 
+  if (/\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}\s+\d{1,2}:\d{2}/.test(t)) {
+    const iso = parseFechaHoraManualToIso(t);
+    return iso || "";
+  }
+
   return modo === "inicio"
     ? parseFechaManualToIsoGtInicioDia(t)
     : parseFechaManualToIsoGtFinDia(t);
+}
+
+export function combinarCalendarioGtConHora(diaYyyyMmDd: string, horaHHmm: string): string {
+  const dia = normalizarFechaCalendario(diaYyyyMmDd);
+  const hora = horaHHmm.trim();
+  if (!dia || !/^\d{1,2}:\d{2}$/.test(hora)) return "";
+  const manual = formatFechaManualGt(`${dia}T12:00:00.000Z`);
+  if (!manual) return "";
+  const [h, m] = hora.split(":");
+  return `${manual} ${pad2(Number(h))}:${pad2(Number(m))}`;
 }
 
 export function parseFechaHoraManualToIso(

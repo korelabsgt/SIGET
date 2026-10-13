@@ -1,6 +1,39 @@
 import { z } from "zod";
 import { coerceFechaSolicitudIsoGt } from "../../lib/fechas-input";
-import { validarFechasMisionSoloDiaCalendarioGt } from "./calendario-reservas";
+import {
+  fechaCalendarioDesdeIso,
+  validarFechasMisionNoAnterioresAHoyGt,
+} from "./calendario-reservas";
+
+function validarFechasMisionSolicitud(fechaInicioIso: string, fechaFinIso: string) {
+  const diaInicio = fechaCalendarioDesdeIso(fechaInicioIso);
+  const diaFin = fechaCalendarioDesdeIso(fechaFinIso);
+
+  if (!diaInicio || !diaFin || diaFin < diaInicio) {
+    return {
+      ok: false as const,
+      path: "fecha_fin_estimada" as const,
+      message: "El retorno estimado no puede ser anterior a la fecha de salida.",
+    };
+  }
+
+  const fechas = validarFechasMisionNoAnterioresAHoyGt(fechaInicioIso, fechaFinIso);
+  if (!fechas.ok) return fechas;
+
+  const ini = new Date(fechaInicioIso).getTime();
+  const fin = new Date(fechaFinIso).getTime();
+  if (Number.isNaN(ini) || Number.isNaN(fin) || fin <= ini) {
+    return {
+      ok: false as const,
+      path: "fecha_fin_estimada" as const,
+      message:
+        diaInicio === diaFin
+          ? "El retorno debe ser posterior a la hora de salida."
+          : "El retorno debe ser posterior a la salida (revise día y hora).",
+    };
+  }
+  return { ok: true as const };
+}
 
 export const ESTADOS_SOLICITUD = [
   "PENDIENTE",
@@ -19,7 +52,7 @@ const fechaManualSolicitud = (requerido: string, modo: "inicio" | "fin") =>
       if (!coerceFechaSolicitudIsoGt(val, modo)) {
         ctx.addIssue({
           code: "custom",
-          message: "Fecha inválida. Escriba DD/MM/AAAA",
+          message: "Fecha u hora inválida. Use DD/MM/AAAA o DD/MM/AAAA HH:mm",
         });
       }
     })
@@ -44,10 +77,7 @@ export const solicitudInputSchema = z
     solicitante_id: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    const fechas = validarFechasMisionSoloDiaCalendarioGt(
-      data.fecha_inicio,
-      data.fecha_fin_estimada,
-    );
+    const fechas = validarFechasMisionSolicitud(data.fecha_inicio, data.fecha_fin_estimada);
     if (!fechas.ok) {
       ctx.addIssue({
         code: "custom",
@@ -113,10 +143,7 @@ export const solicitudWizardPaso1Schema = z
     }
   })
   .superRefine((data, ctx) => {
-    const fechas = validarFechasMisionSoloDiaCalendarioGt(
-      data.fecha_inicio,
-      data.fecha_fin_estimada,
-    );
+    const fechas = validarFechasMisionSolicitud(data.fecha_inicio, data.fecha_fin_estimada);
     if (!fechas.ok) {
       ctx.addIssue({
         code: "custom",

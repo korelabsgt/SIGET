@@ -10,7 +10,6 @@ import {
   MAX_FOTOS_DOCUMENTOS,
   MAX_FOTOS_SEGURO,
   MAX_FOTOS_UNIDAD,
-  MIN_FOTOS_VEHICULO,
   SEGURO_PATH_MARKER,
   type TipoFotoVehiculo,
 } from "../lib/helpers";
@@ -64,7 +63,7 @@ export function ImagenVehiculoDropzone({
     <div className="space-y-2">
       <Label>Fotografías del vehículo</Label>
       <p className="text-xs text-muted-foreground">
-        Obligatoria {MIN_FOTOS_VEHICULO}. Hasta {max} fotografías de la unidad.
+        Hasta {max} fotografías de la unidad. Opcional si subes documentos del vehículo.
       </p>
       {previews.length > 0 ? (
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -139,8 +138,7 @@ export function ImagenVehiculoDropzone({
             <span className="hidden lg:inline">Haz clic o arrastra imágenes aquí</span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground lg:pointer-events-none">
-            JPG, PNG o WEBP (se optimizan a máx. 200 KB). Mínimo {MIN_FOTOS_VEHICULO}, máximo{" "}
-            {max}.
+            JPG, PNG o WEBP (se optimizan a máx. 200 KB). Máximo {max} en esta sección.
           </p>
           <ImagenVehiculoFuentePicker
             disabled={disabled}
@@ -166,13 +164,11 @@ export function DocumentosVehiculoCampo({
   onAddFiles,
   disabled,
   sinEspacio = false,
-  requeridaCirculacion = false,
 }: {
   documentos: DocumentoPreviewItem[];
   onAddFiles: (files: File[]) => void;
   disabled?: boolean;
   sinEspacio?: boolean;
-  requeridaCirculacion?: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
   const ocupados = documentos.length;
@@ -188,16 +184,12 @@ export function DocumentosVehiculoCampo({
 
   return (
     <div className="space-y-2">
-      <Label>
-        Documentos del vehículo
-        {requeridaCirculacion ? <span className="ml-1 text-red-500">*</span> : null}
-      </Label>
+      <Label>Documentos del vehículo</Label>
       <p className="text-xs text-muted-foreground">
         Hasta {MAX_FOTOS_CIRCULACION} fotografías de tarjeta de circulación y {MAX_FOTOS_SEGURO}{" "}
-        del seguro.
-        {requeridaCirculacion
-          ? " Al menos una fotografía de circulación es obligatoria."
-          : " Se guardan junto a las fotografías del vehículo."}
+        del seguro. Opcional si subes fotografías del vehículo. Al guardar, basta con{" "}
+        <span className="font-semibold text-foreground">una imagen en total</span> (foto o
+        documento).
       </p>
 
       {sinEspacio ? (

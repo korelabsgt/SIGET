@@ -21,7 +21,7 @@ export const ESTADOS_SOLICITUD_MARCA_FLOTA_RESERVADO = [
 
 export type SolicitudCalendarioRef = Pick<
   SolicitudRow,
-  "id" | "vehiculo_id" | "estado" | "fecha_inicio" | "fecha_fin_estimada"
+  "id" | "vehiculo_id" | "estado" | "fecha_inicio" | "fecha_fin_estimada" | "destino"
 >;
 
 export function fechaCalendarioDesdeIso(iso: string): string {
@@ -42,6 +42,31 @@ export type PisoPickerSolicitudGt = {
   hourMin: number;
   minuteMin: number;
 };
+
+export const SOLICITUD_PASO_MINUTOS = 10;
+
+export function minutosPasoSolicitudDisponibles(
+  minuteMin: number,
+  step = SOLICITUD_PASO_MINUTOS,
+): number[] {
+  const start = minuteMin <= 0 ? 0 : Math.ceil(minuteMin / step) * step;
+  const items: number[] = [];
+  for (let m = start; m < 60; m += step) {
+    items.push(m);
+  }
+  return items.length > 0 ? items : [0];
+}
+
+export function ajustarMinutoPasoSolicitud(
+  minute: number,
+  minuteMin: number,
+  step = SOLICITUD_PASO_MINUTOS,
+): number {
+  const disponibles = minutosPasoSolicitudDisponibles(minuteMin, step);
+  if (disponibles.includes(minute)) return minute;
+  const siguiente = disponibles.find((m) => m >= minute);
+  return siguiente ?? disponibles[disponibles.length - 1];
+}
 
 export const SOLICITUD_MINUTOS_CUARTO = [0, 15, 30, 45] as const;
 

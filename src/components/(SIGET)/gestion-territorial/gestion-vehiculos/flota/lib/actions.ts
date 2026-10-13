@@ -11,12 +11,13 @@ import {
   MAX_FOTOS_SEGURO,
   estadoVehiculoConReservaFija,
   estadoVehiculoNormalizado,
-  fotosUnidadVehiculo,
+  cumpleMinimoImagenesVehiculo,
   fotosVehiculo,
   imagenUrlParaDb,
-  MIN_FOTOS_VEHICULO,
+  MIN_IMAGENES_VEHICULO,
   listarVehiculosCatalogoFlota,
   normalizeVehiculoRow,
+  reservaUsuarioIdsDeVehiculo,
   separarFotosVehiculo,
 } from "./helpers";
 import { type VehiculoInput, vehiculoInputSchema, type VehiculoRow } from "./zod";
@@ -97,17 +98,16 @@ export async function getVehiculo(id: string): Promise<VehiculoRow | null> {
   return normalizeVehiculoRow(data as VehiculoRow);
 }
 
-function payloadConFotos(
-  data: VehiculoInput,
-  { requiereCirculacion = false }: { requiereCirculacion?: boolean } = {},
-) {
+function payloadConFotos(data: VehiculoInput) {
   const fotos = fotosVehiculo({ imagen_url: data.imagen_url ?? [] });
   const { unidad, tarjetasCirculacion, fotoSeguro } = separarFotosVehiculo({
     imagen_url: fotos,
   });
 
-  if (unidad.length < MIN_FOTOS_VEHICULO) {
-    throw new Error("Debes subir al menos una fotografía del vehículo.");
+  if (fotos.length < MIN_IMAGENES_VEHICULO) {
+    throw new Error(
+      "Debes subir al menos una imagen: fotografía del vehículo o documento (circulación o seguro).",
+    );
   }
   if (tarjetasCirculacion.length > MAX_FOTOS_CIRCULACION) {
     throw new Error(`Puedes guardar hasta ${MAX_FOTOS_CIRCULACION} fotografías de circulación.`);
@@ -115,18 +115,24 @@ function payloadConFotos(
   if (fotos.filter(esFotoSeguroVehiculo).length > MAX_FOTOS_SEGURO) {
     throw new Error("Solo puedes guardar una fotografía del seguro.");
   }
-  if (requiereCirculacion && tarjetasCirculacion.length < 1) {
-    throw new Error("Debes subir al menos una fotografía de la tarjeta de circulación.");
-  }
 
   const estado = estadoVehiculoConReservaFija(data.placa, data.estado);
-  const reservaUsuarioId =
-    estado === "RESERVA_INDIVIDUAL" ? data.reserva_usuario_id ?? null : null;
+  const reservaUsuarioIds =
+    estado === "RESERVA_INDIVIDUAL"
+      ? [
+          ...new Set(
+            (data.reserva_usuario_ids ?? [])
+              .map((id) => id.trim())
+              .filter((id) => id.length > 0),
+          ),
+        ]
+      : [];
 
   return {
     ...data,
     estado,
-    reserva_usuario_id: reservaUsuarioId,
+    reserva_usuario_ids: reservaUsuarioIds,
+    reserva_usuario_id: reservaUsuarioIds[0] ?? null,
     imagen_url: imagenUrlParaDb(
       combinarFotosVehiculo(unidad, tarjetasCirculacion, fotoSeguro),
     ),
@@ -143,6 +149,14 @@ function mapImagenesDbError(message: string) {
 
 function mapVehiculoDbError(message: string): string {
   const lower = message.toLowerCase();
+  if (
+    lower.includes("reserva_usuario_ids") &&
+    (lower.includes("column") ||
+      lower.includes("schema cache") ||
+      lower.includes("could not find"))
+  ) {
+    return "Falta la columna reserva_usuario_ids en ot_vehiculos. Aplica en Supabase la migración db/migrations/ot_vehiculos_reserva_usuario_ids.sql.";
+  }
   if (
     lower.includes("reserva_usuario_id") &&
     (lower.includes("column") ||
@@ -166,11 +180,13 @@ function filaOtVehiculosDesdePayload(
   payload: VehiculoPayloadDb,
   modo: "insert" | "update",
 ) {
-  const { reserva_usuario_id, ...resto } = payload;
+  const { reserva_usuario_id, reserva_usuario_ids, ...resto } = payload;
   const fila: Record<string, unknown> = { ...resto };
-  if (payload.estado === "RESERVA_INDIVIDUAL" && reserva_usuario_id) {
+  if (payload.estado === "RESERVA_INDIVIDUAL" && reserva_usuario_ids.length > 0) {
+    fila.reserva_usuario_ids = reserva_usuario_ids;
     fila.reserva_usuario_id = reserva_usuario_id;
   } else if (modo === "update") {
+    fila.reserva_usuario_ids = [];
     fila.reserva_usuario_id = null;
   }
   return fila;
@@ -200,9 +216,11 @@ export async function createVehiculo(input: VehiculoInput): Promise<VehiculoRow>
     throw new Error(mensajeErrorValidacionVehiculo(parsed.error));
   }
 
-  const payload = payloadConFotos(parsed.data, { requiereCirculacion: true });
-  if (payload.estado === "RESERVA_INDIVIDUAL" && payload.reserva_usuario_id) {
-    await validarUsuarioReservaIndividual(supabase, payload.reserva_usuario_id);
+  const payload = payloadConFotos(parsed.data);
+  if (payload.estado === "RESERVA_INDIVIDUAL") {
+    for (const usuarioId of payload.reserva_usuario_ids) {
+      await validarUsuarioReservaIndividual(supabase, usuarioId);
+    }
   }
   const fila = filaOtVehiculosDesdePayload(payload, "insert");
 
@@ -245,8 +263,10 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
 
   const placa = parsed.data.placa.trim().toUpperCase();
   const payload = payloadConFotos({ ...parsed.data, placa });
-  if (payload.estado === "RESERVA_INDIVIDUAL" && payload.reserva_usuario_id) {
-    await validarUsuarioReservaIndividual(supabase, payload.reserva_usuario_id);
+  if (payload.estado === "RESERVA_INDIVIDUAL") {
+    for (const usuarioId of payload.reserva_usuario_ids) {
+      await validarUsuarioReservaIndividual(supabase, usuarioId);
+    }
   }
   const fila = filaOtVehiculosDesdePayload(payload, "update");
 
@@ -299,7 +319,7 @@ export async function updateVehiculo(id: string, input: VehiculoInput): Promise<
     if (vehiculoId) {
       await crearBitacoraPendienteReservaIndividual(admin, {
         id: vehiculoId,
-        reserva_usuario_id: vehiculo.reserva_usuario_id ?? null,
+        reserva_usuario_ids: reservaUsuarioIdsDeVehiculo(vehiculo),
         kilometraje_actual: vehiculo.kilometraje_actual ?? 0,
       });
     }
@@ -333,8 +353,10 @@ export async function removeVehiculoImagen(
     (foto) => normalizeVehiculoStoragePath(foto) !== path,
   );
 
-  if (fotosUnidadVehiculo({ imagen_url: fotos }).length < MIN_FOTOS_VEHICULO) {
-    throw new Error("Debes conservar al menos una fotografía del vehículo.");
+  if (!cumpleMinimoImagenesVehiculo({ imagen_url: fotos })) {
+    throw new Error(
+      "Debes conservar al menos una imagen: fotografía del vehículo o documento.",
+    );
   }
 
   const fotosAnteriores = fotosVehiculo(row as VehiculoRow);

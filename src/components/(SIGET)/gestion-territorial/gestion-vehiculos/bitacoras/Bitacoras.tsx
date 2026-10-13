@@ -170,7 +170,7 @@ export function Bitacoras() {
 
   const bitacorasFiltradas = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return bitacoras.filter((b) => {
+    const filtradas = bitacoras.filter((b) => {
       if (!bitacoraEnPeriodoCalendario(b.fecha, periodoFilter)) return false;
       const matchVehiculo =
         vehiculoFilter === GV_TODOS_VEHICULOS || b.vehiculo_id === vehiculoFilter;
@@ -190,6 +190,14 @@ export function Bitacoras() {
         nombreSolicitanteBitacora(b).toLowerCase().includes(q) ||
         (b.vale_combustible?.toLowerCase().includes(q) ?? false)
       );
+    });
+    return [...filtradas].sort((a, b) => {
+      const pendienteA = esBitacoraPendiente(a) ? 0 : 1;
+      const pendienteB = esBitacoraPendiente(b) ? 0 : 1;
+      if (pendienteA !== pendienteB) return pendienteA - pendienteB;
+      const fechaA = a.fecha ?? "";
+      const fechaB = b.fecha ?? "";
+      return fechaB.localeCompare(fechaA);
     });
   }, [bitacoras, searchQuery, vehiculoFilter, periodoFilter, estadoFilter]);
 

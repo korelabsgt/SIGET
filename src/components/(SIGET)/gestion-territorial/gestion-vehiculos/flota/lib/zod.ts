@@ -51,6 +51,7 @@ export const vehiculoSchema = z.object({
     .optional(),
   estado: z.enum(ESTADOS_VEHICULO).default("LIBRE"),
   reserva_usuario_id: z.string().uuid().nullable().optional(),
+  reserva_usuario_ids: z.array(z.string().uuid()).default([]),
   vencimiento_seguro: fechaManualOpcional,
   vencimiento_circulacion: fechaManualOpcional,
   imagen_url: z.array(z.string()).max(6).default([]),
@@ -60,6 +61,7 @@ export const vehiculoSchema = z.object({
 export const vehiculoInputBaseSchema = vehiculoSchema.omit({
   id: true,
   created_at: true,
+  reserva_usuario_id: true,
 });
 
 export const vehiculoInputSchema = vehiculoInputBaseSchema.superRefine((data, ctx) => {
@@ -73,13 +75,18 @@ export const vehiculoInputSchema = vehiculoInputBaseSchema.superRefine((data, ct
     return;
   }
   if (data.estado !== "RESERVA_INDIVIDUAL") return;
-  const raw = data.reserva_usuario_id;
-  const usuarioId = typeof raw === "string" ? raw.trim() : "";
-  if (!usuarioId) {
+  const ids = [
+    ...new Set(
+      (data.reserva_usuario_ids ?? [])
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0),
+    ),
+  ];
+  if (ids.length < 1) {
     ctx.addIssue({
       code: "custom",
-      message: "Selecciona el usuario para la reserva individual.",
-      path: ["reserva_usuario_id"],
+      message: "Indica al menos un usuario que ocupa el vehículo en reserva individual.",
+      path: ["reserva_usuario_ids"],
     });
   }
 });

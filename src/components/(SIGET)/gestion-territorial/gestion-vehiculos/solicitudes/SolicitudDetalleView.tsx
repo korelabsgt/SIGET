@@ -218,6 +218,7 @@ function BloqueMisionYVehiculo({
 function AccionesSolicitud({
   solicitud,
   canAprobarRechazar,
+  puedeCancelarComoSolicitante,
   puedeControlMision,
   puedeIniciarPorHorario,
   misionPendiente,
@@ -226,6 +227,7 @@ function AccionesSolicitud({
 }: {
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
+  puedeCancelarComoSolicitante: boolean;
   puedeControlMision: boolean;
   puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
@@ -240,16 +242,21 @@ function AccionesSolicitud({
     anchoCompleto ? "h-12 w-full" : "h-9 px-4",
   );
 
-  const btnCancelarMision = canAprobarRechazar ? (
-    <button
-      type="button"
-      onClick={() => onAction(solicitud, "CANCELAR")}
-      className={cn(btnBase, "bg-red-600 dark:bg-red-700", anchoCompleto && "w-full")}
-    >
-      <X size={16} strokeWidth={2.5} />
-      Cancelar misión
-    </button>
-  ) : null;
+  const btnCancelarMision =
+    canAprobarRechazar || puedeCancelarComoSolicitante ? (
+      <button
+        type="button"
+        onClick={() => onAction(solicitud, "CANCELAR")}
+        className={cn(btnBase, "bg-red-600 dark:bg-red-700", anchoCompleto && "w-full")}
+      >
+        <X size={16} strokeWidth={2.5} />
+        {solicitud.estado === "PENDIENTE" ? "Cancelar solicitud" : "Cancelar misión"}
+      </button>
+    ) : null;
+
+  if (puedeCancelarComoSolicitante && solicitud.estado === "PENDIENTE") {
+    return btnCancelarMision;
+  }
 
   if (canAprobarRechazar && solicitud.estado === "PENDIENTE") {
     return (
@@ -331,6 +338,7 @@ function AccionesSolicitud({
 function ContenidoDetalle({
   solicitud,
   canAprobarRechazar,
+  puedeCancelarComoSolicitante,
   puedeControlMision,
   puedeIniciarPorHorario,
   misionPendiente,
@@ -340,6 +348,7 @@ function ContenidoDetalle({
 }: {
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
+  puedeCancelarComoSolicitante: boolean;
   puedeControlMision: boolean;
   puedeIniciarPorHorario: boolean;
   misionPendiente: boolean;
@@ -357,6 +366,7 @@ function ContenidoDetalle({
     <AccionesSolicitud
       solicitud={solicitud}
       canAprobarRechazar={canAprobarRechazar}
+      puedeCancelarComoSolicitante={puedeCancelarComoSolicitante}
       puedeControlMision={puedeControlMision}
       puedeIniciarPorHorario={puedeIniciarPorHorario}
       misionPendiente={misionPendiente}
@@ -366,7 +376,10 @@ function ContenidoDetalle({
   );
   const tieneAcciones =
     (canAprobarRechazar && solicitud.estado === "PENDIENTE") ||
-    solicitud.estado === "APROBADA" ||
+    (puedeCancelarComoSolicitante &&
+      (solicitud.estado === "PENDIENTE" || solicitud.estado === "APROBADA")) ||
+    (canAprobarRechazar && solicitud.estado === "APROBADA") ||
+    (puedeControlMision && solicitud.estado === "APROBADA") ||
     (puedeControlMision && solicitud.estado === "EN_MISION");
 
   if (embedded) {
@@ -488,6 +501,7 @@ function ContenidoDetalle({
 export function SolicitudDetalleView({
   solicitud,
   canAprobarRechazar,
+  puedeCancelarComoSolicitante,
   puedeControlMision,
   puedeIniciarPorHorario = true,
   misionPendiente = false,
@@ -498,6 +512,7 @@ export function SolicitudDetalleView({
 }: {
   solicitud: SolicitudRow;
   canAprobarRechazar: boolean;
+  puedeCancelarComoSolicitante: boolean;
   puedeControlMision: boolean;
   puedeIniciarPorHorario?: boolean;
   misionPendiente?: boolean;
@@ -514,6 +529,7 @@ export function SolicitudDetalleView({
       <ContenidoDetalle
         solicitud={solicitud}
         canAprobarRechazar={canAprobarRechazar}
+        puedeCancelarComoSolicitante={puedeCancelarComoSolicitante}
         puedeControlMision={puedeControlMision}
         puedeIniciarPorHorario={puedeIniciarPorHorario}
         misionPendiente={misionPendiente}
@@ -541,6 +557,7 @@ export function SolicitudDetalleView({
         <ContenidoDetalle
           solicitud={solicitud}
           canAprobarRechazar={canAprobarRechazar}
+          puedeCancelarComoSolicitante={puedeCancelarComoSolicitante}
           puedeControlMision={puedeControlMision}
           puedeIniciarPorHorario={puedeIniciarPorHorario}
           misionPendiente={misionPendiente}

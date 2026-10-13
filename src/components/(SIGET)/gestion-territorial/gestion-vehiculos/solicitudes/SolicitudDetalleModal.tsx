@@ -6,6 +6,7 @@ import { GvModalShell, GV_MODAL_DETALLE_CONTENT_CLASS, GvModalInset } from "../l
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import {
   canAprobarRechazarSolicitudes,
+  canCancelarMisionComoSolicitante,
   canGestionarMisionSolicitud,
   puedeIniciarMisionEnHorarioProgramado,
 } from "../lib/permissions";
@@ -42,6 +43,11 @@ export function SolicitudDetalleModal({
     gvRole,
     solicitud.fecha_inicio,
   );
+  const puedeCancelarComoSolicitante = canCancelarMisionComoSolicitante(
+    gvRole,
+    solicitud.solicitante_id,
+    user?.id,
+  );
 
   return (
     <GvModalShell
@@ -56,6 +62,7 @@ export function SolicitudDetalleModal({
         <SolicitudDetalleView
           solicitud={solicitud}
           canAprobarRechazar={canAprobarRechazar}
+          puedeCancelarComoSolicitante={puedeCancelarComoSolicitante}
           puedeControlMision={puedeControlMision}
           puedeIniciarPorHorario={puedeIniciarPorHorario}
           misionPendiente={misionPendiente}

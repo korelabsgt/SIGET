@@ -26,7 +26,7 @@ export function GvSectionSelect({ className }: { className?: string }) {
         layoutId="gv-modulo-secciones"
         layout="responsive-grid"
         fill
-        className="min-w-0 w-full max-w-full max-md:px-2.5 sm:w-auto"
+        className="min-w-0 w-full max-w-full sm:w-auto"
         options={options}
       />
     </nav>

@@ -75,9 +75,11 @@ export default async function RootLayout({
                 <OfflineBanner />
                 <main className="flex min-h-0 flex-1 w-full flex-col overflow-y-auto">
                   <Header />
-                  <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-                  <ConditionalFooter />
+                  <div className="flex w-full flex-1 flex-col basis-auto min-h-0">
+                    {children}
+                  </div>
                 </main>
+                <ConditionalFooter />
                 <ObsToastContainer />
               </div>
             </UserProvider>

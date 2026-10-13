@@ -8,13 +8,18 @@ export const COMENTARIO_RECHAZO_SOLICITUD_VENCIDA =
   "Rechazada automáticamente: venció la fecha y hora de salida programadas sin respuesta.";
 
 export const COMENTARIO_PREFIJO_MISION_CANCELADA = "Misión cancelada:";
+export const COMENTARIO_PREFIJO_SOLICITUD_CANCELADA =
+  "Solicitud cancelada por el solicitante:";
 
 export function esSolicitudMisionCancelada(
   solicitud: Pick<SolicitudRow, "estado" | "comentarios">,
 ): boolean {
   if (solicitud.estado !== "RECHAZADA") return false;
   const texto = solicitud.comentarios?.trim() ?? "";
-  return texto.startsWith(COMENTARIO_PREFIJO_MISION_CANCELADA);
+  return (
+    texto.startsWith(COMENTARIO_PREFIJO_MISION_CANCELADA) ||
+    texto.startsWith(COMENTARIO_PREFIJO_SOLICITUD_CANCELADA)
+  );
 }
 
 export function estadoBadgeClass(estado: SolicitudRow["estado"]) {

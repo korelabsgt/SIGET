@@ -49,7 +49,11 @@ import {
 
 import { cn } from "@/lib/utils";
 
-import { cambiarEstadoSolicitud, cancelarMisionAprobadaSolicitud } from "./lib/actions";
+import {
+  cambiarEstadoSolicitud,
+  cancelarMisionAprobadaSolicitud,
+  cancelarSolicitudVehiculoPorSolicitante,
+} from "./lib/actions";
 
 import {
   ESTADOS_SOLICITUD,
@@ -198,6 +202,8 @@ export function SolicitudActionModal({
 
   actionType,
 
+  puedeCancelarComoSolicitante = false,
+
   onSaved,
 
 }: {
@@ -209,6 +215,8 @@ export function SolicitudActionModal({
   solicitud: SolicitudRow | null;
 
   actionType: ActionType | null;
+
+  puedeCancelarComoSolicitante?: boolean;
 
   onSaved: () => void;
 
@@ -308,6 +316,8 @@ export function SolicitudActionModal({
 
       imagen_url: [],
 
+      reserva_usuario_ids: [],
+
     };
 
 
@@ -320,10 +330,15 @@ export function SolicitudActionModal({
 
   const meta = actionType ? ACTION_META[actionType] : null;
 
+  const cancelarComoSolicitante =
+    actionType === "CANCELAR" && puedeCancelarComoSolicitante;
+
   const solicitudEstadoInvalido =
     solicitud != null &&
     (actionType === "CANCELAR"
-      ? solicitud.estado !== "APROBADA"
+      ? cancelarComoSolicitante
+        ? solicitud.estado !== "PENDIENTE" && solicitud.estado !== "APROBADA"
+        : solicitud.estado !== "APROBADA"
       : solicitud.estado !== "PENDIENTE");
 
   const solicitudNoPendiente =
@@ -336,9 +351,13 @@ export function SolicitudActionModal({
     if (!solicitud || !actionType || submitInFlightRef.current || isPending) return;
 
     if (actionType === "CANCELAR") {
-      if (solicitud.estado !== "APROBADA") {
+      const estadoValidoCancelar = puedeCancelarComoSolicitante
+        ? solicitud.estado === "PENDIENTE" || solicitud.estado === "APROBADA"
+        : solicitud.estado === "APROBADA";
+
+      if (!estadoValidoCancelar) {
         toast.warn(
-          `Esta solicitud ya no está aprobada (${formatEstadoLabel(solicitud.estado).toLowerCase()}).`,
+          `Esta solicitud ya no puede cancelarse (${formatEstadoLabel(solicitud.estado).toLowerCase()}).`,
         );
         onSaved();
         onOpenChange(false);
@@ -356,14 +375,22 @@ export function SolicitudActionModal({
       submitInFlightRef.current = true;
       startTransition(async () => {
         try {
-          const res = await cancelarMisionAprobadaSolicitud(solicitud.id, {
-            comentarios: parsed.data,
-          });
+          const res = puedeCancelarComoSolicitante
+            ? await cancelarSolicitudVehiculoPorSolicitante(solicitud.id, {
+                comentarios: parsed.data,
+              })
+            : await cancelarMisionAprobadaSolicitud(solicitud.id, {
+                comentarios: parsed.data,
+              });
           if (!res.success) {
             toast.error(res.error || "No se pudo cancelar la misión.");
             return;
           }
-          toast.success("Misión cancelada.");
+          toast.success(
+            solicitud.estado === "PENDIENTE"
+              ? "Solicitud cancelada."
+              : "Misión cancelada.",
+          );
           onSaved();
           onOpenChange(false);
         } finally {
@@ -550,7 +577,9 @@ export function SolicitudActionModal({
 
               .{" "}
               {actionType === "CANCELAR"
-                ? "Solo puede cancelar misiones aprobadas que no se han iniciado."
+                ? puedeCancelarComoSolicitante
+                  ? "Solo puede cancelar solicitudes pendientes o misiones aprobadas que no se han iniciado."
+                  : "Solo puede cancelar misiones aprobadas que no se han iniciado."
                 : "Actualice la lista; solo las pendientes pueden aprobarse o rechazarse."}
 
             </div>

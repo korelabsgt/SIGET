@@ -653,7 +653,13 @@ export const MAX_FOTOS_CIRCULACION = 2;
 export const MAX_FOTOS_SEGURO = 1;
 export const MAX_FOTOS_DOCUMENTOS = MAX_FOTOS_CIRCULACION + MAX_FOTOS_SEGURO;
 export const MAX_FOTOS_VEHICULO = MAX_FOTOS_UNIDAD + MAX_FOTOS_DOCUMENTOS;
-export const MIN_FOTOS_VEHICULO = 1;
+export const MIN_IMAGENES_VEHICULO = 1;
+
+export function cumpleMinimoImagenesVehiculo(
+  vehiculo: Pick<VehiculoRow, "imagen_url">,
+): boolean {
+  return fotosVehiculo(vehiculo).length >= MIN_IMAGENES_VEHICULO;
+}
 
 export const CIRCULACION_PATH_MARKER = "_circulacion_";
 export const SEGURO_PATH_MARKER = "_seguro_";
@@ -725,13 +731,43 @@ export function imagenUrlParaDb(fotos: string[]): string[] {
   return normalizarFotoPaths(fotos);
 }
 
+export function reservaUsuarioIdsDeVehiculo(
+  row: {
+    reserva_usuario_id?: string | null;
+    reserva_usuario_ids?: string[] | null;
+  },
+): string[] {
+  const fromArray = row.reserva_usuario_ids ?? [];
+  const ids = fromArray
+    .map((id) => (typeof id === "string" ? id.trim() : ""))
+    .filter((id) => id.length > 0);
+  const unicos = [...new Set(ids)];
+  if (unicos.length > 0) return unicos;
+  const uno = row.reserva_usuario_id?.trim() ?? "";
+  return uno ? [uno] : [];
+}
+
+export function usuarioAsignadoReservaIndividual(
+  userId: string,
+  row: Pick<VehiculoRow, "reserva_usuario_id" | "reserva_usuario_ids">,
+): boolean {
+  const id = userId.trim();
+  if (!id) return false;
+  return reservaUsuarioIdsDeVehiculo(row).includes(id);
+}
+
 export function normalizeVehiculoRow(row: VehiculoRow): VehiculoRow {
   const fotos = fotosVehiculo(row);
   const kmActual = row.kilometraje_actual ?? 0;
   const kmReferencia =
     row.km_referencia_servicio == null ? kmActual : row.km_referencia_servicio;
+  const reservaUsuarioIds = reservaUsuarioIdsDeVehiculo(row);
+  const reservaUsuarioId =
+    row.reserva_usuario_id?.trim() ?? reservaUsuarioIds[0] ?? null;
   return {
     ...row,
+    reserva_usuario_ids: reservaUsuarioIds,
+    reserva_usuario_id: reservaUsuarioId,
     kilometraje_actual: kmActual,
     km_referencia_servicio: Math.min(kmReferencia, kmActual),
     imagen_url: fotos,

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import { Car, CarFront, Check, Loader2, Plus, ScanSearch, Search, FileSpreadsheet, ArrowDownToLine } from "lucide";
 import { SigetActionButton, sigetAccent } from "@/components/ui/siget-action-button";
 import { GvMorphIcon } from "../lib/morph-icon";
@@ -41,8 +40,8 @@ import {
   canManageFlota,
 } from "../lib/permissions";
 
-const Crear = dynamic(() => import("./forms/Crear").then((m) => m.Crear));
-const VerEditar = dynamic(() => import("./forms/VerEditar").then((m) => m.VerEditar));
+import { Crear } from "./forms/Crear";
+import { VerEditar } from "./forms/VerEditar";
 
 const TODOS = "__todos__";
 

@@ -31,6 +31,22 @@ function DetalleFila({ label, value }: { label: string; value: string }) {
   );
 }
 
+function DetalleFilaComentarios({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-border/60 py-3 first:border-t-0 first:pt-0 dark:border-zinc-700/60">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "w-full text-sm font-medium leading-relaxed text-foreground text-justify",
+          GV_DETALLE_TEXTO_CLASS,
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function SolicitudCombustibleDetalleModal({
   open,
   onClose,
@@ -98,7 +114,7 @@ export function SolicitudCombustibleDetalleModal({
           <DetalleFila label="Denominación" value={formatDenominacionCuponSolicitud(solicitud)} />
           <DetalleFila label="Monto entregado" value={formatMontoEntregaCombustible(solicitud)} />
           {solicitud.comentarios?.trim() ? (
-            <DetalleFila label="Comentarios" value={solicitud.comentarios.trim()} />
+            <DetalleFilaComentarios label="Comentarios" value={solicitud.comentarios.trim()} />
           ) : null}
         </div>
 

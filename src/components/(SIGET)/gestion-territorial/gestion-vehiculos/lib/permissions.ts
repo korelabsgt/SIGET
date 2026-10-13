@@ -101,6 +101,16 @@ export function canGestionarMisionSolicitud(
   return canIniciarMisionSolicitud(role, solicitudSolicitanteId, userId);
 }
 
+export function canCancelarMisionComoSolicitante(
+  role: string | null | undefined,
+  solicitudSolicitanteId: string,
+  userId: string | null | undefined,
+): boolean {
+  if (!userId || solicitudSolicitanteId !== userId) return false;
+  if (isSuperRole(role) || canManageSolicitudesVehiculos(role)) return false;
+  return true;
+}
+
 export function puedeIniciarMisionEnHorarioProgramado(
   role: string | null | undefined,
   fechaInicioIso: string,

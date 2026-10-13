@@ -17,6 +17,7 @@ import { es } from "date-fns/locale/es";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "react-toastify";
 
+import { TimePicker } from "@/components/ui/time-picker";
 import { showAlert } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { fechaCalendarioGt, formatFechaManualGt } from "@/lib/fechas-gt";
@@ -25,6 +26,7 @@ import { nombreSolicitanteReserva } from "../flota/lib/reserva-vehiculo";
 import {
   diasReservaCalendarioGt,
   findConflictoDiaVehiculo,
+  pisoPickerSolicitudGt,
   vehiculoReservadoEnDiaCalendario,
 } from "./lib/calendario-reservas";
 import { formatFechaSolicitudGv, formatEstadoLabel } from "./lib/helpers";
@@ -33,9 +35,46 @@ import {
   type SolicitudCalendarioConSolicitante,
 } from "./lib/preferencia-vehiculo";
 import {
+  combinarCalendarioGtConHora,
+  parseFechaHoraManualToIso,
   parseFechaManualToIsoGtFinDia,
   parseFechaManualToIsoGtInicioDia,
+  partesFechaHoraManual,
 } from "../lib/fechas-input";
+
+function horaDesdeManualFecha(value: string): string {
+  const { hour, minute } = partesFechaHoraManual(value);
+  if (hour.length === 2 && minute.length === 2) return `${hour}:${minute}`;
+  return "";
+}
+
+function pad2Hora(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function normalizarHoraSolicitud(hhmm: string, diaCalendario: string): string {
+  const match = hhmm.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return "";
+  let h = Number(match[1]);
+  let m = Number(match[2]);
+  const piso = pisoPickerSolicitudGt();
+  let hourMin = 0;
+  let minuteMin = 0;
+  if (diaCalendario <= piso.calendarioMin) {
+    hourMin = piso.hourMin;
+    minuteMin = piso.minuteMin;
+  }
+  const minEff = minuteMin;
+  if (h < hourMin) {
+    h = hourMin;
+    m = minEff;
+  } else if (h === hourMin && m < minEff) {
+    m = minEff;
+  }
+  if (m > 59) m = 59;
+  if (m < 0) m = 0;
+  return `${pad2Hora(h)}:${pad2Hora(m)}`;
+}
 
 function dateFromCalendarioGt(yyyyMmDd: string): Date | null {
   const norm = yyyyMmDd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -72,6 +111,7 @@ function ReservaDiaCalendarioTooltip({
 }) {
   const nombre = nombreSolicitanteReserva(reserva.solicitante);
   const estado = formatEstadoLabel(reserva.estado);
+  const destino = reserva.destino?.trim() ?? "";
 
   return (
     <div className="group/reserva relative flex h-10 w-full items-center justify-center">
@@ -87,6 +127,12 @@ function ReservaDiaCalendarioTooltip({
         <p className="text-xs font-bold text-orange-700 dark:text-orange-300">Reservado</p>
         <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{nombre}</p>
         <p className="capitalize text-zinc-600 dark:text-zinc-400">{estado}</p>
+        {destino ? (
+          <p className="mt-1.5 text-zinc-600 dark:text-zinc-400">
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">Destino:</span>{" "}
+            <span className="line-clamp-2">{destino}</span>
+          </p>
+        ) : null}
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           <span className="font-medium text-zinc-900 dark:text-zinc-100">Salida:</span>{" "}
           {formatFechaSolicitudGv(reserva.fecha_inicio)}
@@ -139,6 +185,8 @@ export function SolicitudVehiculoCalendarioRango({
     return iso ? fechaCalendarioGt(new Date(iso)) : null;
   });
   const [hoverDia, setHoverDia] = useState<string | null>(null);
+  const [horaSalida, setHoraSalida] = useState("");
+  const [horaRetorno, setHoraRetorno] = useState("");
   const pendienteFinRangoRef = useRef(false);
 
   const esDiaReservado = useCallback(
@@ -200,6 +248,8 @@ export function SolicitudVehiculoCalendarioRango({
       setInicioDia(null);
       setFinDia(null);
       setHoverDia(null);
+      setHoraSalida("");
+      setHoraRetorno("");
       return;
     }
 
@@ -212,6 +262,8 @@ export function SolicitudVehiculoCalendarioRango({
 
     if (!inicioDia || (inicioDia && finDia)) {
       pendienteFinRangoRef.current = false;
+      setHoraSalida("");
+      setHoraRetorno("");
       setInicioDia(dia);
       setFinDia(null);
       setHoverDia(null);
@@ -227,6 +279,8 @@ export function SolicitudVehiculoCalendarioRango({
         "Rango no disponible",
         "El rango incluye días reservados o no disponibles.",
       );
+      setHoraSalida("");
+      setHoraRetorno("");
       setInicioDia(dia);
       setFinDia(null);
       return;
@@ -236,6 +290,19 @@ export function SolicitudVehiculoCalendarioRango({
     setInicioDia(desde);
     setFinDia(hasta);
   };
+
+  const finDiaEfectivo = useMemo(() => {
+    if (!inicioDia) return null;
+    if (finDia) return finDia;
+    if (pendienteFinRangoRef.current) return null;
+    return inicioDia;
+  }, [finDia, inicioDia]);
+
+  const esMisionUnSoloDia = Boolean(
+    inicioDia && finDiaEfectivo && inicioDia === finDiaEfectivo,
+  );
+
+  const rangoCalendarioCompleto = Boolean(inicioDia && finDiaEfectivo);
 
   useEffect(() => {
     if (!habilitado) return;
@@ -248,23 +315,49 @@ export function SolicitudVehiculoCalendarioRango({
       return;
     }
 
-    const inicioManual = manualDesdeCalendarioGt(inicioDia);
-    const finManual = finDia
-      ? manualDesdeCalendarioGt(finDia)
-      : pendienteFinRangoRef.current
-        ? ""
-        : inicioManual;
-
-    const finDiaEfectivo = finDia ?? (pendienteFinRangoRef.current ? null : inicioDia);
     if (!finDiaEfectivo) {
-      if (inicioManual !== fechaInicioManual || fechaFinManual) {
-        onAplicarFechas(inicioManual, "");
+      if (fechaInicioManual || fechaFinManual) {
+        onAplicarFechas("", "");
       }
       return;
     }
 
-    const inicioIso = `${inicioDia}T00:00:00-06:00`;
-    const finIso = `${finDiaEfectivo}T23:59:59-06:00`;
+    if (!horaSalida.trim()) {
+      const desdeFormSalida = horaDesdeManualFecha(fechaInicioManual);
+      setHoraSalida(
+        desdeFormSalida || normalizarHoraSolicitud("08:30", inicioDia),
+      );
+      return;
+    }
+
+    if (!horaRetorno.trim()) {
+      const desdeFormRetorno = horaDesdeManualFecha(fechaFinManual);
+      setHoraRetorno(
+        desdeFormRetorno || normalizarHoraSolicitud("17:30", finDiaEfectivo),
+      );
+      return;
+    }
+
+    const inicioManual = combinarCalendarioGtConHora(inicioDia, horaSalida);
+    const finManual = combinarCalendarioGtConHora(finDiaEfectivo, horaRetorno);
+    const inicioIso = parseFechaHoraManualToIso(inicioManual);
+    const finIso = parseFechaHoraManualToIso(finManual);
+
+    if (!inicioIso || !finIso) {
+      onAplicarFechas("", "");
+      return;
+    }
+
+    if (new Date(finIso).getTime() <= new Date(inicioIso).getTime()) {
+      toast.error(
+        esMisionUnSoloDia
+          ? "La hora de retorno debe ser posterior a la hora de salida."
+          : "El retorno debe ser posterior a la salida (revise día y hora).",
+      );
+      onAplicarFechas("", "");
+      return;
+    }
+
     const conflicto = findConflictoDiaVehiculo(
       {
         vehiculo_id: vehiculoId,
@@ -278,6 +371,8 @@ export function SolicitudVehiculoCalendarioRango({
       pendienteFinRangoRef.current = false;
       setInicioDia(null);
       setFinDia(null);
+      setHoraSalida("");
+      setHoraRetorno("");
       onAplicarFechas("", "");
       return;
     }
@@ -286,9 +381,12 @@ export function SolicitudVehiculoCalendarioRango({
       onAplicarFechas(inicioManual, finManual);
     }
   }, [
-    finDia,
+    esMisionUnSoloDia,
+    finDiaEfectivo,
     fechaFinManual,
     fechaInicioManual,
+    horaRetorno,
+    horaSalida,
     inicioDia,
     onAplicarFechas,
     reservas,
@@ -436,6 +534,48 @@ export function SolicitudVehiculoCalendarioRango({
           })}
         </div>
       </div>
+
+      {rangoCalendarioCompleto && inicioDia && finDiaEfectivo ? (
+        <div
+          className="rounded-2xl border border-zinc-200/80 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60"
+          role="group"
+          aria-label="Horario de la misión"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {esMisionUnSoloDia
+              ? `Horario del ${manualDesdeCalendarioGt(inicioDia)}`
+              : `Salida ${manualDesdeCalendarioGt(inicioDia)} · Retorno ${manualDesdeCalendarioGt(finDiaEfectivo)}`}
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground">
+                Hora de salida
+                {esMisionUnSoloDia ? null : (
+                  <span className="font-normal text-muted-foreground"> (primer día)</span>
+                )}
+              </span>
+              <TimePicker
+                value={horaSalida}
+                onChange={(v) => setHoraSalida(normalizarHoraSolicitud(v, inicioDia))}
+                disabled={!habilitado}
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground">
+                Hora de retorno
+                {esMisionUnSoloDia ? null : (
+                  <span className="font-normal text-muted-foreground"> (último día)</span>
+                )}
+              </span>
+              <TimePicker
+                value={horaRetorno}
+                onChange={(v) => setHoraRetorno(normalizarHoraSolicitud(v, finDiaEfectivo))}
+                disabled={!habilitado}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-center gap-3 text-center text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">

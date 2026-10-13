@@ -64,16 +64,23 @@ function GvPageChromeLayout({
     <GvModuloPageFrame className="flex w-full flex-col">
       {!hideChrome ? (
         <div className={GV_MODULO_HEADER_ROW_CLASS}>
-          <div className="flex min-w-0 items-center gap-2 max-md:px-2.5 sm:flex-1 sm:gap-3">
+          <div className="flex min-w-0 items-center gap-3 max-md:px-2.5 sm:flex-1">
             <GvBackToTerritorial morph className="shrink-0" />
-            <h1 className="min-w-0 flex-1 text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
-              Gestión de vehículos
-            </h1>
-            <GvCampanaNotificaciones />
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-initial sm:gap-2.5">
+              <h1 className="min-w-0 text-2xl font-black uppercase leading-tight tracking-tight text-foreground md:text-3xl">
+                Gestión de vehículos
+              </h1>
+              <div className="shrink-0 sm:hidden">
+                <GvCampanaNotificaciones />
+              </div>
+            </div>
           </div>
           <div
-            className="flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center justify-end gap-2 max-md:px-2.5 sm:gap-3 sm:w-auto"
+            className="flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center justify-end gap-2 max-md:px-2.5 sm:w-auto sm:-translate-x-[8mm] sm:gap-1.5"
           >
+            <div className="hidden shrink-0 sm:block">
+              <GvCampanaNotificaciones />
+            </div>
             <GvSectionSelect />
             <div
               ref={headerExtrasContainerRef}
