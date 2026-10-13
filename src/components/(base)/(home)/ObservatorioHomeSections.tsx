@@ -80,7 +80,7 @@ const MONTH_NAMES = [
 
 /* ─── helpers ─── */
 
-function SectionLabel({
+export function SectionLabel({
   children,
   className,
 }: {
@@ -103,7 +103,7 @@ function SectionLabel({
   );
 }
 
-function SectionDivider({ className }: { className?: string }) {
+export function SectionDivider({ className }: { className?: string }) {
   return (
     <motion.div
       initial={{ scaleX: 0 }}
@@ -118,7 +118,7 @@ function SectionDivider({ className }: { className?: string }) {
   );
 }
 
-function LightSectionBackground() {
+export function LightSectionBackground() {
   return (
     <div
       aria-hidden
@@ -127,7 +127,7 @@ function LightSectionBackground() {
   );
 }
 
-function DarkSectionBackground() {
+export function DarkSectionBackground() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
       <motion.div
@@ -189,27 +189,72 @@ function bannerChainDelay(previousDelay: number, previousDuration: number) {
   return previousDelay + previousDuration + BANNER_SEQ_GAP;
 }
 
-function BannerHeroSequence({
-  label,
-  compact = false,
-}: {
-  label: string;
-  compact?: boolean;
-}) {
-  const observatorioText = `— ${label} —`;
-  const aguaText = "\u201CAgua sin fronteras\u201D";
-  const countriesText = "El Salvador · Guatemala · Honduras";
-
+function bannerHeroSequenceDelays() {
   const obsDelay = 0;
   const planDelay = bannerChainDelay(obsDelay, BANNER_CHAR_DURATION);
   const aguaDelay = bannerChainDelay(planDelay, BANNER_CHAR_DURATION);
   const lineDelay = bannerChainDelay(aguaDelay, BANNER_CHAR_DURATION);
   const countriesDelay = lineDelay + 0.55;
+  return { obsDelay, planDelay, aguaDelay, lineDelay, countriesDelay };
+}
+
+export function getBannerCatalogFooterDelays() {
+  const { countriesDelay } = bannerHeroSequenceDelays();
+  return {
+    kicker: countriesDelay + 0.38,
+    divider: countriesDelay + 0.52,
+    descripcion: countriesDelay + 0.68,
+  };
+}
+
+export function BannerHeroBlurReveal({
+  children,
+  delay,
+  className,
+  style,
+}: {
+  children: React.ReactNode;
+  delay: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.82, filter: "blur(10px)" }}
+      whileInView={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+      viewport={{ once: false, amount: 0.3 }}
+      transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      className={className}
+      style={style}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+export function BannerHeroSequence({
+  label,
+  compact = false,
+  compactProminent = false,
+}: {
+  label: string;
+  compact?: boolean;
+  compactProminent?: boolean;
+}) {
+  const observatorioText = `— ${label} —`;
+  const aguaText = "\u201CAgua sin fronteras\u201D";
+  const countriesText = "El Salvador · Guatemala · Honduras";
+
+  const { obsDelay, planDelay, aguaDelay, lineDelay, countriesDelay } =
+    bannerHeroSequenceDelays();
+  const logoStyleReveal = compactProminent;
 
   const obsLabelClass = cn(
     "font-black uppercase tracking-[0.2em] text-white drop-shadow-lg",
     compact
-      ? "mb-4 text-[10px]"
+      ? compactProminent
+        ? "mb-4 text-sm sm:text-base md:mb-5 md:text-lg md:tracking-[0.22em] lg:text-xl"
+        : "mb-4 text-[10px]"
       : "mb-12 text-xl md:mb-14 md:text-2xl lg:text-3xl",
   );
 
@@ -247,17 +292,23 @@ function BannerHeroSequence({
         compact ? "translate-y-1" : "-translate-y-10 md:-translate-y-16",
       )}
     >
-      <TextAnimate
-        animation="blurIn"
-        as="p"
-        by="character"
-        duration={BANNER_CHAR_DURATION}
-        delay={obsDelay}
-        startOnView
-        className={obsLabelClass}
-      >
-        {observatorioText}
-      </TextAnimate>
+      {logoStyleReveal ? (
+        <BannerHeroBlurReveal delay={obsDelay} className={obsLabelClass}>
+          {observatorioText}
+        </BannerHeroBlurReveal>
+      ) : (
+        <TextAnimate
+          animation="blurIn"
+          as="p"
+          by="character"
+          duration={BANNER_CHAR_DURATION}
+          delay={obsDelay}
+          startOnView
+          className={obsLabelClass}
+        >
+          {observatorioText}
+        </TextAnimate>
+      )}
 
       <div
         className={cn(
@@ -282,31 +333,51 @@ function BannerHeroSequence({
           )}
         />
         <div className="flex min-w-0 w-full flex-col items-center text-center md:w-auto">
-          <TextAnimate
-            animation="blurIn"
-            as="p"
-            by="character"
-            duration={BANNER_CHAR_DURATION}
-            delay={planDelay}
-            startOnView
-            className={planClass}
-            style={planStyle}
-          >
-            Plan Trifinio
-          </TextAnimate>
+          {logoStyleReveal ? (
+            <BannerHeroBlurReveal
+              delay={planDelay}
+              className={planClass}
+              style={planStyle}
+            >
+              Plan Trifinio
+            </BannerHeroBlurReveal>
+          ) : (
+            <TextAnimate
+              animation="blurIn"
+              as="p"
+              by="character"
+              duration={BANNER_CHAR_DURATION}
+              delay={planDelay}
+              startOnView
+              className={planClass}
+              style={planStyle}
+            >
+              Plan Trifinio
+            </TextAnimate>
+          )}
 
-          <TextAnimate
-            animation="blurIn"
-            as="p"
-            by="character"
-            duration={BANNER_CHAR_DURATION}
-            delay={aguaDelay}
-            startOnView
-            className={aguaClass}
-            style={aguaStyle}
-          >
-            {aguaText}
-          </TextAnimate>
+          {logoStyleReveal ? (
+            <BannerHeroBlurReveal
+              delay={aguaDelay}
+              className={aguaClass}
+              style={aguaStyle}
+            >
+              {aguaText}
+            </BannerHeroBlurReveal>
+          ) : (
+            <TextAnimate
+              animation="blurIn"
+              as="p"
+              by="character"
+              duration={BANNER_CHAR_DURATION}
+              delay={aguaDelay}
+              startOnView
+              className={aguaClass}
+              style={aguaStyle}
+            >
+              {aguaText}
+            </TextAnimate>
+          )}
 
           <div className="mt-3 grid w-max max-w-full grid-cols-1">
             <div
@@ -329,21 +400,34 @@ function BannerHeroSequence({
               />
             </div>
 
-            <TextAnimate
-              animation="blurIn"
-              as="p"
-              by="character"
-              duration={BANNER_CHAR_DURATION}
-              delay={countriesDelay}
-              startOnView
-              className={cn(
-                countriesClass,
-                "col-start-1 row-start-2 mt-0 w-max max-w-full justify-self-center",
-              )}
-              style={countriesStyle}
-            >
-              {countriesText}
-            </TextAnimate>
+            {logoStyleReveal ? (
+              <BannerHeroBlurReveal
+                delay={countriesDelay}
+                className={cn(
+                  countriesClass,
+                  "col-start-1 row-start-2 mt-0 w-max max-w-full justify-self-center",
+                )}
+                style={countriesStyle}
+              >
+                {countriesText}
+              </BannerHeroBlurReveal>
+            ) : (
+              <TextAnimate
+                animation="blurIn"
+                as="p"
+                by="character"
+                duration={BANNER_CHAR_DURATION}
+                delay={countriesDelay}
+                startOnView
+                className={cn(
+                  countriesClass,
+                  "col-start-1 row-start-2 mt-0 w-max max-w-full justify-self-center",
+                )}
+                style={countriesStyle}
+              >
+                {countriesText}
+              </TextAnimate>
+            )}
           </div>
         </div>
       </div>
@@ -403,7 +487,7 @@ function BannerTitle({
   );
 }
 
-function FullWidthImageBanner({
+export function FullWidthImageBanner({
   src,
   alt,
   overlay = "from-[#0a1628]/80 via-[#0a1628]/40 to-transparent",
@@ -412,6 +496,9 @@ function FullWidthImageBanner({
   title,
   imageClassName,
   fixedBackground = false,
+  contentAlign = "center",
+  objectFit = "cover",
+  desktopHeightVh = 70,
 }: {
   src: string;
   alt: string;
@@ -421,7 +508,11 @@ function FullWidthImageBanner({
   title?: string;
   imageClassName?: string;
   fixedBackground?: boolean;
+  contentAlign?: "center" | "top";
+  objectFit?: "cover" | "contain";
+  desktopHeightVh?: number;
 }) {
+  const desktopCover = objectFit === "cover";
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -446,7 +537,14 @@ function FullWidthImageBanner({
           )}
         />
         {(label || title || showPlanTrifinioBrand) && (
-          <div className="absolute inset-0 flex w-full min-w-0 flex-col items-center justify-center px-4 text-center">
+          <div
+            className={cn(
+              "absolute inset-0 flex w-full min-w-0 flex-col items-center px-4 text-center",
+              contentAlign === "top"
+                ? "justify-start pt-6"
+                : "justify-center",
+            )}
+          >
             {showPlanTrifinioBrand && label ? (
               <BannerHeroSequence label={label} compact />
             ) : (
@@ -462,32 +560,51 @@ function FullWidthImageBanner({
       {/* desktop — parallax o imagen fija con scroll encima */}
       <div
         ref={ref}
-        className={cn(
-          "relative hidden w-full md:block",
-          fixedBackground ? "h-[70vh] bg-[#0a1628]" : "",
-        )}
-        style={fixedBackground ? undefined : { height: "70vh" }}
+        className="relative hidden w-full bg-[#0a1628] md:block"
+        style={
+          fixedBackground && !desktopCover
+            ? undefined
+            : { height: `${desktopHeightVh}vh` }
+        }
       >
         {fixedBackground ? (
           <>
             <motion.div
-              style={{ opacity: fixedBgOpacity }}
-              className="sticky top-0 z-0 h-[70vh] w-full overflow-hidden"
+              style={{
+                opacity: fixedBgOpacity,
+                ...(desktopCover ? { height: `${desktopHeightVh}vh` } : {}),
+              }}
+              className="sticky top-0 z-0 w-full overflow-hidden"
             >
-              <img
-                src={src}
-                alt={alt}
-                className={cn(
-                  "absolute inset-0 h-full w-full object-cover",
-                  imageClassName,
-                )}
-              />
-              <div className={cn("absolute inset-0 bg-linear-to-r", overlay)} />
+              <div className={cn("relative w-full", desktopCover ? "h-full" : "")}>
+                <img
+                  src={src}
+                  alt={alt}
+                  className={cn(
+                    desktopCover
+                      ? "absolute inset-0 h-full w-full object-cover"
+                      : "block h-auto w-full object-contain",
+                    imageClassName,
+                  )}
+                />
+                <div
+                  className={cn(
+                    "absolute inset-0 bg-linear-to-r",
+                    overlay,
+                    desktopCover ? "" : "pointer-events-none",
+                  )}
+                />
+              </div>
             </motion.div>
             {(label || title || showPlanTrifinioBrand) && (
               <motion.div
                 style={{ y: textY }}
-                className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+                className={cn(
+                  "pointer-events-none absolute inset-0 z-10 flex flex-col items-center px-6 text-center",
+                  contentAlign === "top"
+                    ? "justify-start pt-10 md:pt-14 lg:pt-16"
+                    : "justify-center",
+                )}
               >
                 {showPlanTrifinioBrand && label ? (
                   <BannerHeroSequence label={label} />
@@ -515,7 +632,12 @@ function FullWidthImageBanner({
             {(label || title || showPlanTrifinioBrand) && (
               <motion.div
                 style={{ y: textY }}
-                className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+                className={cn(
+                  "absolute inset-0 flex flex-col items-center px-6 text-center",
+                  contentAlign === "top"
+                    ? "justify-start pt-10 md:pt-14 lg:pt-16"
+                    : "justify-center",
+                )}
               >
                 {showPlanTrifinioBrand && label ? (
                   <BannerHeroSequence label={label} />
@@ -1535,8 +1657,20 @@ function orbitFloatAnimation(float: (typeof ORBIT_ICONS)[number]["float"]) {
   return anim;
 }
 
-function ObservatorioIconOrbit() {
+export function ObservatorioIconOrbit({
+  descriptions,
+  center = "animated",
+  hrefs,
+}: {
+  descriptions?: readonly string[];
+  center?: "animated" | "logo";
+  hrefs?: readonly string[];
+} = {}) {
   const orbitRef = useRef<HTMLDivElement>(null);
+  const orbitIcons = ORBIT_ICONS.map((icon, idx) => ({
+    ...icon,
+    description: descriptions?.[idx] ?? icon.description,
+  }));
   const { scrollYProgress } = useScroll({
     target: orbitRef,
     offset: ["start 0.85", "end 0.15"],
@@ -1579,7 +1713,10 @@ function ObservatorioIconOrbit() {
               type: "spring",
               stiffness: 120,
             }}
-            className="pointer-events-auto relative flex size-32 md:size-44 items-center justify-center"
+            className={cn(
+              "relative flex size-32 items-center justify-center md:size-44",
+              center === "animated" ? "pointer-events-auto" : "pointer-events-none",
+            )}
           >
             <motion.div
               animate={{ y: [0, -6, 0] }}
@@ -1590,12 +1727,21 @@ function ObservatorioIconOrbit() {
               }}
               className="size-full"
             >
-              <AnimatedIcon
-                iconKey="okgvdvjm"
-                target="#obs-icon-center"
-                size="100%"
-                speed={1.5}
-              />
+              {center === "logo" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/trifinio/logo.png"
+                  alt="Plan Trifinio"
+                  className="size-full object-contain drop-shadow-sm"
+                />
+              ) : (
+                <AnimatedIcon
+                  iconKey="okgvdvjm"
+                  target="#obs-icon-center"
+                  size="100%"
+                  speed={1.5}
+                />
+              )}
             </motion.div>
           </motion.div>
         </div>
@@ -1604,12 +1750,33 @@ function ObservatorioIconOrbit() {
           className="pointer-events-none absolute inset-0 z-10"
           style={{ rotate: orbitRotate }}
         >
-          {ORBIT_ICONS.map((icon, idx) => {
+          {orbitIcons.map((icon, idx) => {
             const rad =
               (orbitAngle(icon.slot, ORBIT_SIDE_SPREAD) * Math.PI) / 180;
             const left = 50 + ORBIT_RADIUS * Math.sin(rad);
             const top = 50 - ORBIT_RADIUS * Math.cos(rad);
             const float = icon.float;
+            const href = hrefs?.[idx];
+
+            const iconBody = (
+              <motion.div
+                animate={orbitFloatAnimation(float)}
+                transition={{
+                  duration: float.duration,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: float.delay,
+                }}
+                className="size-full"
+              >
+                <AnimatedIcon
+                  iconKey={icon.iconKey}
+                  target={`#${icon.id}`}
+                  size="100%"
+                  speed={icon.speed}
+                />
+              </motion.div>
+            );
 
             return (
               <motion.div
@@ -1642,23 +1809,13 @@ function ObservatorioIconOrbit() {
                   align={icon.align}
                   description={icon.description}
                 />
-                <motion.div
-                  animate={orbitFloatAnimation(float)}
-                  transition={{
-                    duration: float.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: float.delay,
-                  }}
-                  className="size-full"
-                >
-                  <AnimatedIcon
-                    iconKey={icon.iconKey}
-                    target={`#${icon.id}`}
-                    size="100%"
-                    speed={icon.speed}
-                  />
-                </motion.div>
+                {href ? (
+                  <Link href={href} className="size-full" aria-label={icon.description}>
+                    {iconBody}
+                  </Link>
+                ) : (
+                  iconBody
+                )}
               </motion.div>
             );
           })}
@@ -1666,7 +1823,7 @@ function ObservatorioIconOrbit() {
       </div>
 
       <ul className="mt-6 mb-12 w-full space-y-4 md:hidden">
-        {ORBIT_ICONS.map((icon) => (
+        {orbitIcons.map((icon) => (
           <li key={`${icon.id}-mobile`} className="flex items-start gap-4">
             <div
               id={`${icon.id}-mobile`}
@@ -2125,6 +2282,12 @@ const FOOTER_SIGET_LINKS = [
   { label: "Acceder SIGET", href: "/login", external: false },
 ] as const;
 
+const FOOTER_CONOCIMIENTO_LINKS = [
+  { label: "Inicio", href: "/", external: false },
+  { label: "Catálogo", href: "/conocimiento/noticias", external: false },
+  { label: "Acceder SIGET", href: "/login", external: false },
+] as const;
+
 const FOOTER_PLAN_TRIFINIO_LINKS = [
   {
     label: "Sitio oficial",
@@ -2179,10 +2342,9 @@ function FooterPlanTrifinioBrand() {
       <img
         src="/trifinio/logo.png"
         alt="Plan Trifinio"
-        className="size-[110px] shrink-0 object-contain md:size-[120px] lg:size-[132px]"
+        className="size-[72px] shrink-0 object-contain md:size-[80px] lg:size-[88px]"
       />
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center md:flex-none">
-        {/* fantasma para anclar el ancho al texto de países (solo desktop) */}
         <p
           className="pointer-events-none invisible hidden h-0 overflow-hidden whitespace-nowrap font-semibold text-white md:block"
           style={{
@@ -2198,26 +2360,26 @@ function FooterPlanTrifinioBrand() {
           className="whitespace-nowrap text-center font-black leading-[0.95] text-white"
           style={{
             fontFamily: "'Arial Black', sans-serif",
-            fontSize: "clamp(1.9rem, 8vw, 2.8rem)",
+            fontSize: "clamp(1.75rem, 7vw, 2.45rem)",
           }}
         >
           Plan Trifinio
         </p>
         <p
-          className="mt-1 text-center font-bold italic leading-tight text-white"
+          className="mt-0.5 text-center font-bold italic leading-tight text-white"
           style={{
             fontFamily: "Arial, sans-serif",
-            fontSize: "clamp(1.15rem, 4.5vw, 1.8rem)",
+            fontSize: "clamp(1.05rem, 4vw, 1.6rem)",
           }}
         >
           &ldquo;Agua sin fronteras&rdquo;
         </p>
-        <div className="mt-2 h-[2px] w-full origin-center bg-white" />
+        <div className="mt-1.5 h-[2px] w-full origin-center bg-white" />
         <p
-          className="mt-2 whitespace-nowrap text-center font-semibold text-white/85"
+          className="mt-1.5 whitespace-nowrap text-center font-semibold text-white/85"
           style={{
             fontFamily: "Arial, sans-serif",
-            fontSize: "clamp(0.65rem, 2.5vw, 0.9rem)",
+            fontSize: "clamp(0.58rem, 2vw, 0.78rem)",
             letterSpacing: "0.18em",
           }}
         >
@@ -2310,7 +2472,7 @@ function FooterLinkItem({
   showExternalIcon?: boolean;
 }) {
   const className = cn(
-    "group max-w-full text-base font-semibold text-white/85 transition-colors hover:text-white md:text-lg",
+    "group max-w-full text-sm font-semibold text-white/85 transition-colors hover:text-white md:text-[15px]",
     showExternalIcon ? "inline-flex items-center gap-2" : "inline-block",
   );
 
@@ -2343,35 +2505,49 @@ function FooterLinkItem({
   );
 }
 
-function ObservatorioFooterContent({ className }: { className?: string }) {
+function ObservatorioFooterContent({
+  className,
+  variant = "observatorio",
+}: {
+  className?: string;
+  variant?: "observatorio" | "conocimiento";
+}) {
+  const esConocimiento = variant === "conocimiento";
+  const navHeading = esConocimiento ? "Inicio" : "Observatorio Web";
+  const navLinks = esConocimiento
+    ? FOOTER_CONOCIMIENTO_LINKS
+    : FOOTER_SIGET_LINKS;
+  const descripcion = esConocimiento
+    ? "Noticias, documentos y recursos educativos públicos de Plan Trifinio."
+    : "Plataforma tecnológica para la recolección, centralización, análisis y visualización de datos sobre movilidad humana en la región Trifinio.";
+  const sigetLine = esConocimiento
+    ? "SIGET — Sistema Integral de Gestión Estratégica Trifinio."
+    : "Sistema Integral de Gestión Estratégica Trifinio (SIGET).";
+
   return (
     <div
       className={cn(
-        "relative z-10 flex h-full w-full flex-col justify-end gap-8 px-4 pb-8 sm:px-6 md:gap-10 md:px-10 md:pb-10 lg:px-14 xl:px-16",
+        "relative z-10 flex h-full min-h-0 w-full flex-col justify-center gap-4 px-4 py-4 sm:px-6 md:gap-5 md:px-10 md:py-3 lg:px-14 xl:px-16",
         className,
       )}
     >
-      <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-12 md:items-start md:gap-x-10 lg:gap-x-14">
-        {/* Columna 1 — Marca + descripción */}
+      <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-12 md:items-start md:gap-x-8 md:gap-y-4 lg:gap-x-12">
         <div className="w-full min-w-0 md:col-span-5">
           <FooterPlanTrifinioBrand />
-          <p className="mt-6 max-w-md text-base leading-relaxed text-white/75 md:text-[15px] md:leading-relaxed lg:text-base">
-            Plataforma tecnológica para la recolección, centralización, análisis
-            y visualización de datos sobre movilidad humana en la región
-            Trifinio.
+          <p className="mt-4 max-w-md text-sm leading-snug text-white/75 md:text-[14px] md:leading-relaxed">
+            {descripcion}
           </p>
-          <p className="mt-4 w-full text-base font-black leading-snug text-white md:max-w-md md:text-sm md:font-normal md:leading-relaxed md:text-white/60">
-            Sistema Integral de Gestión Estratégica Trifinio (SIGET).
+          <p className="mt-2 w-full text-sm font-black leading-snug text-white md:max-w-md md:text-xs md:font-normal md:leading-relaxed md:text-white/60">
+            {sigetLine}
           </p>
         </div>
 
-        {/* Columna 2 — Observatorio Web + Redes */}
-        <div className="min-w-0 md:col-span-3">
+        <div className="min-w-0 md:col-span-3 md:col-start-7">
           <div className="grid grid-cols-2 items-start gap-4 md:grid-cols-1 md:gap-0">
             <div className="min-w-0">
-              <FooterSectionHeading>Observatorio Web</FooterSectionHeading>
-              <ul className="mt-5 space-y-3.5">
-                {FOOTER_SIGET_LINKS.map((link) => (
+              <FooterSectionHeading>{navHeading}</FooterSectionHeading>
+              <ul className="mt-3 space-y-2">
+                {navLinks.map((link) => (
                   <li key={link.label}>
                     <FooterLinkItem
                       {...link}
@@ -2384,22 +2560,22 @@ function ObservatorioFooterContent({ className }: { className?: string }) {
             </div>
 
             <div className="min-w-0 text-right md:text-left">
-              <div className="md:mt-8">
+              <div className="md:mt-5">
                 <FooterSectionHeading align="end" className="md:justify-start">
                   Redes
                 </FooterSectionHeading>
               </div>
-              <ul className="mt-5 flex flex-col items-end space-y-3.5 md:items-start">
+              <ul className="mt-3 flex flex-col items-end space-y-2 md:items-start">
                 {FOOTER_SOCIAL.map(({ label, href, icon: Icon }) => (
                   <li key={label}>
                     <a
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-3 text-base font-semibold text-white/85 transition-colors hover:text-white md:text-lg"
+                      className="group inline-flex items-center gap-2.5 text-sm font-semibold text-white/85 transition-colors hover:text-white md:text-[15px]"
                     >
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-celeste-trifinio transition-colors group-hover:border-celeste-trifinio/50 group-hover:bg-white/10">
-                        <Icon className="size-4" />
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-celeste-trifinio transition-colors group-hover:border-celeste-trifinio/50 group-hover:bg-white/10">
+                        <Icon className="size-3.5" />
                       </span>
                       <FooterLinkLabel mode="responsive">
                         {label}
@@ -2412,12 +2588,11 @@ function ObservatorioFooterContent({ className }: { className?: string }) {
           </div>
         </div>
 
-        {/* Columna 3 — Plan Trifinio (a la derecha) */}
-        <div className="min-w-0 md:col-span-4 md:text-right">
+        <div className="min-w-0 md:col-span-3 md:col-start-10 md:text-right">
           <FooterSectionHeading className="md:justify-end">
             Plan Trifinio
           </FooterSectionHeading>
-          <div className="mt-5 flex justify-between gap-6 md:hidden">
+          <div className="mt-3 flex justify-between gap-6 md:hidden">
             <ul className="flex min-w-0 flex-col items-start gap-3">
               {FOOTER_PLAN_TRIFINIO_LINKS_LEFT.map((link) => (
                 <li key={link.label} className="min-w-0 max-w-44 sm:max-w-xs">
@@ -2443,7 +2618,7 @@ function ObservatorioFooterContent({ className }: { className?: string }) {
               ))}
             </ul>
           </div>
-          <ul className="mt-5 hidden space-y-3.5 md:flex md:flex-col md:items-end">
+          <ul className="mt-3 hidden space-y-2 md:flex md:flex-col md:items-end">
             {FOOTER_PLAN_TRIFINIO_LINKS.map((link) => (
               <li key={link.label} className="text-right">
                 <FooterLinkItem
@@ -2458,7 +2633,7 @@ function ObservatorioFooterContent({ className }: { className?: string }) {
         </div>
       </div>
 
-      <div className="flex w-full flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 sm:flex-row">
+      <div className="flex w-full shrink-0 flex-col items-center justify-between gap-2 border-t border-white/10 pt-3 sm:flex-row sm:pt-4">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-white/55">
           © 2026 SIGET — Plan Trifinio
         </p>
@@ -2489,16 +2664,76 @@ export const FOOTER_SCROLL_SPACER_VH = 58;
 /** Scroll en móvil: ~100vh para que el bloque blanco suba y desaparezca por completo. */
 export const FOOTER_SCROLL_SPACER_MOBILE_VH = 100;
 
+function scrollPrincipalConocimiento(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("main.overflow-y-auto");
+}
+
+export function useFooterCurtainReveal(active = true) {
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (!active) {
+      setRevealed(false);
+      return;
+    }
+
+    const update = () => {
+      const root = scrollPrincipalConocimiento();
+      const spacerVh =
+        window.innerWidth < 768
+          ? FOOTER_SCROLL_SPACER_MOBILE_VH
+          : FOOTER_SCROLL_SPACER_VH;
+      const footerPx = (spacerVh / 100) * window.innerHeight;
+
+      if (root) {
+        const scrolled = root.scrollTop + root.clientHeight;
+        const total = root.scrollHeight;
+        setRevealed(scrolled >= total - footerPx - 4);
+        return;
+      }
+
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      setRevealed(scrolled >= total - footerPx - 4);
+    };
+
+    update();
+
+    const root = scrollPrincipalConocimiento();
+    const scrollTarget: HTMLElement | Window = root ?? window;
+    scrollTarget.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    const resizeObserver =
+      root && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(update)
+        : null;
+    if (root) resizeObserver?.observe(root);
+
+    return () => {
+      scrollTarget.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      resizeObserver?.disconnect();
+    };
+  }, [active]);
+
+  return revealed;
+}
+
 export function ObservatorioFooterCurtain({
   revealed = false,
+  variant = "observatorio",
+  compensateParentZoom = true,
 }: {
   revealed?: boolean;
+  variant?: "observatorio" | "conocimiento";
+  compensateParentZoom?: boolean;
 }) {
   return (
     <footer
-      className="relative z-20 flex h-auto w-full flex-col overflow-hidden bg-[#0a1628] md:fixed md:bottom-0 md:left-0 md:z-0 md:h-[50vh] max-md:!opacity-100 max-md:!visibility-visible max-md:!pointer-events-auto"
+      className="relative z-20 flex h-auto w-full flex-col overflow-hidden bg-[#0a1628] md:fixed md:bottom-0 md:left-0 md:right-0 md:z-0 md:h-[50vh] max-md:!pointer-events-auto max-md:!opacity-100 max-md:!visibility-visible"
       style={{
-        zoom: 1 / 0.9,
+        ...(compensateParentZoom ? { zoom: 1 / 0.9 } : {}),
         opacity: revealed ? 1 : 0,
         visibility: revealed ? "visible" : "hidden",
         pointerEvents: revealed ? undefined : "none",
@@ -2507,7 +2742,7 @@ export function ObservatorioFooterCurtain({
     >
       <DarkSectionBackground />
       <div className="relative z-10 flex h-full w-full overflow-y-auto md:overflow-visible">
-        <ObservatorioFooterContent className="pt-14 md:pt-0" />
+        <ObservatorioFooterContent className="max-md:pt-10" variant={variant} />
       </div>
     </footer>
   );

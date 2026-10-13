@@ -1,21 +1,19 @@
 import { notFound } from "next/navigation";
-import { formatFechaCalendarioGt } from "@/lib/fechas-gt";
-import { modalAccentClass } from "@/components/ui/general-modal";
-import { getDocumentoPublico } from "./lib/actions";
+import { getDocumentoPublico, getNoticiasRelacionadas } from "./lib/actions";
 import {
-  CHANNEL_LABELS,
-  COUNTRY_LABELS,
-  PROGRAM_LABELS,
-  TYPE_LABELS,
   esCanalPublico,
   esNoticiaSecciones,
+  instanteUltimaActualizacion,
   parsearNoticiaContent,
-  sanitizarHtml,
   slugsFotosSeccion,
 } from "./lib/helpers";
-import { esImagenMime, esPdfMime, rutaRawArchivo, rutaVisorArchivo } from "./lib/storage";
+import { esPdfMime, rutaRawArchivo, rutaVisorArchivo } from "./lib/storage";
 import { ConocimientoDetalleAcciones } from "./ConocimientoDetalleAcciones";
+import { ConocimientoVolverEnlace } from "./ConocimientoVolverEnlace";
+import { DocumentoLectura } from "./DocumentoLectura";
 import { NoticiaArticulo } from "./NoticiaArticulo";
+import { NoticiasRelacionadas } from "./NoticiasRelacionadas";
+import { rutaCatalogoCanal } from "./lib/helpers";
 
 export async function ConocimientoDetalle({
   canal,
@@ -27,6 +25,7 @@ export async function ConocimientoDetalle({
   if (!esCanalPublico(canal)) notFound();
   const doc = await getDocumentoPublico(canal, slug);
   if (!doc) notFound();
+  const actualizadoEn = instanteUltimaActualizacion(doc);
 
   if (doc.channel === "noticia" && esNoticiaSecciones(doc.content)) {
     const parsed = parsearNoticiaContent(doc.content);
@@ -34,19 +33,32 @@ export async function ConocimientoDetalle({
       parsed.sections.flatMap((section) => slugsFotosSeccion(section)),
     );
     const adjuntos = doc.files.filter((file) => !slugsUsados.has(file.slug));
+    const relacionadas = await getNoticiasRelacionadas({
+      documentType: doc.document_type,
+      excludeSlug: doc.slug,
+    });
     return (
-      <article className="relative w-full flex-1 bg-white dark:bg-zinc-900">
-        <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-10">
+      <article className="relative w-full flex-1">
+        <div className="relative z-10 mx-auto my-4 w-full max-w-3xl rounded-3xl border border-white/60 bg-white/85 px-4 pb-4 pt-1.5 shadow-sm backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/85 md:my-8 md:px-6 md:pb-5">
+          <ConocimientoVolverEnlace
+            href={rutaCatalogoCanal("noticias")}
+            label="Volver a noticias"
+          />
           <NoticiaArticulo
             title={doc.title}
             summary={doc.summary}
             author={doc.author}
             publicationDate={doc.publication_date}
+            actualizadoEn={actualizadoEn}
             countryScope={doc.country_scope}
             program={doc.program}
             tags={doc.tags}
             documentType={doc.document_type}
             channel={doc.channel}
+            visitas={doc.view_count}
+            descargas={doc.download_count}
+            slug={doc.slug}
+            registrarVisita
             sections={parsed.sections.map((section) => ({
               id: section.id,
               heading: section.heading,
@@ -72,80 +84,49 @@ export async function ConocimientoDetalle({
               ))}
             </div>
           ) : null}
+          <NoticiasRelacionadas items={relacionadas} articuloActual={doc} />
+          <div className="mt-6 flex w-full justify-start">
+            <ConocimientoVolverEnlace
+              href={rutaCatalogoCanal("noticias")}
+              label="Volver a noticias"
+              className="mb-0 py-1.5"
+            />
+          </div>
         </div>
       </article>
     );
   }
 
-  const imagenes = doc.files.filter((file) => esImagenMime(file.mime_type));
-  const adjuntos = doc.files.filter((file) => !esImagenMime(file.mime_type));
-  const html = sanitizarHtml(doc.content);
+  const relacionadas =
+    doc.channel === "noticia"
+      ? await getNoticiasRelacionadas({
+          documentType: doc.document_type,
+          excludeSlug: doc.slug,
+        })
+      : [];
 
   return (
-    <article className="relative w-full flex-1 bg-white dark:bg-zinc-900">
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
-          {CHANNEL_LABELS[doc.channel]} · {TYPE_LABELS[doc.document_type]}
-        </p>
-        <h1 className={`mt-2 text-3xl leading-tight ${modalAccentClass}`}>{doc.title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {doc.author}
-          {doc.cooperante ? ` · ${doc.cooperante}` : ""} ·{" "}
-          {formatFechaCalendarioGt(doc.publication_date)} ·{" "}
-          {COUNTRY_LABELS[doc.country_scope]}
-          {doc.program ? ` · ${PROGRAM_LABELS[doc.program]}` : ""}
-        </p>
-        {doc.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {doc.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-bold text-muted-foreground dark:bg-zinc-800"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {doc.summary ? (
-          <p className="mt-6 text-base leading-relaxed text-foreground">{doc.summary}</p>
-        ) : null}
-
-        {html && html !== "<p></p>" ? (
-          <div
-            className="prose prose-sm mt-6 max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: html }}
+    <article className="relative w-full flex-1">
+      <div className="relative z-10 mx-auto my-4 w-full max-w-3xl rounded-3xl border border-white/60 bg-white/85 px-4 pb-4 pt-1.5 shadow-sm backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/85 md:my-8 md:px-6 md:pb-5">
+        {doc.channel === "noticia" ? (
+          <ConocimientoVolverEnlace
+            href={rutaCatalogoCanal("noticias")}
+            label="Volver a noticias"
           />
         ) : null}
-
-        {imagenes.length > 0 ? (
-          <div className="mt-8 grid gap-4">
-            {imagenes.map((file) => (
-              <figure key={file.id} className="overflow-hidden rounded-2xl border border-border dark:border-zinc-700">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={rutaRawArchivo(file.slug)}
-                  alt={file.original_name}
-                  className="w-full"
-                />
-              </figure>
-            ))}
-          </div>
-        ) : null}
-
-        {adjuntos.length > 0 ? (
-          <div className="mt-8 space-y-3">
-            {adjuntos.map((file) => (
-              <ConocimientoDetalleAcciones
-                key={file.id}
-                slug={file.slug}
-                nombre={file.original_name}
-                puedeVer={esPdfMime(file.mime_type)}
-                visorHref={rutaVisorArchivo(file.slug)}
-                rawHref={rutaRawArchivo(file.slug, true)}
-              />
-            ))}
+        <DocumentoLectura
+          doc={doc}
+          actualizadoEn={actualizadoEn}
+          registrarVisita
+        />
+        <NoticiasRelacionadas items={relacionadas} articuloActual={doc} />
+        {doc.channel === "noticia" ? (
+          <div className="mt-6 flex w-full justify-start">
+            <ConocimientoVolverEnlace
+              href={rutaCatalogoCanal("noticias")}
+              label="Volver a noticias"
+              className="mb-0 py-1.5"
+            />
           </div>
         ) : null}
       </div>

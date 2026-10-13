@@ -31,6 +31,7 @@ import {
   COUNTRY_OPTIONS,
   PROGRAM_OPTIONS,
   TYPE_LABELS,
+  eventosActividadDocumento,
   nombreDesdeMetadata,
   parsearNoticiaContent,
   seccionNoticiaVacia,
@@ -38,6 +39,8 @@ import {
 } from "../lib/helpers";
 import { esImagenMime, rutaRawArchivo } from "../lib/storage";
 import { esNoticiaAspectId, type NoticiaAspectId } from "../lib/noticia-imagen";
+import { LineaTiempoActividad } from "../LineaTiempoActividad";
+import { NoticiaSeccionEditor } from "./NoticiaSeccionEditor";
 import { parsearVideoNoticia } from "../lib/noticia-video";
 import type { DocumentFormValues, DocumentRecord, TagRecord } from "../lib/zod";
 import { NOTICIA_GALERIA_MAX } from "../lib/zod";
@@ -330,7 +333,8 @@ export function NoticiaWizard({
   return (
     <div className="relative w-full flex-1 bg-white dark:bg-zinc-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] bg-size-[24px_24px] opacity-50 dark:bg-[radial-gradient(oklch(36%_0_0)_1px,transparent_1px)] dark:opacity-40" />
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-1 py-2.5">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-6 px-1 py-2.5 xl:flex-row xl:items-start">
+        <div className="min-w-0 flex-1">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-celeste-trifinio">
           Noticia
         </p>
@@ -595,6 +599,13 @@ export function NoticiaWizard({
             )}
           </div>
         </div>
+        </div>
+        {documento ? (
+          <LineaTiempoActividad
+            eventos={eventosActividadDocumento(documento)}
+            className="w-full xl:sticky xl:top-4 xl:w-72 xl:shrink-0"
+          />
+        ) : null}
       </div>
       <NoticiaFotoCropper
         open={Boolean(cropSrc && cropTarget)}
@@ -774,11 +785,11 @@ function SeccionEditor({
       </ModalField>
       <ModalField>
         <ModalLabel htmlFor={`sec-body-${section.id}`}>Texto</ModalLabel>
-        <ModalTextarea
+        <NoticiaSeccionEditor
           id={`sec-body-${section.id}`}
           value={section.body}
-          onChange={(e) => onChange({ body: e.target.value })}
-          rows={1}
+          onChange={(body) => onChange({ body })}
+          disabled={disabled}
         />
       </ModalField>
     </motion.div>

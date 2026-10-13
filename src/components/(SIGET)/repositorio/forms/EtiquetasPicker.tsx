@@ -77,6 +77,7 @@ export function EtiquetasPicker({
 
   const handleCrear = async (event: React.FormEvent) => {
     event.preventDefault();
+    event.stopPropagation();
     const limpio = nombre.trim();
     if (limpio.length < 2) {
       toast.warn("Escribe un nombre de al menos 2 caracteres.");
@@ -125,6 +126,9 @@ export function EtiquetasPicker({
             className="pl-10"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.preventDefault();
+            }}
             placeholder="Buscar etiqueta"
             disabled={disabled}
           />

@@ -108,7 +108,9 @@ export async function persistirNoticia(params: {
   let id: string | undefined;
 
   if (slug) {
-    const updated = await updateDocumentAction(slug, values);
+    const updated = await updateDocumentAction(slug, values, {
+      registrarActividad: false,
+    });
     if (!updated.success || !updated.id || !updated.slug) {
       return { success: false, error: updated.error };
     }
@@ -160,7 +162,11 @@ export async function persistirNoticia(params: {
     kind: "noticia_secciones",
     sections: nextSections.length > 0 ? nextSections : parsearNoticiaContent("").sections,
   });
-  const refreshed = await updateDocumentAction(slug, { ...values, content: contentFinal });
+  const refreshed = await updateDocumentAction(
+    slug,
+    { ...values, content: contentFinal },
+    { registrarActividad: Boolean(params.existingSlug) },
+  );
   if (!refreshed.success) {
     return { success: false, error: refreshed.error, slug, id };
   }
@@ -168,7 +174,7 @@ export async function persistirNoticia(params: {
   const keep = new Set(usedSlugs);
   for (const oldSlug of params.existingImageSlugs ?? []) {
     if (!keep.has(oldSlug)) {
-      await eliminarArchivoAction(oldSlug);
+      await eliminarArchivoAction(oldSlug, false);
     }
   }
 

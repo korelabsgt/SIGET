@@ -31,6 +31,7 @@ Componentes: `ModalShell`, `ModalForm`, `ModalField`, `ModalLabel`, `ModalInput`
 
 - Inputs y textareas: borde zinc (`modalFieldClass`), fondo transparente, focus ring zinc.
 - Fechas de calendario: **solo** `ModalFechaInput` (`DD/MM/AAAA`, manual, sin icono ni popover). Valor ISO `YYYY-MM-DD` vía `fechas-gt.ts`.
+- Fechas **mostradas** (no el input): `formatFechaHora24Gt` → `Lun 01/02/26, 17:00`.
 - Prohibido `CalendarDatePicker`, `<input type="date">` y placeholders genéricos (excepto `DD/MM/AAAA` en fecha).
 
 ### Footer

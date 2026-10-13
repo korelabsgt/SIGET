@@ -40,7 +40,7 @@ export function RepositorioCrear() {
   return (
     <div className="relative w-full flex-1 bg-white dark:bg-zinc-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] bg-size-[24px_24px] opacity-50 dark:bg-[radial-gradient(oklch(36%_0_0)_1px,transparent_1px)] dark:opacity-40" />
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-8">
+      <div className="relative z-10 w-full px-3 py-8 md:px-4">
         <h1 className={`mb-6 text-2xl ${modalAccentClass}`}>Nuevo documento</h1>
         <div className="rounded-2xl border border-border bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800">
           <DocumentoForm

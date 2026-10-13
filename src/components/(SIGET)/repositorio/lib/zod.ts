@@ -16,6 +16,7 @@ export const DOCUMENT_CHANNELS = [
 
 export const PUBLIC_CANAL_SLUGS = [
   "noticias",
+  "documentos",
   "cientifico",
   "educativo",
 ] as const;
@@ -114,6 +115,11 @@ export const rejectDocumentSchema = z.object({
   reason: z.string().trim().min(1, "Indique el motivo del rechazo").max(500),
 });
 
+export const updateAccessLevelSchema = z.object({
+  slug: z.string().trim().min(1),
+  access_level: accessLevelSchema,
+});
+
 export const createTagSchema = z.object({
   name: z.string().trim().min(2, "El nombre es obligatorio").max(60),
 });
@@ -163,6 +169,7 @@ export type SortOption = z.infer<typeof sortOptionSchema>;
 export type DocumentFormValues = z.infer<typeof documentFormSchema>;
 export type DocumentFilterParams = z.infer<typeof documentFilterParamsSchema>;
 export type RejectDocumentValues = z.infer<typeof rejectDocumentSchema>;
+export type UpdateAccessLevelValues = z.infer<typeof updateAccessLevelSchema>;
 export type CreateTagValues = z.infer<typeof createTagSchema>;
 export type RegistrarArchivoValues = z.infer<typeof registrarArchivoSchema>;
 export type NoticiaSeccion = z.infer<typeof noticiaSeccionSchema>;
@@ -172,6 +179,15 @@ export type TagRecord = {
   id: string;
   name: string;
   slug: string;
+};
+
+export type ActividadAccion = "creacion" | "modificacion";
+
+export type ActividadEvento = {
+  accion: ActividadAccion;
+  user_id: string | null;
+  nombre: string;
+  at: string;
 };
 
 export type DocumentFileRecord = {
@@ -205,12 +221,14 @@ export type DocumentRecord = {
   publication_date: string;
   version: string;
   download_count: number;
+  view_count: number;
   created_by: string | null;
   created_by_nombre: string | null;
   approved_by: string | null;
   rejection_reason: string | null;
   created_at: string;
   updated_at: string | null;
+  actividad: ActividadEvento[];
   tags: TagRecord[];
   files: DocumentFileRecord[];
 };
@@ -228,6 +246,7 @@ export type DocumentListItem = {
   cooperante: string;
   publication_date: string;
   download_count: number;
+  view_count: number;
   publishing_status?: DocumentStatus;
   created_at: string;
   tags: TagRecord[];

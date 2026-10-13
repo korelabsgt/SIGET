@@ -118,6 +118,8 @@ create table if not exists public.library_documents (
   publication_date date not null default current_date,
   version text not null default '1',
   download_count integer not null default 0,
+  view_count integer not null default 0,
+  actividad jsonb not null default '[]'::jsonb,
   created_by uuid references public.profiles (id) on delete set null,
   approved_by uuid references public.profiles (id) on delete set null,
   rejection_reason text,
@@ -420,7 +422,8 @@ create or replace function public.search_library_documents(
   p_program public.program_enum default null,
   p_sort text default 'fecha_desc',
   p_limit integer default 12,
-  p_offset integer default 0
+  p_offset integer default 0,
+  p_exclude_channel public.document_channel default null
 )
 returns table (
   id uuid,
@@ -435,6 +438,7 @@ returns table (
   cooperante text,
   publication_date date,
   download_count integer,
+  view_count integer,
   created_at timestamptz,
   total_count bigint
 )
@@ -461,6 +465,7 @@ begin
     select d.*
     from public.library_documents d
     where (p_channel is null or d.channel = p_channel)
+      and (p_exclude_channel is null or d.channel <> p_exclude_channel)
       and (p_country is null or d.country_scope = p_country)
       and (p_program is null or d.program = p_program)
       and (
@@ -492,6 +497,7 @@ begin
     f.cooperante,
     f.publication_date,
     f.download_count,
+    f.view_count,
     f.created_at,
     count(*) over () as total_count
   from filtered f
@@ -568,7 +574,8 @@ grant execute on function public.search_library_documents(
   public.program_enum,
   text,
   integer,
-  integer
+  integer,
+  public.document_channel
 ) to anon, authenticated;
 
 grant execute on function public.register_library_download(text) to anon, authenticated;

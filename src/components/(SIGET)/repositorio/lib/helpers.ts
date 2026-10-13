@@ -1,5 +1,6 @@
 import type {
   DocumentChannel,
+  DocumentListItem,
   DocumentStatus,
   PublicCanalSlug,
   CountryScope,
@@ -7,6 +8,7 @@ import type {
   DocumentType,
   AccessLevel,
   SortOption,
+  ActividadEvento,
   NoticiaContent,
   NoticiaSeccion,
 } from "./zod";
@@ -34,7 +36,7 @@ const CHANNEL_TO_CANAL: Record<
   educativo: "educativo",
 };
 
-const CANAL_TO_CHANNEL: Record<PublicCanalSlug, DocumentChannel> = {
+const CANAL_TO_CHANNEL: Partial<Record<PublicCanalSlug, DocumentChannel>> = {
   noticias: "noticia",
   cientifico: "cientifico",
   educativo: "educativo",
@@ -54,7 +56,39 @@ export function canalDesdeChannel(
 
 export function channelDesdeCanal(canal: string): DocumentChannel | null {
   if (!esCanalPublico(canal)) return null;
-  return CANAL_TO_CHANNEL[canal];
+  return CANAL_TO_CHANNEL[canal] ?? null;
+}
+
+export function esCanalDocumentos(canal: string | null | undefined): boolean {
+  return canal === "documentos";
+}
+
+export function puedeEditarDocumento(
+  doc: {
+    created_by: string | null;
+    publishing_status: DocumentStatus;
+  },
+  userId: string | null | undefined,
+  role: string,
+): boolean {
+  if (isLibraryAdminRole(role)) return true;
+  if (!userId || doc.created_by !== userId) return false;
+  return doc.publishing_status !== "aprobado";
+}
+
+export function puedeEditarAccesoDocumento(
+  doc: {
+    created_by: string | null;
+    publishing_status: DocumentStatus;
+    channel: DocumentChannel;
+  },
+  userId: string | null | undefined,
+  role: string,
+): boolean {
+  if (doc.channel === "noticia" || doc.channel === "normativo_interno") {
+    return false;
+  }
+  return puedeEditarDocumento(doc, userId, role);
 }
 
 export function esCanalPublico(value: string): value is PublicCanalSlug {
@@ -74,9 +108,11 @@ export function rutaDetalleDocumento(
   channel: DocumentChannel,
   slug: string,
 ): string | null {
-  const canal = canalDesdeChannel(channel);
-  if (!canal) return null;
-  return `/conocimiento/${canal}/${encodeURIComponent(slug)}`;
+  if (channel === "noticia") {
+    return `/conocimiento/noticias/${encodeURIComponent(slug)}`;
+  }
+  if (channel === "normativo_interno") return null;
+  return `/conocimiento/documentos/${encodeURIComponent(slug)}`;
 }
 
 export function segmentoListaRepositorio(
@@ -85,11 +121,18 @@ export function segmentoListaRepositorio(
   return channel === "noticia" ? "noticias" : "documentos";
 }
 
-export function rutaEditarDocumento(
+export function rutaVerDocumento(
   slug: string,
   channel: DocumentChannel,
 ): string {
   return `/siget/repositorio/${segmentoListaRepositorio(channel)}/${encodeURIComponent(slug)}`;
+}
+
+export function rutaEditarDocumento(
+  slug: string,
+  channel: DocumentChannel,
+): string {
+  return `${rutaVerDocumento(slug, channel)}/editar`;
 }
 
 export function rutaRepositorioInicio(): string {
@@ -130,6 +173,41 @@ export function slugifyEtiqueta(nombre: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export function eventosActividadDocumento(doc: {
+  actividad: ActividadEvento[];
+  created_at: string;
+  created_by: string | null;
+  created_by_nombre: string | null;
+}): ActividadEvento[] {
+  if (doc.actividad.length > 0) return doc.actividad;
+  if (!doc.created_at) return [];
+  return [
+    {
+      accion: "creacion",
+      user_id: doc.created_by,
+      nombre: doc.created_by_nombre?.trim() || "Usuario",
+      at: doc.created_at,
+    },
+  ];
+}
+
+export function instanteUltimaActualizacion(doc: {
+  actividad: ActividadEvento[];
+  created_at: string;
+}): string | null {
+  const ultimo = doc.actividad[doc.actividad.length - 1]?.at;
+  if (ultimo) return ultimo;
+  return doc.created_at || null;
+}
+
+export function etiquetaActividad(
+  accion: ActividadEvento["accion"],
+  esUltimaModificacion: boolean,
+): string {
+  if (accion === "creacion") return "Creación";
+  return esUltimaModificacion ? "Última modificación" : "Modificación";
 }
 
 export function nombreDesdeMetadata(
@@ -245,8 +323,9 @@ export const CHANNEL_LABELS: Record<DocumentChannel, string> = {
 
 export const CANAL_LABELS: Record<PublicCanalSlug, string> = {
   noticias: "Noticias",
-  cientifico: "Científico",
-  educativo: "Educativo",
+  documentos: "Documentos",
+  cientifico: "Ciencia",
+  educativo: "Educación",
 };
 
 export const STATUS_LABELS: Record<DocumentStatus, string> = {
@@ -287,7 +366,7 @@ export const PROGRAM_LABELS: Record<ProgramEnum, string> = {
 
 export const ACCESS_LABELS: Record<AccessLevel, string> = {
   public: "Público",
-  interno: "Interno",
+  interno: "Privado",
 };
 
 export const SORT_LABELS: Record<SortOption, string> = {
@@ -334,10 +413,106 @@ export const SORT_OPTION_LIST = SORT_OPTIONS.map((value) => ({
   label: SORT_LABELS[value],
 }));
 
+export function textoPlanoHtml(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function sanitizarHtml(html: string): string {
   return html
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/on\w+="[^"]*"/gi, "")
     .replace(/on\w+='[^']*'/gi, "")
     .replace(/javascript:/gi, "");
+}
+
+export const HOME_PREVIEW_SIMULADO_PREFIX = "home-simulado-";
+
+const HOME_PREVIEW_SIMULADO_TITLES: Partial<Record<PublicCanalSlug, string[]>> =
+  {
+    noticias: [
+      "Encuentro trifinio alinea seguimiento y acciones conjuntas",
+      "Plan Trifinio impulsa diálogo con actores locales",
+      "Comunicado sobre avances en la región fronteriza",
+      "Crónica de jornada de trabajo en El Salvador",
+      "Nota sobre cooperación en Guatemala y Honduras",
+      "Balance institucional del trimestre en la región",
+    ],
+    educativo: [
+      "Guía de buenas prácticas para formación comunitaria",
+      "Manual de inducción al trabajo trifinio",
+      "Curso abierto sobre gestión participativa",
+      "Material didáctico para líderes locales",
+      "Recursos para capacitación en territorio",
+      "Apuntes de taller trinacional de aprendizaje",
+    ],
+    cientifico: [
+      "Estudio sobre dinámicas socioeconómicas en la región",
+      "Artículo técnico de monitoreo ambiental",
+      "Informe de línea base trinacional",
+      "Análisis de indicadores de desarrollo local",
+      "Revisión de evidencia en proyectos fronterizos",
+      "Síntesis científica para toma de decisiones",
+    ],
+  };
+
+export function esHomePreviewSimulado(id: string): boolean {
+  return id.startsWith(HOME_PREVIEW_SIMULADO_PREFIX);
+}
+
+function fechaSimuladaHomePreview(diasAtras: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - diasAtras);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function documentTypeSimulado(channel: DocumentChannel): DocumentType {
+  if (channel === "noticia") return "comunicado";
+  if (channel === "educativo") return "guia";
+  return "articulo";
+}
+
+export function portadaSimuladaHomePreview(
+  canal: PublicCanalSlug,
+  index: number,
+): string {
+  const seed = encodeURIComponent(`siget-${canal}-${index}`);
+  return `https://picsum.photos/seed/${seed}/800/800`;
+}
+
+export function seisSimuladosHomePreview(
+  canal: PublicCanalSlug,
+): DocumentListItem[] {
+  const channel = channelDesdeCanal(canal);
+  if (!channel) return [];
+  const titulos = HOME_PREVIEW_SIMULADO_TITLES[canal] ?? [];
+  const creado = fechaSimuladaHomePreview(0);
+
+  return Array.from({ length: 6 }, (_, index) => ({
+    id: `${HOME_PREVIEW_SIMULADO_PREFIX}${canal}-${index}`,
+    slug: `preview-${canal}-${index}`,
+    title: titulos[index] ?? `Ejemplo ${index + 1}`,
+    summary: "<p>Vista previa de maquetación (rol super).</p>",
+    channel,
+    document_type: documentTypeSimulado(channel),
+    country_scope: "trinacional",
+    program: null,
+    author: "Plan Trifinio",
+    cooperante: "",
+    publication_date: fechaSimuladaHomePreview(index * 4 + 1),
+    download_count: 0,
+    view_count: 0,
+    created_at: creado,
+    tags: [],
+    cover_slug: portadaSimuladaHomePreview(canal, index),
+  }));
 }

@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   approveDocumentAction,
   createDocumentAction,
@@ -12,13 +17,18 @@ import {
   getTags,
   createTagAction,
   registrarArchivoAction,
+  ocultarDocumentoAction,
   rejectDocumentAction,
+  getTagsCatalogoPublico,
   searchDocumentsPublic,
   submitForReviewAction,
+  updateAccessLevelAction,
   updateDocumentAction,
 } from "./actions";
 import { persistirNoticia } from "./upload-client";
+import type { CatalogTagFilters } from "./actions";
 import type {
+  AccessLevel,
   DocumentFilterParams,
   DocumentFormValues,
   RegistrarArchivoValues,
@@ -33,6 +43,7 @@ export function useTags() {
   return useQuery({
     queryKey: TAGS_KEY,
     queryFn: getTags,
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -70,11 +81,41 @@ export function useDocumento(slug: string, enabled = true) {
   });
 }
 
+const PUBLIC_STALE_MS = 60_000;
+
+export function publicDocumentosQueryKey(filters: DocumentFilterParams) {
+  return [...PUBLIC_KEY, filters] as const;
+}
+
 export function useDocumentosPublicos(filters: DocumentFilterParams) {
   return useQuery({
-    queryKey: [...PUBLIC_KEY, filters],
+    queryKey: publicDocumentosQueryKey(filters),
     queryFn: () => searchDocumentsPublic(filters),
+    placeholderData: keepPreviousData,
+    staleTime: PUBLIC_STALE_MS,
   });
+}
+
+const CATALOG_TAGS_KEY = ["library-catalog-tags"];
+
+export function useTagsCatalogoPublico(filters: CatalogTagFilters) {
+  return useQuery({
+    queryKey: [...CATALOG_TAGS_KEY, filters],
+    queryFn: () => getTagsCatalogoPublico(filters),
+    staleTime: PUBLIC_STALE_MS,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usePrefetchDocumentosPublicos() {
+  const queryClient = useQueryClient();
+  return (filters: DocumentFilterParams) => {
+    void queryClient.prefetchQuery({
+      queryKey: publicDocumentosQueryKey(filters),
+      queryFn: () => searchDocumentsPublic(filters),
+      staleTime: PUBLIC_STALE_MS,
+    });
+  };
 }
 
 function useInvalidateLibrary() {
@@ -104,6 +145,15 @@ export function useEditarDocumento(slug: string) {
   });
 }
 
+export function useActualizarAcceso(slug: string) {
+  const invalidate = useInvalidateLibrary();
+  return useMutation({
+    mutationFn: (accessLevel: AccessLevel) =>
+      updateAccessLevelAction(slug, accessLevel),
+    onSuccess: invalidate,
+  });
+}
+
 export function usePersistirNoticia() {
   const invalidate = useInvalidateLibrary();
   return useMutation({
@@ -124,6 +174,14 @@ export function useAprobarDocumento() {
   const invalidate = useInvalidateLibrary();
   return useMutation({
     mutationFn: (slug: string) => approveDocumentAction(slug),
+    onSuccess: invalidate,
+  });
+}
+
+export function useOcultarDocumento() {
+  const invalidate = useInvalidateLibrary();
+  return useMutation({
+    mutationFn: (slug: string) => ocultarDocumentoAction(slug),
     onSuccess: invalidate,
   });
 }

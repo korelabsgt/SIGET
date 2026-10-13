@@ -136,6 +136,32 @@ export function formatHoraTablaGt(value: string | null | undefined): string {
   return partesFechaHoraTablaGt(value)?.hora ?? "\u2014";
 }
 
+export function formatFechaHora24Gt(value: string | null | undefined): string {
+  if (!value) return "\u2014";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "\u2014";
+
+  const parts = new Intl.DateTimeFormat(LOCALE_GT, {
+    timeZone: TIMEZONE_GT,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  const hour = (parts.find((p) => p.type === "hour")?.value ?? "").padStart(2, "0");
+  const minute = (parts.find((p) => p.type === "minute")?.value ?? "").padStart(2, "0");
+
+  return `${formatDiaSemanaCortoGt(weekday)} ${day}/${month}/${year}, ${hour}:${minute}`;
+}
+
 export function formatFechaHoraTablaGt(
   value: string | null | undefined,
 ): string {

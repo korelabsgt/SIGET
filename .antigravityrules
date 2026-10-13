@@ -38,6 +38,13 @@ Prohibido dispersar lógica del módulo fuera de esa carpeta.
 - `page.tsx` solo importa el componente principal dentro de `<Suspense>`.
 - Prohibido UI compleja, lógica de negocio o estado en `page.tsx`.
 
+## Fechas
+
+- Instantes con hora: `timestamptz`. Solo día: `date`.
+- Visualización (tablas, cards, historiales, “última actualización”, listados): **siempre** `Lun 01/02/26, 17:00` — día corto capitalizado, `DD/MM/YY`, coma, hora **24 h**. Zona `America/Guatemala`. Función `formatFechaHora24Gt` en `@/lib/fechas-gt.ts`.
+- Prohibido `toLocaleString` ad hoc, AM/PM, mes en letras o ISO crudo en UI.
+- Captura en formularios: `ModalFechaInput` (`DD/MM/AAAA`) cuando el campo es solo día.
+
 ```typescript
 import { Suspense } from "react";
 import { NombreComponentePrincipal } from "@/components/mi-componente/NombreComponentePrincipal";

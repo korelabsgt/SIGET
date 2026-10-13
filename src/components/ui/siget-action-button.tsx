@@ -66,6 +66,7 @@ export function SigetActionButton({
   morphOnHover = true,
   type = "button",
   iconOnly = false,
+  iconSide = "right",
 }: {
   label: ReactNode;
   accentColor: string;
@@ -82,6 +83,7 @@ export function SigetActionButton({
   morphOnHover?: boolean;
   type?: "button" | "submit";
   iconOnly?: boolean;
+  iconSide?: "left" | "right";
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -110,6 +112,7 @@ export function SigetActionButton({
         className={cn(
           "inline-flex max-w-full items-center justify-center leading-none",
           !iconOnly && "w-full gap-1",
+          iconSide === "left" && !iconOnly && "flex-row-reverse",
         )}
       >
         {!iconOnly ? (

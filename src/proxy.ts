@@ -112,7 +112,11 @@ export async function proxy(request: NextRequest) {
           url.pathname = "/siget/cambiar-password";
           return NextResponse.redirect(url);
         }
-      } else if (pathname === "/siget/cambiar-password" || pathname === "/login") {
+      } else if (
+        pathname === "/siget/cambiar-password" ||
+        pathname === "/login" ||
+        pathname === "/"
+      ) {
         const url = request.nextUrl.clone();
         url.pathname = "/siget";
         return NextResponse.redirect(url);

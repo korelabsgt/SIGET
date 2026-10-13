@@ -9,6 +9,7 @@ import {
   Ellipsis,
   EllipsisVertical,
   Eye,
+  EyeOff,
   FilePlus,
   Newspaper,
   Pencil,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { modalActionMessage } from "@/components/ui/general-modal";
 import { cn } from "@/lib/utils";
-import { formatFechaFilaTablaGt } from "@/lib/fechas-gt";
+import { formatFechaHora24Gt } from "@/lib/fechas-gt";
 import { useUserContext } from "@/components/(base)/providers/UserProvider";
 import {
   useAprobarDocumento,
@@ -35,21 +36,25 @@ import {
   useEliminarDocumento,
   useEnviarRevision,
   useMisDocumentos,
+  useOcultarDocumento,
 } from "./lib/hooks";
 import {
   CHANNEL_LABELS,
   STATUS_LABELS,
   isLibraryAdminRole,
-  rutaDetalleDocumento,
+  puedeEditarDocumento,
+  textoPlanoHtml,
   rutaEditarDocumento,
   rutaNuevaNoticia,
   rutaNuevoDocumento,
+  rutaVerDocumento,
 } from "./lib/helpers";
+import { ConocimientoBuscador } from "./ConocimientoBuscador";
 import { confirmAprobarDocumento, confirmQuitarDocumento } from "./lib/swal";
 import type { DocumentRecord } from "./lib/zod";
 import { RechazarDocumento } from "./forms/Rechazar";
 
-type TabRepositorio = "propios" | "revision";
+type TabRepositorio = "buscador" | "propios" | "revision";
 
 const PAGE_SIZE_OPTIONS = [10, 15, 25, 50] as const;
 const DEFAULT_PAGE_SIZE = 15;
@@ -77,19 +82,27 @@ function StatusBadge({ status }: { status: DocumentRecord["publishing_status"] }
 function DocumentoAccionesMenu({
   doc,
   esAdmin,
+  userId,
   onReject,
   rowHovered,
 }: {
   doc: DocumentRecord;
   esAdmin: boolean;
+  userId: string | undefined;
   onReject: (slug: string) => void;
   rowHovered: boolean;
 }) {
   const router = useRouter();
   const enviar = useEnviarRevision();
   const aprobar = useAprobarDocumento();
+  const ocultar = useOcultarDocumento();
   const eliminar = useEliminarDocumento();
-  const publicHref = rutaDetalleDocumento(doc.channel, doc.slug);
+  const puedeEditar = puedeEditarDocumento(
+    doc,
+    userId,
+    esAdmin ? "admin" : "user",
+  );
+  const verHref = rutaVerDocumento(doc.slug, doc.channel);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -116,7 +129,7 @@ function DocumentoAccionesMenu({
         sideOffset={8}
         className="z-[200] flex min-w-[9rem] flex-col gap-2 rounded-2xl border border-border bg-white p-2 opacity-100 shadow-lg dark:bg-zinc-900"
       >
-        {doc.publishing_status !== "aprobado" ? (
+        {puedeEditar ? (
           <SigetActionButton
             label="Editar"
             accentColor={sigetAccent.editar}
@@ -128,16 +141,36 @@ function DocumentoAccionesMenu({
             }}
             className="w-full"
           />
-        ) : publicHref ? (
+        ) : null}
+        <SigetActionButton
+          label="Ver"
+          accentColor={sigetAccent.abrir}
+          morphFrom={Eye}
+          morphTo={Eye}
+          morphOnHover={false}
+          onClick={() => {
+            setMenuOpen(false);
+            router.push(verHref);
+          }}
+          className="w-full"
+        />
+        {esAdmin && doc.publishing_status === "aprobado" ? (
           <SigetActionButton
-            label="Ver"
-            accentColor={sigetAccent.abrir}
-            morphFrom={Eye}
-            morphTo={Eye}
+            label="Ocultar"
+            accentColor={sigetAccent.cancelar}
+            morphFrom={EyeOff}
+            morphTo={EyeOff}
             morphOnHover={false}
-            onClick={() => {
+            disabled={ocultar.isPending}
+            ariaLabel="Ocultar del catálogo público"
+            onClick={async () => {
               setMenuOpen(false);
-              router.push(publicHref);
+              const res = await ocultar.mutateAsync(doc.slug);
+              if (!res.success) {
+                toast.error(modalActionMessage(res.error ?? undefined, "No se pudo ocultar."));
+                return;
+              }
+              toast.success("Ya no está publicada. Puedes volver a enviarla a revisión.");
             }}
             className="w-full"
           />
@@ -199,7 +232,7 @@ function DocumentoAccionesMenu({
             />
           </>
         ) : null}
-        {doc.publishing_status !== "aprobado" || esAdmin ? (
+        {esAdmin || (doc.created_by === userId && doc.publishing_status !== "aprobado") ? (
           <SigetActionButton
             label="Quitar"
             accentColor={sigetAccent.quitar}
@@ -227,19 +260,24 @@ function DocumentoAccionesMenu({
 }
 
 function TituloDocumentoCell({ doc }: { doc: DocumentRecord }) {
-  const fecha = formatFechaFilaTablaGt(doc.publication_date);
+  const creadoEl = formatFechaHora24Gt(doc.created_at);
+  const creador =
+    doc.created_by_nombre?.trim() || doc.author.trim() || "Usuario";
+  const resumen = textoPlanoHtml(doc.summary);
   return (
     <div className="min-w-0 w-full">
-      <p className="text-sm font-bold leading-snug text-foreground">{doc.title}</p>
-      <p
-        className="mt-1 text-xs font-semibold tabular-nums text-foreground/70"
-        title={fecha}
-      >
-        {fecha}
+      <p className="text-sm font-bold leading-snug text-azul-trifinio dark:text-[#6f9fd4]">
+        {doc.title}
       </p>
-      {doc.summary.trim() ? (
-        <p className="mt-2 text-[13px] leading-relaxed text-zinc-600 whitespace-pre-wrap dark:text-zinc-400">
-          {doc.summary}
+      <p className="mt-1 text-xs leading-snug text-foreground/70" title={creadoEl}>
+        Creado por:{" "}
+        <span className="font-bold text-foreground">{creador}</span>
+        {" con fecha: "}
+        <span className="font-bold tabular-nums text-foreground">{creadoEl}</span>
+      </p>
+      {resumen ? (
+        <p className="mt-2 line-clamp-3 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+          {resumen}
         </p>
       ) : null}
       {doc.publishing_status === "rechazado" && doc.rejection_reason ? (
@@ -252,19 +290,11 @@ function TituloDocumentoCell({ doc }: { doc: DocumentRecord }) {
 }
 
 function AutorDocumentoCell({ doc }: { doc: DocumentRecord }) {
-  const creador = doc.created_by_nombre?.trim();
-  const mostrarCreador = Boolean(creador && creador !== doc.author.trim());
-
   return (
-    <div className="min-w-[7.5rem] max-w-[11rem] leading-snug">
+    <div className="min-w-[11rem] max-w-[14rem] leading-snug">
       <p className="line-clamp-2 break-words text-sm font-semibold text-foreground">
         {doc.author}
       </p>
-      {mostrarCreador ? (
-        <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-          Creó {creador}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -280,9 +310,10 @@ function filtrarPorModo(docs: DocumentRecord[], modo: RepositorioListaModo): Doc
 
 export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
   const router = useRouter();
-  const { effectiveRole } = useUserContext();
+  const { effectiveRole, user } = useUserContext();
   const esAdmin = isLibraryAdminRole(effectiveRole);
-  const [tab, setTab] = useState<TabRepositorio>("propios");
+  const esNoticias = modo === "noticias";
+  const [tab, setTab] = useState<TabRepositorio>(esNoticias ? "propios" : "buscador");
   const [rejectSlug, setRejectSlug] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
@@ -317,18 +348,19 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
     return lista.slice(start, start + pageSize);
   }, [lista, pageSafe, pageSize]);
 
-  const esNoticias = modo === "noticias";
   const rutaNueva = esNoticias ? rutaNuevaNoticia() : rutaNuevoDocumento();
   const labelNueva = esNoticias ? "Nueva Noticia" : "Documento";
 
   const tabs = useMemo(() => {
-    const base: { id: TabRepositorio; label: string; count: number }[] = [
-      {
-        id: "propios",
-        label: esNoticias ? "Mis noticias" : "Mis documentos",
-        count: propiosFiltrados.length,
-      },
-    ];
+    const base: { id: TabRepositorio; label: string; count?: number }[] = [];
+    if (!esNoticias) {
+      base.push({ id: "buscador", label: "Buscador" });
+    }
+    base.push({
+      id: "propios",
+      label: esNoticias ? "Mis noticias" : "Mis documentos",
+      count: propiosFiltrados.length,
+    });
     if (esAdmin) {
       base.push({
         id: "revision",
@@ -356,7 +388,9 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
                 )}
               >
                 {item.label}
-                <span className="tabular-nums">{item.count}</span>
+                {item.count !== undefined ? (
+                  <span className="tabular-nums">{item.count}</span>
+                ) : null}
                 {active ? (
                   <motion.span
                     layoutId="repositorio-tab-indicator"
@@ -380,6 +414,17 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
         </div>
       </div>
 
+      {tab === "buscador" ? (
+        <div className="mx-4 mb-6 min-h-0 flex-1 overflow-auto rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40">
+          <div className="h-1 w-full shrink-0 bg-celeste-trifinio" />
+          <ConocimientoBuscador
+            canal="documentos"
+            mostrarCanales={false}
+            compacto
+            hrefForItem={(item) => rutaVerDocumento(item.slug, item.channel)}
+          />
+        </div>
+      ) : (
       <div className="mx-4 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700 dark:bg-zinc-900/40">
         <div className="h-1 w-full shrink-0 bg-celeste-trifinio" />
         {loading ? (
@@ -403,7 +448,7 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-border bg-sky-50/80 text-[11px] font-bold text-celeste-trifinio dark:border-zinc-700 dark:bg-sky-950/30">
                     <th className="w-full min-w-[16rem] px-4 py-3 pl-4">Título y resumen</th>
-                    <th className="w-0 whitespace-nowrap px-2 py-3">Autor</th>
+                    <th className="w-0 min-w-[11rem] whitespace-nowrap px-2 py-3">Autor</th>
                     <th className="w-0 whitespace-nowrap px-2 py-3 text-center">Tipo</th>
                     <th className="w-0 whitespace-nowrap px-2 py-3 pr-4 text-right">Acc.</th>
                   </tr>
@@ -425,7 +470,7 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
                         <td className="w-full align-top px-4 py-3 pl-4">
                           <TituloDocumentoCell doc={doc} />
                         </td>
-                        <td className="px-2 py-3 align-middle">
+                        <td className="w-0 min-w-[11rem] px-2 py-3 align-middle">
                           <AutorDocumentoCell doc={doc} />
                         </td>
                         <td className="w-0 whitespace-nowrap px-2 py-3 align-middle text-center">
@@ -443,6 +488,7 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
                           <DocumentoAccionesMenu
                             doc={doc}
                             esAdmin={esAdmin}
+                            userId={user?.id}
                             onReject={setRejectSlug}
                             rowHovered={hoveredRowId === doc.id}
                           />
@@ -492,6 +538,7 @@ export function RepositorioLista({ modo }: { modo: RepositorioListaModo }) {
           </div>
         )}
       </div>
+      )}
 
       <RechazarDocumento
         open={Boolean(rejectSlug)}

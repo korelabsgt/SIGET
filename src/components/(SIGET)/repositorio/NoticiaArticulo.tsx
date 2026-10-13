@@ -1,5 +1,7 @@
-import { formatFechaCalendarioGt } from "@/lib/fechas-gt";
+import { formatFechaCalendarioGt, formatFechaHora24Gt } from "@/lib/fechas-gt";
 import { modalAccentClass } from "@/components/ui/general-modal";
+import { ContadoresPublicacion } from "./ContadoresPublicacion";
+import { sanitizarHtml } from "./lib/helpers";
 import {
   CHANNEL_LABELS,
   COUNTRY_LABELS,
@@ -25,6 +27,7 @@ export function NoticiaArticulo({
   summary,
   author,
   publicationDate,
+  actualizadoEn = null,
   countryScope,
   program,
   tags = [],
@@ -32,11 +35,16 @@ export function NoticiaArticulo({
   documentType = "articulo",
   channel = "noticia",
   galeriaInsetBleed = false,
+  visitas,
+  descargas,
+  slug,
+  registrarVisita = false,
 }: {
   title: string;
   summary: string;
   author: string;
   publicationDate: string;
+  actualizadoEn?: string | null;
   countryScope: "trinacional" | "guatemala" | "el_salvador" | "honduras";
   program?: ProgramEnum | null;
   tags?: TagRecord[];
@@ -44,6 +52,10 @@ export function NoticiaArticulo({
   documentType?: DocumentType;
   channel?: DocumentChannel;
   galeriaInsetBleed?: boolean;
+  visitas?: number;
+  descargas?: number;
+  slug?: string;
+  registrarVisita?: boolean;
 }) {
   return (
     <article className="w-full">
@@ -59,6 +71,21 @@ export function NoticiaArticulo({
         {` · ${COUNTRY_LABELS[countryScope]}`}
         {program ? ` · ${PROGRAM_LABELS[program]}` : ""}
       </p>
+      {actualizadoEn ? (
+        <p className="mt-1 text-sm text-muted-foreground">
+          Última actualización: {formatFechaHora24Gt(actualizadoEn)}
+        </p>
+      ) : null}
+      {visitas !== undefined && descargas !== undefined ? (
+        <div className="mt-2">
+          <ContadoresPublicacion
+            visitas={visitas}
+            descargas={descargas}
+            slug={slug}
+            registrar={registrarVisita}
+          />
+        </div>
+      ) : null}
       {tags.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {tags.map((tag) => (
@@ -95,9 +122,16 @@ export function NoticiaArticulo({
               posterSrc={section.photoSrcs?.[0]}
             />
             {section.body.trim() ? (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                {section.body}
-              </div>
+              /<\/?[a-z][\s\S]*>/i.test(section.body) ? (
+                <div
+                  className="noticia-cuerpo text-sm leading-relaxed text-foreground"
+                  dangerouslySetInnerHTML={{ __html: sanitizarHtml(section.body) }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                  {section.body}
+                </div>
+              )
             ) : null}
           </section>
         ))}

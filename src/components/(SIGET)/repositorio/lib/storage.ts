@@ -37,3 +37,11 @@ export function rutaRawArchivo(slug: string, descargar = false): string {
   const base = `/conocimiento/archivo/${encodeURIComponent(slug)}/raw`;
   return descargar ? `${base}?dl=1` : base;
 }
+
+export function portadaListItemSrc(
+  cover_slug: string | null | undefined,
+): string | null {
+  if (!cover_slug) return null;
+  if (/^https?:\/\//i.test(cover_slug)) return cover_slug;
+  return rutaRawArchivo(cover_slug);
+}

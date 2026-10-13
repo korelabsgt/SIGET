@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { RepositorioEditar } from "@/components/(SIGET)/repositorio/forms/VerEditar";
+import { RepositorioDocumentoVista } from "@/components/(SIGET)/repositorio/RepositorioDocumentoVista";
 
-export default async function RepositorioDocumentoEditarPage({
+export default async function RepositorioDocumentoVerPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -9,7 +9,7 @@ export default async function RepositorioDocumentoEditarPage({
   const { slug } = await params;
   return (
     <Suspense>
-      <RepositorioEditar slug={slug} listaSegmento="documentos" />
+      <RepositorioDocumentoVista slug={slug} listaSegmento="documentos" />
     </Suspense>
   );
 }

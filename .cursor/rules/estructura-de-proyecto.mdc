@@ -61,4 +61,6 @@ Si el módulo necesita aparecer en el menú lateral, usar también `menu-lateral
 ## Fechas
 
 - Instantes con hora: `timestamptz`. Solo día: `date`.
-- Skill `componente-fechas-gt` + util `@/lib/fechas-gt.ts`.
+- Visualización (tablas, cards, historiales, “última actualización”, listados): **siempre** `Lun 01/02/26, 17:00` — día corto capitalizado, `DD/MM/YY`, coma, hora **24 h**. Zona `America/Guatemala`. Función `formatFechaHora24Gt` en `@/lib/fechas-gt.ts`.
+- Prohibido `toLocaleString` ad hoc, AM/PM, mes en letras o ISO crudo en UI.
+- Captura en formularios: `ModalFechaInput` (`DD/MM/AAAA`) cuando el campo es solo día.

@@ -14,7 +14,13 @@ const TRIFINIO_MARKER: Marker[] = [
 
 const TRIFINIO_MAP_CLIP_ID = "trifinio-map-logo-clip";
 
-export function TrifinioDottedMapSection() {
+export function TrifinioDottedMapSection({
+  title = "Observatorio Web",
+  description = "El área de análisis del Observatorio Web de Plan Trifinio es la región Trifinio.",
+}: {
+  title?: string;
+  description?: string;
+}) {
   return (
     <section className="flex w-full flex-col pt-40 pb-16 md:pt-48 md:pb-20 overflow-x-hidden">
       <div className="mx-auto max-w-6xl w-full px-6 md:px-12 lg:px-16">
@@ -29,12 +35,11 @@ export function TrifinioDottedMapSection() {
             — Región Trifinio —
           </p>
           <h2 className="mt-4 text-3xl md:text-4xl font-black text-foreground leading-tight">
-            Observatorio Web
+            {title}
           </h2>
           <div className="mx-auto mt-4 h-0.5 w-12 rounded-full bg-celeste-trifinio" />
           <p className="mx-auto mt-5 max-w-2xl text-muted-foreground text-base md:text-lg leading-relaxed">
-            El área de análisis del Observatorio Web de Plan Trifinio es la
-            región Trifinio.
+            {description}
           </p>
         </motion.div>
       </div>

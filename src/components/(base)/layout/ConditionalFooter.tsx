@@ -9,6 +9,8 @@ export default function ConditionalFooter() {
   const pathname = usePathname();
   if (
     pathname === "/" ||
+    pathname === "/conocimiento" ||
+    pathname.startsWith("/conocimiento/") ||
     pathname.startsWith("/archivos") ||
     pathname.startsWith("/conocimiento/archivo")
   ) {

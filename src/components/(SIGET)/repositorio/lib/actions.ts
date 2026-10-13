@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createPublicClient } from "@/utils/supabase/public";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -8,6 +9,7 @@ import {
   documentFormSchema,
   documentFilterParamsSchema,
   rejectDocumentSchema,
+  updateAccessLevelSchema,
   registrarArchivoSchema,
   createTagSchema,
   documentChannelSchema,
@@ -24,9 +26,16 @@ import {
   type DocumentSearchResult,
   type DocumentFileRecord,
   type TagRecord,
+  type ActividadEvento,
   type DocumentChannel,
 } from "./zod";
-import { channelDesdeCanal, isLibraryAdminRole, slugifyEtiqueta } from "./helpers";
+import {
+  channelDesdeCanal,
+  esCanalDocumentos,
+  isLibraryAdminRole,
+  puedeEditarAccesoDocumento,
+  slugifyEtiqueta,
+} from "./helpers";
 import { LIBRARY_BUCKET, esImagenMime, esPdfMime } from "./storage";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -215,12 +224,14 @@ function normalizarDocumento(row: Record<string, unknown>): DocumentRecord {
     publication_date: normalizarFechaCalendario(asString(row.publication_date)),
     version: asString(row.version, "1"),
     download_count: Number(row.download_count ?? 0),
+    view_count: Number(row.view_count ?? 0),
     created_by: asNullableString(row.created_by),
     created_by_nombre: extraerNombreCreador(row),
     approved_by: asNullableString(row.approved_by),
     rejection_reason: asNullableString(row.rejection_reason),
     created_at: asString(row.created_at),
     updated_at: asNullableString(row.updated_at),
+    actividad: parsearActividad(row.actividad),
     tags: extraerTags(row),
     files: extraerArchivos(row),
   };
@@ -229,11 +240,89 @@ function normalizarDocumento(row: Record<string, unknown>): DocumentRecord {
 const DOCUMENT_SELECT = `
   id, slug, title, summary, content, channel, document_type, country_scope,
   program, access_level, publishing_status, author, cooperante, publication_date,
-  version, download_count, created_by, approved_by, rejection_reason,
+  version, download_count, view_count, created_by, approved_by, rejection_reason,
   created_at, updated_at,
   document_tags ( tags ( id, name, slug ) ),
   library_document_files ( * )
 `;
+
+const DOCUMENT_SELECT_PRIVADO = `${DOCUMENT_SELECT}, actividad`;
+const DOCUMENT_SELECT_PUBLICO = DOCUMENT_SELECT_PRIVADO;
+
+const ACTIVIDAD_MAX = 80;
+
+function parsearActividad(raw: unknown): ActividadEvento[] {
+  if (!Array.isArray(raw)) return [];
+  const eventos: ActividadEvento[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    const accion = rec.accion === "creacion" || rec.accion === "modificacion" ? rec.accion : null;
+    const at = asString(rec.at);
+    if (!accion || !at) continue;
+    eventos.push({
+      accion,
+      user_id: asNullableString(rec.user_id),
+      nombre: asString(rec.nombre).trim(),
+      at,
+    });
+  }
+  return eventos;
+}
+
+async function nombreCompletoUsuario(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase.from("profiles").select("nombre").eq("id", userId).maybeSingle();
+  const nombre = asString((data as { nombre?: unknown } | null)?.nombre).trim();
+  return nombre || "Usuario";
+}
+
+function semillaActividad(actual: DocumentRecord): ActividadEvento[] {
+  if (actual.actividad.length > 0) return actual.actividad;
+  if (!actual.created_at) return [];
+  return [
+    {
+      accion: "creacion",
+      user_id: actual.created_by,
+      nombre: actual.created_by_nombre?.trim() || "Usuario",
+      at: actual.created_at,
+    },
+  ];
+}
+
+async function actividadConEvento(
+  supabase: SupabaseServerClient,
+  previa: ActividadEvento[],
+  userId: string,
+  accion: ActividadEvento["accion"],
+): Promise<ActividadEvento[]> {
+  const nombre = await nombreCompletoUsuario(supabase, userId);
+  return [
+    ...previa,
+    {
+      accion,
+      user_id: userId,
+      nombre,
+      at: new Date().toISOString(),
+    },
+  ].slice(-ACTIVIDAD_MAX);
+}
+
+async function anexarActividad(
+  supabase: SupabaseServerClient,
+  documentId: string,
+  userId: string,
+  previa: ActividadEvento[],
+): Promise<string | null> {
+  const actividad = await actividadConEvento(supabase, previa, userId, "modificacion");
+  const { error } = await supabase
+    .from("library_documents")
+    .update({ actividad })
+    .eq("id", documentId);
+  return error ? "SAVE_FAILED" : null;
+}
 
 function payloadFromForm(
   values: DocumentFormValues,
@@ -393,6 +482,7 @@ function listItemFromRow(row: Record<string, unknown>): DocumentListItem {
     cooperante: asString(row.cooperante),
     publication_date: normalizarFechaCalendario(asString(row.publication_date)),
     download_count: Number(row.download_count ?? 0),
+    view_count: Number(row.view_count ?? 0),
     publishing_status: statusParsed.success ? statusParsed.data : undefined,
     created_at: asString(row.created_at),
     tags: extraerTags(row),
@@ -410,6 +500,7 @@ export async function searchDocumentsPublic(
   const channel =
     params.channel ??
     (params.canal ? channelDesdeCanal(params.canal) : null);
+  const excludeChannel = esCanalDocumentos(params.canal) ? "noticia" : null;
   const page = params.page;
   const pageSize = params.page_size;
   const empty: DocumentSearchResult = {
@@ -421,7 +512,7 @@ export async function searchDocumentsPublic(
 
   try {
     const supabase = createPublicClient();
-    const { data, error } = await supabase.rpc("search_library_documents", {
+    const rpcArgs = {
       p_query: params.query || null,
       p_channel: channel,
       p_tag_slugs: params.tag_slugs.length > 0 ? params.tag_slugs : null,
@@ -430,17 +521,100 @@ export async function searchDocumentsPublic(
       p_sort: params.sort,
       p_limit: pageSize,
       p_offset: (page - 1) * pageSize,
+    };
+    let { data, error } = await supabase.rpc("search_library_documents", {
+      ...rpcArgs,
+      p_exclude_channel: excludeChannel,
     });
+    if (error) {
+      const retry = await supabase.rpc("search_library_documents", rpcArgs);
+      data = retry.data;
+      error = retry.error;
+    }
     if (error || !data) return empty;
     const rows = data as Record<string, unknown>[];
     const total = Number(rows[0]?.total_count ?? 0);
-    const items = await attachPortadas(
+    const mapped = await attachPortadas(
       supabase,
       await attachTagsToItems(supabase, rows.map(listItemFromRow)),
     );
+    const items = excludeChannel
+      ? mapped.filter((item) => item.channel !== excludeChannel)
+      : mapped;
     return { items, total, page, page_size: pageSize };
   } catch {
     return empty;
+  }
+}
+
+export type CatalogTagFilters = {
+  query: string;
+  canal?: DocumentFilterParams["canal"];
+  country_scope?: DocumentFilterParams["country_scope"];
+  program?: DocumentFilterParams["program"];
+};
+
+export async function getTagsCatalogoPublico(
+  filters: CatalogTagFilters,
+): Promise<TagRecord[]> {
+  const bySlug = new Map<string, TagRecord>();
+  const pageSize = 50;
+  const maxPages = 8;
+
+  try {
+    for (let page = 1; page <= maxPages; page += 1) {
+      const batch = await searchDocumentsPublic({
+        query: filters.query,
+        canal: filters.canal,
+        country_scope: filters.country_scope,
+        program: filters.program,
+        tag_slugs: [],
+        sort: "fecha_desc",
+        page,
+        page_size: pageSize,
+      });
+      for (const item of batch.items) {
+        for (const tag of item.tags) {
+          bySlug.set(tag.slug, tag);
+        }
+      }
+      const totalPages = Math.max(1, Math.ceil(batch.total / pageSize));
+      if (page >= totalPages || batch.items.length === 0) break;
+    }
+    return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+  } catch {
+    return [];
+  }
+}
+
+export async function getNoticiasRelacionadas(params: {
+  documentType: DocumentListItem["document_type"];
+  excludeSlug: string;
+  limit?: number;
+}): Promise<DocumentListItem[]> {
+  const limit = Math.min(Math.max(params.limit ?? 3, 1), 6);
+  const exclude = params.excludeSlug.trim();
+  if (!exclude) return [];
+
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("library_documents")
+      .select(
+        "id, slug, title, summary, channel, document_type, country_scope, program, author, cooperante, publication_date, download_count, view_count, created_at, publishing_status",
+      )
+      .eq("channel", "noticia")
+      .eq("document_type", params.documentType)
+      .eq("publishing_status", "aprobado")
+      .eq("access_level", "public")
+      .neq("slug", exclude)
+      .order("publication_date", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    const items = data.map((row) => listItemFromRow(row as Record<string, unknown>));
+    return attachPortadas(supabase, await attachTagsToItems(supabase, items));
+  } catch {
+    return [];
   }
 }
 
@@ -448,18 +622,53 @@ export async function getDocumentoPublico(
   canal: string,
   slug: string,
 ): Promise<DocumentRecord | null> {
+  if (!slug.trim()) return null;
   const channel = channelDesdeCanal(canal);
-  if (!channel || !slug.trim()) return null;
+  if (!channel && !esCanalDocumentos(canal)) return null;
   try {
     const supabase = createPublicClient();
-    const { data, error } = await supabase
+    const porCanal = <T extends string>(select: T) => {
+      const base = supabase
+        .from("library_documents")
+        .select(select)
+        .eq("slug", slug.trim());
+      return channel
+        ? base.eq("channel", channel)
+        : base.neq("channel", "noticia");
+    };
+    const first = await porCanal(DOCUMENT_SELECT_PUBLICO).maybeSingle();
+    const row = first.error
+      ? (await porCanal(DOCUMENT_SELECT).maybeSingle()).data
+      : first.data;
+    if (!row) return null;
+    return normalizarDocumento(row as unknown as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+export async function getDocumentoVista(
+  slug: string,
+): Promise<DocumentRecord | null> {
+  const auth = await requireAuth();
+  if (auth.error || !auth.supabase || !slug.trim()) return null;
+  try {
+    const { data, error } = await auth.supabase
       .from("library_documents")
-      .select(DOCUMENT_SELECT)
+      .select(DOCUMENT_SELECT_PRIVADO)
       .eq("slug", slug.trim())
-      .eq("channel", channel)
       .maybeSingle();
     if (error || !data) return null;
-    return normalizarDocumento(data as Record<string, unknown>);
+    const doc = normalizarDocumento(data as Record<string, unknown>);
+    const esAdmin = isLibraryAdminRole(auth.user.role);
+    const esDueno = doc.created_by === auth.user.id;
+    const esPublico =
+      doc.publishing_status === "aprobado" &&
+      doc.access_level === "public" &&
+      doc.channel !== "normativo_interno";
+    if (!esAdmin && !esDueno && !esPublico) return null;
+    const [withName] = await attachCreadores(auth.supabase, [doc]);
+    return withName;
   } catch {
     return null;
   }
@@ -471,7 +680,7 @@ export async function getMisDocumentos(): Promise<DocumentRecord[]> {
   try {
     const { data, error } = await auth.supabase
       .from("library_documents")
-      .select(DOCUMENT_SELECT)
+      .select(DOCUMENT_SELECT_PRIVADO)
       .eq("created_by", auth.user.id)
       .order("updated_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -491,7 +700,7 @@ export async function getBandejaRevision(): Promise<DocumentRecord[]> {
   try {
     const { data, error } = await auth.supabase
       .from("library_documents")
-      .select(DOCUMENT_SELECT)
+      .select(DOCUMENT_SELECT_PRIVADO)
       .eq("publishing_status", "en_revision")
       .order("updated_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -513,7 +722,7 @@ export async function getDocumentoPorSlug(
   try {
     const { data, error } = await auth.supabase
       .from("library_documents")
-      .select(DOCUMENT_SELECT)
+      .select(DOCUMENT_SELECT_PRIVADO)
       .eq("slug", slug.trim())
       .maybeSingle();
     if (error || !data) return null;
@@ -542,6 +751,12 @@ export async function createDocumentAction(
 
   try {
     const payload = payloadFromForm(parsed.data, auth.user.id);
+    payload.actividad = await actividadConEvento(
+      auth.supabase,
+      [],
+      auth.user.id,
+      "creacion",
+    );
     const { data, error } = await auth.supabase
       .from("library_documents")
       .insert(payload)
@@ -570,6 +785,7 @@ export async function createDocumentAction(
 export async function updateDocumentAction(
   slug: string,
   values: DocumentFormValues,
+  options?: { registrarActividad?: boolean },
 ): Promise<ActionResultWithSlug> {
   const auth = await requireAuth();
   if (auth.error || !auth.supabase) return { success: false, error: auth.error };
@@ -589,6 +805,14 @@ export async function updateDocumentAction(
     const payload = payloadFromForm(parsed.data);
     if (esAdmin && actual.publishing_status === "aprobado") {
       payload.publishing_status = "aprobado";
+    }
+    if (options?.registrarActividad !== false) {
+      payload.actividad = await actividadConEvento(
+        auth.supabase,
+        semillaActividad(actual),
+        auth.user.id,
+        "modificacion",
+      );
     }
     const { data, error } = await auth.supabase
       .from("library_documents")
@@ -616,6 +840,50 @@ export async function updateDocumentAction(
   }
 }
 
+export async function updateAccessLevelAction(
+  slug: string,
+  accessLevel: string,
+): Promise<ActionResult> {
+  const auth = await requireAuth();
+  if (auth.error || !auth.supabase) return { success: false, error: auth.error };
+
+  const parsed = updateAccessLevelSchema.safeParse({
+    slug,
+    access_level: accessLevel,
+  });
+  if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+
+  const actual = await getDocumentoPorSlug(parsed.data.slug);
+  if (!actual) return { success: false, error: "NOT_FOUND" };
+  if (
+    !puedeEditarAccesoDocumento(actual, auth.user.id, auth.user.role)
+  ) {
+    return { success: false, error: "FORBIDDEN" };
+  }
+
+  const access =
+    actual.channel === "normativo_interno" ? "interno" : parsed.data.access_level;
+
+  try {
+    const { error } = await auth.supabase
+      .from("library_documents")
+      .update({
+        access_level: access,
+        actividad: await actividadConEvento(
+          auth.supabase,
+          semillaActividad(actual),
+          auth.user.id,
+          "modificacion",
+        ),
+      })
+      .eq("id", actual.id);
+    if (error) return { success: false, error: "SAVE_FAILED" };
+    return { success: true, error: null };
+  } catch {
+    return { success: false, error: "SAVE_FAILED" };
+  }
+}
+
 export async function submitForReviewAction(slug: string): Promise<ActionResult> {
   const auth = await requireAuth();
   if (auth.error || !auth.supabase) return { success: false, error: auth.error };
@@ -630,6 +898,13 @@ export async function submitForReviewAction(slug: string): Promise<ActionResult>
       .update({ publishing_status: "en_revision", rejection_reason: null })
       .eq("id", actual.id);
     if (error) return { success: false, error: "SAVE_FAILED" };
+    const histError = await anexarActividad(
+      auth.supabase,
+      actual.id,
+      auth.user.id,
+      semillaActividad(actual),
+    );
+    if (histError) return { success: false, error: histError };
     return { success: true, error: null };
   } catch {
     return { success: false, error: "SAVE_FAILED" };
@@ -639,6 +914,8 @@ export async function submitForReviewAction(slug: string): Promise<ActionResult>
 export async function approveDocumentAction(slug: string): Promise<ActionResult> {
   const auth = await requireAdmin();
   if (auth.error || !auth.supabase) return { success: false, error: auth.error };
+  const actual = await getDocumentoPorSlug(slug);
+  if (!actual) return { success: false, error: "NOT_FOUND" };
   try {
     const { error } = await auth.supabase
       .from("library_documents")
@@ -647,8 +924,42 @@ export async function approveDocumentAction(slug: string): Promise<ActionResult>
         approved_by: auth.user.id,
         rejection_reason: null,
       })
-      .eq("slug", slug.trim());
+      .eq("id", actual.id);
     if (error) return { success: false, error: "SAVE_FAILED" };
+    const histError = await anexarActividad(
+      auth.supabase,
+      actual.id,
+      auth.user.id,
+      semillaActividad(actual),
+    );
+    if (histError) return { success: false, error: histError };
+    return { success: true, error: null };
+  } catch {
+    return { success: false, error: "SAVE_FAILED" };
+  }
+}
+
+export async function ocultarDocumentoAction(slug: string): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (auth.error || !auth.supabase) return { success: false, error: auth.error };
+  const actual = await getDocumentoPorSlug(slug);
+  if (!actual || actual.publishing_status !== "aprobado") {
+    return { success: false, error: actual ? "SAVE_FAILED" : "NOT_FOUND" };
+  }
+  try {
+    const { error } = await auth.supabase
+      .from("library_documents")
+      .update({ publishing_status: "borrador" })
+      .eq("id", actual.id)
+      .eq("publishing_status", "aprobado");
+    if (error) return { success: false, error: "SAVE_FAILED" };
+    const histError = await anexarActividad(
+      auth.supabase,
+      actual.id,
+      auth.user.id,
+      semillaActividad(actual),
+    );
+    if (histError) return { success: false, error: histError };
     return { success: true, error: null };
   } catch {
     return { success: false, error: "SAVE_FAILED" };
@@ -663,6 +974,8 @@ export async function rejectDocumentAction(
   if (auth.error || !auth.supabase) return { success: false, error: auth.error };
   const parsed = rejectDocumentSchema.safeParse({ slug, reason });
   if (!parsed.success) return { success: false, error: "INVALID_INPUT" };
+  const actual = await getDocumentoPorSlug(parsed.data.slug);
+  if (!actual) return { success: false, error: "NOT_FOUND" };
   try {
     const { error } = await auth.supabase
       .from("library_documents")
@@ -670,8 +983,15 @@ export async function rejectDocumentAction(
         publishing_status: "rechazado",
         rejection_reason: parsed.data.reason,
       })
-      .eq("slug", parsed.data.slug);
+      .eq("id", actual.id);
     if (error) return { success: false, error: "SAVE_FAILED" };
+    const histError = await anexarActividad(
+      auth.supabase,
+      actual.id,
+      auth.user.id,
+      semillaActividad(actual),
+    );
+    if (histError) return { success: false, error: histError };
     return { success: true, error: null };
   } catch {
     return { success: false, error: "SAVE_FAILED" };
@@ -734,7 +1054,10 @@ export async function registrarArchivoAction(
   }
 }
 
-export async function eliminarArchivoAction(fileSlug: string): Promise<ActionResult> {
+export async function eliminarArchivoAction(
+  fileSlug: string,
+  registrarActividad = true,
+): Promise<ActionResult> {
   const auth = await requireAuth();
   if (auth.error || !auth.supabase) return { success: false, error: auth.error };
   try {
@@ -753,6 +1076,37 @@ export async function eliminarArchivoAction(fileSlug: string): Promise<ActionRes
       .delete()
       .eq("id", data.id);
     if (delError) return { success: false, error: "DELETE_FAILED" };
+    if (registrarActividad) {
+      const { data: doc } = await auth.supabase
+        .from("library_documents")
+        .select("id, actividad, created_at, created_by")
+        .eq("id", data.document_id)
+        .maybeSingle();
+      if (doc) {
+        const row = doc as Record<string, unknown>;
+        let previa = parsearActividad(row.actividad);
+        if (previa.length === 0 && asString(row.created_at)) {
+          const creadorId = asNullableString(row.created_by);
+          previa = [
+            {
+              accion: "creacion",
+              user_id: creadorId,
+              nombre: creadorId
+                ? await nombreCompletoUsuario(auth.supabase, creadorId)
+                : "Usuario",
+              at: asString(row.created_at),
+            },
+          ];
+        }
+        const histError = await anexarActividad(
+          auth.supabase,
+          asString(row.id),
+          auth.user.id,
+          previa,
+        );
+        if (histError) return { success: false, error: histError };
+      }
+    }
     return { success: true, error: null };
   } catch {
     return { success: false, error: "DELETE_FAILED" };
@@ -821,6 +1175,41 @@ export async function obtenerArchivoRepositorioPorSlug(slug: string): Promise<{
     };
   } catch {
     return null;
+  }
+}
+
+function cookieVisita(slug: string): string {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i += 1) {
+    hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
+  }
+  return `siget_visita_${hash.toString(36)}`;
+}
+
+export async function registerViewAction(
+  slug: string,
+): Promise<{ success: boolean; view_count: number | null }> {
+  const limpio = slug.trim();
+  if (!limpio) return { success: false, view_count: null };
+  try {
+    const jar = await cookies();
+    const key = cookieVisita(limpio);
+    if (jar.get(key)) return { success: true, view_count: null };
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("register_library_view", {
+      doc_slug: limpio,
+    });
+    if (error) return { success: false, view_count: null };
+    jar.set(key, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 12,
+    });
+    const count = typeof data === "number" ? data : Number(data ?? 0);
+    return { success: true, view_count: Number.isFinite(count) ? count : null };
+  } catch {
+    return { success: false, view_count: null };
   }
 }
 

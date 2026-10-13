@@ -137,10 +137,14 @@ export function HeroVideoLayout({
   videoOpen,
   onOpen,
   mobile = false,
+  secondaryHref = "/observatorio-web",
+  secondaryLabel = "Observatorio Web",
 }: {
   videoOpen: boolean;
   onOpen: () => void;
   mobile?: boolean;
+  secondaryHref?: string;
+  secondaryLabel?: string;
 }) {
   if (videoOpen) return null;
 
@@ -164,13 +168,13 @@ export function HeroVideoLayout({
           <ConoceMasButton onClick={onOpen} />
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
-              href="/observatorio-web"
+              href={secondaryHref}
               className="relative flex cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg px-4 py-2 md:px-5 md:py-2.5"
             >
               <div className="absolute inset-0 rounded-lg border border-white/50 bg-white/55 backdrop-blur-md" />
               <Globe className="relative size-4 shrink-0 text-azul-trifinio-hero" />
               <span className="relative whitespace-nowrap text-sm font-semibold tracking-wide text-azul-trifinio-hero md:text-base">
-                Observatorio Web
+                {secondaryLabel}
               </span>
             </Link>
           </motion.div>

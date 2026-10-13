@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getDocumentoPorSlug } from "@/components/(SIGET)/repositorio/lib/actions";
+import { getDocumentoVista } from "@/components/(SIGET)/repositorio/lib/actions";
 import { rutaEditarDocumento } from "@/components/(SIGET)/repositorio/lib/helpers";
 
 export default async function RepositorioEditarLegacyRedirectPage({
@@ -8,7 +8,7 @@ export default async function RepositorioEditarLegacyRedirectPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const doc = await getDocumentoPorSlug(slug);
+  const doc = await getDocumentoVista(slug);
   if (!doc) notFound();
   redirect(rutaEditarDocumento(doc.slug, doc.channel));
 }

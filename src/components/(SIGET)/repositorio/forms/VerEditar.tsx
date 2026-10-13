@@ -15,13 +15,15 @@ import {
 import { subirArchivosDocumento } from "../lib/upload-client";
 import type { DocumentFormValues } from "../lib/zod";
 import type { NoticiaSeccionDraft } from "../lib/upload-client";
+import { LineaTiempoActividad } from "../LineaTiempoActividad";
 import { DocumentoForm } from "./DocumentoForm";
 import { NoticiaWizard } from "./NoticiaWizard";
 import { esImagenMime } from "../lib/storage";
 import {
+  eventosActividadDocumento,
+  puedeEditarDocumento,
   rutaEditarDocumento,
-  rutaRepositorioDocumentos,
-  rutaRepositorioNoticias,
+  rutaVerDocumento,
   segmentoListaRepositorio,
 } from "../lib/helpers";
 
@@ -33,7 +35,7 @@ export function RepositorioEditar({
   listaSegmento: "noticias" | "documentos";
 }) {
   const router = useRouter();
-  const { user } = useUserContext();
+  const { user, effectiveRole } = useUserContext();
   const { data: tags = [] } = useTags();
   const { data: documento, isLoading } = useDocumento(slug);
   const editar = useEditarDocumento(slug);
@@ -45,8 +47,12 @@ export function RepositorioEditar({
     const esperado = segmentoListaRepositorio(documento.channel);
     if (esperado !== listaSegmento) {
       router.replace(rutaEditarDocumento(documento.slug, documento.channel));
+      return;
     }
-  }, [documento, listaSegmento, router]);
+    if (user && !puedeEditarDocumento(documento, user.id, effectiveRole)) {
+      router.replace(rutaVerDocumento(documento.slug, documento.channel));
+    }
+  }, [documento, listaSegmento, router, user, effectiveRole]);
 
   const handleSubmit = async (values: DocumentFormValues, files: File[]) => {
     const res = await editar.mutateAsync(values);
@@ -66,9 +72,7 @@ export function RepositorioEditar({
       values.submit_for_review ? "Enviado a revisión." : "Cambios guardados.",
     );
     const canal = documento?.channel ?? values.channel;
-    router.push(
-      canal === "noticia" ? rutaRepositorioNoticias() : rutaRepositorioDocumentos(),
-    );
+    router.push(rutaVerDocumento(res.slug ?? slug, canal));
   };
 
   const handleNoticia = async (
@@ -93,7 +97,7 @@ export function RepositorioEditar({
       return;
     }
     toast.success(values.submit_for_review ? "Enviada a revisión." : "Cambios guardados.");
-    router.push(rutaRepositorioNoticias());
+    router.push(rutaVerDocumento(documento.slug, "noticia"));
   };
 
   if (isLoading) {
@@ -120,7 +124,7 @@ export function RepositorioEditar({
         userMeta={user?.user_metadata as Record<string, unknown> | undefined}
         userEmail={user?.email}
         pending={guardarNoticia.isPending}
-        onCancel={() => router.push(rutaRepositorioNoticias())}
+        onCancel={() => router.push(rutaVerDocumento(documento.slug, documento.channel))}
         onSave={handleNoticia}
       />
     );
@@ -129,9 +133,10 @@ export function RepositorioEditar({
   return (
     <div className="relative w-full flex-1 bg-white dark:bg-zinc-900">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] bg-size-[24px_24px] opacity-50 dark:bg-[radial-gradient(oklch(36%_0_0)_1px,transparent_1px)] dark:opacity-40" />
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-8">
+      <div className="relative z-10 w-full px-3 py-8 md:px-4">
         <h1 className={`mb-6 text-2xl ${modalAccentClass}`}>Editar documento</h1>
-        <div className="rounded-2xl border border-border bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="flex flex-col items-start gap-6 xl:flex-row">
+        <div className="min-w-0 w-full flex-1 rounded-2xl border border-border bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-800">
           <DocumentoForm
             tags={tags}
             existingFiles={documento.files}
@@ -152,7 +157,7 @@ export function RepositorioEditar({
             }}
             pending={editar.isPending || quitarArchivo.isPending}
             onSubmit={handleSubmit}
-            onCancel={() => router.push(rutaRepositorioDocumentos())}
+            onCancel={() => router.push(rutaVerDocumento(documento.slug, documento.channel))}
             onRemoveExisting={async (fileSlug) => {
               const res = await quitarArchivo.mutateAsync(fileSlug);
               if (!res.success) {
@@ -162,6 +167,11 @@ export function RepositorioEditar({
               toast.success("Archivo quitado.");
             }}
           />
+        </div>
+        <LineaTiempoActividad
+          eventos={eventosActividadDocumento(documento)}
+          className="w-full xl:sticky xl:top-4 xl:w-72 xl:shrink-0"
+        />
         </div>
       </div>
     </div>
