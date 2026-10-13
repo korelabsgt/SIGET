@@ -2734,8 +2734,8 @@ export function ObservatorioFooterCurtain({
       className="relative z-20 flex h-auto w-full flex-col overflow-hidden bg-[#0a1628] md:fixed md:bottom-0 md:left-0 md:right-0 md:z-0 md:h-[50vh] max-md:!pointer-events-auto max-md:!opacity-100 max-md:!visibility-visible"
       style={{
         ...(compensateParentZoom ? { zoom: 1 / 0.9 } : {}),
-        opacity: revealed ? 1 : 0,
-        visibility: revealed ? "visible" : "hidden",
+        opacity: 1,
+        visibility: "visible",
         pointerEvents: revealed ? undefined : "none",
       }}
       aria-label="Pie de página Plan Trifinio"

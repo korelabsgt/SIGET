@@ -19,23 +19,48 @@ export function PublicHome() {
   const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
 
   const [footerRevealed, setFooterRevealed] = useState(false);
+  const [showFixedHero, setShowFixedHero] = useState(true);
   useEffect(() => {
-    const onScroll = () => {
-      const scrolled = window.scrollY + window.innerHeight;
-      const total = document.documentElement.scrollHeight;
+    const update = () => {
       const spacerVh =
         window.innerWidth < 768
           ? FOOTER_SCROLL_SPACER_MOBILE_VH
           : FOOTER_SCROLL_SPACER_VH;
       const footerPx = (spacerVh / 100) * window.innerHeight;
+      const main = document.querySelector<HTMLElement>("main.overflow-y-auto");
+
+      if (main) {
+        const total = main.scrollHeight;
+        const scrolled = main.scrollTop + main.clientHeight;
+        const scrollable = total > main.clientHeight + 80;
+        setFooterRevealed(
+          scrollable && scrolled >= total - footerPx - 4,
+        );
+        setShowFixedHero(main.scrollTop < main.clientHeight * 0.72);
+        return;
+      }
+
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
       setFooterRevealed(scrolled >= total - footerPx);
+      setShowFixedHero(window.scrollY < window.innerHeight * 0.72);
     };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+
+    update();
+    const main = document.querySelector<HTMLElement>("main.overflow-y-auto");
+    const scrollTarget: HTMLElement | Window = main ?? window;
+    scrollTarget.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    const ro =
+      main && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(update)
+        : null;
+    if (main) ro?.observe(main);
+
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      scrollTarget.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      ro?.disconnect();
     };
   }, []);
 
@@ -49,12 +74,12 @@ export function PublicHome() {
       {/* Hero desktop — imagen fija con cover */}
       <div
         aria-hidden
-        className="fixed inset-0 z-10 hidden bg-cover bg-center md:block"
+        className="fixed inset-0 z-10 hidden bg-cover bg-center transition-opacity duration-300 md:block"
         style={{
           backgroundImage: "url('/trifinio/hero-background2.jpg')",
-          opacity: footerRevealed ? 0 : 1,
-          visibility: footerRevealed ? "hidden" : "visible",
-          pointerEvents: footerRevealed ? "none" : undefined,
+          opacity: showFixedHero ? 1 : 0,
+          visibility: showFixedHero ? "visible" : "hidden",
+          pointerEvents: showFixedHero ? undefined : "none",
         }}
       />
 
@@ -112,12 +137,6 @@ export function PublicHome() {
       </section>
       </div>
 
-      {/* Spacer: revela el footer fijo al llegar abajo */}
-      <div
-        className="hidden w-full shrink-0"
-        style={{ height: `0vh`, zoom: 1 / 0.9 }}
-        aria-hidden
-      />
       <div
         className="hidden w-full shrink-0 bg-[#0a1628] md:block"
         style={{ height: `${FOOTER_SCROLL_SPACER_VH}vh`, zoom: 1 / 0.9 }}
