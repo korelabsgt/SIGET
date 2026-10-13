@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { HeroVideoLayout, VideoPlayerOverlay } from "@/components/(base)/(home)/ConoceMasVideo";
 import {
   ObservatorioHomeSections,
   ObservatorioFooterCurtain,
   FOOTER_SCROLL_SPACER_VH,
-  useFooterCurtainReveal,
+  FOOTER_SCROLL_SPACER_MOBILE_VH,
 } from "@/components/(base)/(home)/ObservatorioHomeSections";
 import { useUser } from "@/components/(base)/providers/UserProvider";
 
@@ -18,7 +18,26 @@ export function PublicHome() {
   const logoY = useTransform(scrollY, [0, 600], [0, -300]);
   const logoOpacity = useTransform(scrollY, [0, 400], [1, 0]);
 
-  const footerRevealed = useFooterCurtainReveal(true);
+  const [footerRevealed, setFooterRevealed] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      const spacerVh =
+        window.innerWidth < 768
+          ? FOOTER_SCROLL_SPACER_MOBILE_VH
+          : FOOTER_SCROLL_SPACER_VH;
+      const footerPx = (spacerVh / 100) * window.innerHeight;
+      setFooterRevealed(scrolled >= total - footerPx);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
 
   const headerOffset = 0;
 
