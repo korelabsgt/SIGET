@@ -60,7 +60,7 @@ type WizardStep = 1 | 2 | 3;
 
 type GaleriaUiItem = NoticiaGaleriaDraftItem & { previewUrl: string | null };
 
-type SeccionUi = NoticiaSeccionDraft;
+type SeccionUi = Omit<NoticiaSeccionDraft, "gallery"> & { gallery: GaleriaUiItem[] };
 
 type CropTarget = { sectionId: string; slot: number };
 
