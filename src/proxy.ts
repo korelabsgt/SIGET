@@ -5,6 +5,57 @@ import {
   hasSupabaseAuthCookies,
   safeSupabaseQuery,
 } from "@/utils/supabase/auth";
+import { isEncargadoTransporteRole } from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/permissions";
+import {
+  GV_BASE_ROUTE,
+  GV_MANTENIMIENTO_SECCION,
+  GV_SECTION_QUERY_KEY,
+  gestionVehiculosMantenimientoPathname,
+} from "@/components/(SIGET)/gestion-territorial/gestion-vehiculos/lib/routes";
+
+function sigetHomeRedirect(request: NextRequest, role: string): NextResponse {
+  const url = request.nextUrl.clone();
+  if (isEncargadoTransporteRole(role)) {
+    url.pathname = gestionVehiculosMantenimientoPathname();
+    url.search = `${GV_SECTION_QUERY_KEY}=${GV_MANTENIMIENTO_SECCION}`;
+  } else {
+    url.pathname = "/siget";
+    url.search = "";
+  }
+  return NextResponse.redirect(url);
+}
+
+function redirectEncargadoTransporteIfNeeded(
+  request: NextRequest,
+  pathname: string,
+): NextResponse | null {
+  if (pathname === "/siget/cambiar-password" || pathname.startsWith("/api")) {
+    return null;
+  }
+
+  if (pathname === "/esperando-acceso" || pathname.startsWith("/esperando-acceso/")) {
+    return null;
+  }
+
+  if (pathname.startsWith(GV_BASE_ROUTE)) {
+    const seccion = request.nextUrl.searchParams.get(GV_SECTION_QUERY_KEY);
+    if (seccion === GV_MANTENIMIENTO_SECCION) {
+      return null;
+    }
+    const url = request.nextUrl.clone();
+    url.searchParams.set(GV_SECTION_QUERY_KEY, GV_MANTENIMIENTO_SECCION);
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === "/login" || pathname.startsWith("/siget")) {
+    const url = request.nextUrl.clone();
+    url.pathname = gestionVehiculosMantenimientoPathname();
+    url.search = `${GV_SECTION_QUERY_KEY}=${GV_MANTENIMIENTO_SECCION}`;
+    return NextResponse.redirect(url);
+  }
+
+  return null;
+}
 
 function isServerActionRequest(request: NextRequest): boolean {
   return (
@@ -113,22 +164,23 @@ export async function proxy(request: NextRequest) {
           return NextResponse.redirect(url);
         }
       } else if (pathname === "/siget/cambiar-password" || pathname === "/login") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/siget";
-        return NextResponse.redirect(url);
+        return sigetHomeRedirect(request, realRole);
+      }
+
+      if (!needsPasswordChange && isEncargadoTransporteRole(realRole)) {
+        const encargadoRedirect = redirectEncargadoTransporteIfNeeded(request, pathname);
+        if (encargadoRedirect) {
+          return encargadoRedirect;
+        }
       }
 
       if (pathname === "/esperando-acceso") {
         if (!requireAuth) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/siget";
-          return NextResponse.redirect(url);
+          return sigetHomeRedirect(request, realRole);
         }
 
         if (isSuperOrAdmin) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/siget";
-          return NextResponse.redirect(url);
+          return sigetHomeRedirect(request, realRole);
         }
 
         const userAgent = request.headers.get("user-agent") || "Desconocido";
@@ -143,9 +195,7 @@ export async function proxy(request: NextRequest) {
         );
 
         if (device?.is_authorized) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/siget";
-          return NextResponse.redirect(url);
+          return sigetHomeRedirect(request, realRole);
         }
       }
 

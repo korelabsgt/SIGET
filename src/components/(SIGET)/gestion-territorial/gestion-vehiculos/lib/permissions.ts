@@ -32,6 +32,33 @@ export function isAdministradorOtRole(role: string | null | undefined): boolean 
   return compact === "administradorot" || (slug.includes("administrador") && slug.endsWith("ot"));
 }
 
+export function isEncargadoTransporteRole(role: string | null | undefined): boolean {
+  if (!role) return false;
+  const slug = normalizeRoleSlug(role);
+  return slug === "encargado-transporte" || slug === "encargado-de-transporte";
+}
+
+export type GvSectionId = "flota" | "solicitudes" | "bitacoras" | "mantenimiento";
+
+const GV_SECTIONS_ALL: GvSectionId[] = ["solicitudes", "bitacoras", "flota", "mantenimiento"];
+
+export function getAllowedGvSections(role: string | null | undefined): GvSectionId[] {
+  if (isEncargadoTransporteRole(role)) return ["mantenimiento"];
+  return GV_SECTIONS_ALL;
+}
+
+export function isGvSectionAllowedForRole(
+  role: string | null | undefined,
+  section: GvSectionId,
+): boolean {
+  return getAllowedGvSections(role).includes(section);
+}
+
+export function defaultGvSectionForRole(role: string | null | undefined): GvSectionId {
+  if (isEncargadoTransporteRole(role)) return "mantenimiento";
+  return "solicitudes";
+}
+
 export function canManageFlota(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;
@@ -52,6 +79,7 @@ export function canExportFlotaReporte(role: string | null | undefined): boolean 
 }
 
 export function canViewAlertasFlota(role: string | null | undefined): boolean {
+  if (isEncargadoTransporteRole(role)) return true;
   return canManageFlota(role);
 }
 
@@ -125,6 +153,7 @@ export function puedeIniciarMisionEnHorarioProgramado(
 export function canSeeFlotaYCombustible(role: string | null | undefined): boolean {
   if (!role) return false;
   if (isSuperRole(role)) return true;
+  if (isEncargadoTransporteRole(role)) return true;
 
   const slug = normalizeRoleSlug(role);
   if (slug === "admin" || isAdministradorOtRole(role)) return true;
@@ -159,15 +188,18 @@ export function canExportBitacoraReporte(role: string | null | undefined): boole
 }
 
 export function canManageMantenimiento(role: string | null | undefined): boolean {
+  if (isEncargadoTransporteRole(role)) return true;
   return canManageFlota(role);
 }
 
 export function canExportMantenimientoReporte(role: string | null | undefined): boolean {
+  if (isEncargadoTransporteRole(role)) return true;
   return canManageFlota(role);
 }
 
 export function canViewAllFallasMantenimiento(role: string | null | undefined): boolean {
   if (!role) return false;
+  if (isEncargadoTransporteRole(role)) return true;
   if (isSuperRole(role) || canManageFlota(role)) return true;
   const slug = normalizeRoleSlug(role);
   return slug === "taller" || slug === "mecanico";
@@ -175,6 +207,7 @@ export function canViewAllFallasMantenimiento(role: string | null | undefined): 
 
 export function canGestionarFallasMantenimiento(role: string | null | undefined): boolean {
   if (!role) return false;
+  if (isEncargadoTransporteRole(role)) return true;
   if (canManageFlota(role)) return true;
   const slug = normalizeRoleSlug(role);
   return slug === "taller" || slug === "mecanico";

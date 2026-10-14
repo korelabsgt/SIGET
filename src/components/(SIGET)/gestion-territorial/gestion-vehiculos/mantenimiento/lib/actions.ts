@@ -17,6 +17,7 @@ import { aplicarMantenimientoForzadoPorKm } from "../../lib/mantenimiento-km-for
 import { sincronizarEstadoFlotaVehiculo } from "../../lib/sincronizar-estado-vehiculo";
 import {
   canGestionarFallasMantenimiento,
+  canManageMantenimiento,
   canViewAllFallasMantenimiento,
 } from "../../lib/permissions";
 import { FALLAS_MANTENIMIENTO_SELECT } from "./fallas-query";
@@ -96,7 +97,11 @@ export async function getMecanicos(): Promise<MecanicoOption[]> {
 
 export async function createFalla(input: FallaMantenimientoFormData): Promise<void> {
   try {
-    const { supabase, user } = await requireAuth();
+    const { supabase, user, role } = await requireAuth();
+
+    if (!canManageMantenimiento(role)) {
+      throw new Error("No tienes permisos para reportar averías.");
+    }
 
     const parsed = FallaMantenimientoSchema.safeParse(input);
     if (!parsed.success) {

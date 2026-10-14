@@ -1,3 +1,5 @@
+import type { GvSectionId } from "./permissions";
+import { defaultGvSectionForRole, isGvSectionAllowedForRole } from "./permissions";
 import type { GvSubmoduloId } from "./tab-context";
 
 export const GV_SECTION_QUERY_KEY = "seccion";
@@ -14,8 +16,15 @@ export function parseGvSectionParam(value: string | null | undefined): GvSubmodu
   return GV_SECTION_IDS.includes(value as GvSubmoduloId) ? (value as GvSubmoduloId) : null;
 }
 
-export function gvSectionFromSearchParams(params: URLSearchParams): GvSubmoduloId {
-  return parseGvSectionParam(params.get(GV_SECTION_QUERY_KEY)) ?? "solicitudes";
+export function gvSectionFromSearchParams(
+  params: URLSearchParams,
+  role?: string | null,
+): GvSubmoduloId {
+  const fallback = role ? defaultGvSectionForRole(role) : "solicitudes";
+  const parsed = parseGvSectionParam(params.get(GV_SECTION_QUERY_KEY));
+  if (!parsed) return fallback;
+  if (role && !isGvSectionAllowedForRole(role, parsed as GvSectionId)) return fallback;
+  return parsed;
 }
 
 export function buildGvSectionHref(

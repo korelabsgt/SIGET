@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, type ComponentType } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+} from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -10,7 +17,8 @@ import {
   GV_SUBMODULO_TITLES,
   type GvSubmoduloId,
 } from "./lib/tab-context";
-import { useRequireFlotaYCombustible } from "./lib/gv-permissions-hook";
+import { useGvPermissionRole, useRequireFlotaYCombustible } from "./lib/gv-permissions-hook";
+import { getAllowedGvSections } from "./lib/permissions";
 import { GvPageChromeProvider } from "./lib/gv-page-chrome";
 import { GvSolicitudDetailIntentProvider } from "./lib/gv-solicitud-detail-intent";
 import { GvPanelActionIntentProvider } from "./lib/gv-panel-action-intent";
@@ -56,34 +64,40 @@ const PANELS: { id: GvSubmoduloId; Panel: ComponentType }[] = [
 
 function GestionVehiculosShellInner() {
   const allowed = useRequireFlotaYCombustible();
+  const role = useGvPermissionRole();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const sectionFromUrl = gvSectionFromSearchParams(searchParams);
+  const allowedSections = useMemo(() => new Set(getAllowedGvSections(role)), [role]);
+  const sectionFromUrl = gvSectionFromSearchParams(searchParams, role);
 
   const [section, setSection] = useState<GvSubmoduloId>(sectionFromUrl);
   const [visited, setVisited] = useState<Set<GvSubmoduloId>>(() => new Set([sectionFromUrl]));
 
-  const abrirSeccion = useCallback((id: GvSubmoduloId) => {
-    setSection(id);
-    setVisited((prev) => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
+  const abrirSeccion = useCallback(
+    (id: GvSubmoduloId) => {
+      if (!allowedSections.has(id)) return;
+      setSection(id);
+      setVisited((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    },
+    [allowedSections],
+  );
 
   useEffect(() => {
     const sincronizarDesdeHistorial = () => {
       abrirSeccion(
-        gvSectionFromSearchParams(new URLSearchParams(window.location.search)),
+        gvSectionFromSearchParams(new URLSearchParams(window.location.search), role),
       );
     };
 
     window.addEventListener("popstate", sincronizarDesdeHistorial);
     return () => window.removeEventListener("popstate", sincronizarDesdeHistorial);
-  }, [abrirSeccion]);
+  }, [abrirSeccion, role]);
 
   const selectSection = useCallback(
     (id: GvSubmoduloId) => {
@@ -97,14 +111,23 @@ function GestionVehiculosShellInner() {
     [abrirSeccion, pathname, searchParams],
   );
 
+  const seccionEnSearchParams = useMemo(
+    () => gvSectionFromSearchParams(searchParams, role),
+    [role, searchParams],
+  );
+
   useEffect(() => {
-    if (gvSectionFromSearchParams(searchParams) === section) return;
+    abrirSeccion(seccionEnSearchParams);
+  }, [abrirSeccion, seccionEnSearchParams]);
+
+  useEffect(() => {
+    if (seccionEnSearchParams === section) return;
     window.history.replaceState(
       window.history.state,
       "",
       buildGvSectionHref(pathname, section, searchParams),
     );
-  }, [pathname, searchParams, section]);
+  }, [pathname, searchParams, section, seccionEnSearchParams]);
 
   useEffect(() => {
     document.title = GV_SUBMODULO_TITLES[section];
@@ -123,7 +146,7 @@ function GestionVehiculosShellInner() {
         <div className={GV_MODULO_SCROLL_OUTER_CLASS}>
           <div className={GV_TABLE_AREA_CLASS}>
               {PANELS.map(({ id, Panel }) =>
-                visited.has(id) ? (
+                visited.has(id) && allowedSections.has(id) ? (
                   <div
                     key={id}
                     className={cn(
