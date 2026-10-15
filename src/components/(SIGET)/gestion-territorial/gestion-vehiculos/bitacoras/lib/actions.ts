@@ -118,28 +118,20 @@ export async function confirmarBitacora(bitacoraId: string, input: BitacoraInput
     let valeCombustibleConfirmar = parsed.vale_combustible?.trim() || null;
     let montoCombustibleConfirmar = parsed.monto_combustible;
 
-    if (!solicitudVinculada) {
+    if (!solicitudVinculada && solicitudCombustibleId) {
       const valesDisponibles = await listCombustiblesAprobadosSinMisionPorVehiculo(
         parsed.vehiculo_id,
         supabase,
       );
-      if (valesDisponibles.length > 0) {
-        if (!solicitudCombustibleId) {
-          return {
-            success: false,
-            error: "Debe seleccionar un vale de combustible disponible.",
-          };
-        }
-        const elegido = valesDisponibles.find((item) => item.id === solicitudCombustibleId);
-        if (!elegido) {
-          return {
-            success: false,
-            error: "El vale seleccionado no está disponible o ya fue utilizado en otra bitácora.",
-          };
-        }
-        valeCombustibleConfirmar = elegido.vale;
-        montoCombustibleConfirmar = elegido.monto;
+      const elegido = valesDisponibles.find((item) => item.id === solicitudCombustibleId);
+      if (!elegido) {
+        return {
+          success: false,
+          error: "El vale seleccionado no está disponible o ya fue utilizado en otra bitácora.",
+        };
       }
+      valeCombustibleConfirmar = elegido.vale;
+      montoCombustibleConfirmar = elegido.monto;
     }
 
     if (solicitudVinculada) {

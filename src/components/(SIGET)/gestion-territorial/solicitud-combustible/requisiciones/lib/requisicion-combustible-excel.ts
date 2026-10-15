@@ -5,6 +5,11 @@ import { es } from "date-fns/locale";
 
 import { aplicarPaginaCarta } from "../../../lib/excel-carta";
 import type { SolicitudCombustibleRow } from "../../solicitudes/lib/zod";
+import { createClient } from "@/utils/supabase/client";
+import {
+  fetchKilometrajeRequisicionCombustible,
+  type KilometrajeRequisicionCombustible,
+} from "./kilometraje-requisicion";
 import {
   REQUISICION_COMBUSTIBLE_ENTREGADO_POR_CARGO,
   cantidadCuponesSolicitud,
@@ -152,6 +157,11 @@ function numeroRequisicion(row: SolicitudCombustibleRow): string {
   return `${suffix} / ${year}`;
 }
 
+function formatKmRequisicion(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "";
+  return value.toLocaleString("es-GT", { maximumFractionDigits: 0 });
+}
+
 function fechaLugarEsquipulas(row: SolicitudCombustibleRow): string {
   if (!row.fecha_aprobacion) return "Esquipulas, ___ de _____________ de ________";
   const d = new Date(row.fecha_aprobacion);
@@ -166,6 +176,7 @@ function buildRequisicionSheet(
   sheetName: string,
   row: SolicitudCombustibleRow,
   logoBuffer: ArrayBuffer | null,
+  kilometraje: KilometrajeRequisicionCombustible,
 ) {
   const sheet = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: true }],
@@ -330,6 +341,15 @@ function buildRequisicionSheet(
     alignment: { vertical: "middle" },
   });
 
+  mergeSet(sheet, 17, 3, 3, formatKmRequisicion(kilometraje.kmAnterior), {
+    font: { size: 10, underline: true },
+    alignment: { horizontal: "center", vertical: "middle" },
+  });
+  mergeSet(sheet, 18, 3, 3, formatKmRequisicion(kilometraje.kmActual), {
+    font: { size: 10, underline: true },
+    alignment: { horizontal: "center", vertical: "middle" },
+  });
+
   const cantidad = cantidadCuponesSolicitud(row);
   const cuponDel = row.cupon_del ?? "";
   const cuponAl = row.cupon_al ?? "";
@@ -418,11 +438,14 @@ async function writeRequisicionesWorkbook(
 
   const logoBuffer = await fetchLogoBuffer();
   const usedSheetNames = new Set<string>();
+  const supabase = createClient();
 
-  rows.forEach((row, index) => {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const kilometraje = await fetchKilometrajeRequisicionCombustible(supabase, row);
     const sheetName = sanitizeSheetName(sheetNameForRequisicion(row, index), usedSheetNames);
-    buildRequisicionSheet(workbook, sheetName, row, logoBuffer);
-  });
+    buildRequisicionSheet(workbook, sheetName, row, logoBuffer, kilometraje);
+  }
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

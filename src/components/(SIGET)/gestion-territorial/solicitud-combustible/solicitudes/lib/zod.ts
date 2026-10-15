@@ -87,6 +87,7 @@ export type SolicitudCombustibleRow = {
     marca: string;
     modelo: string;
     anio?: number | null;
+    kilometraje_actual?: number | null;
   } | null;
   solicitante?: {
     id: string;

@@ -456,17 +456,6 @@ export function Crear({
   }, [open, vehiculoIdCombustible, vehiculos, selectedMisionId, setValue]);
 
   const onFormValidated = (data: BitacoraInput) => {
-    if (
-      esReservaIndividualPendiente &&
-      combustiblesSinMision.length > 0 &&
-      !data.solicitud_combustible_id?.trim()
-    ) {
-      setError("solicitud_combustible_id", {
-        message: "Debe seleccionar un vale de combustible",
-      });
-      return;
-    }
-
     if (reciboCombustibleObligatorio) {
       const tieneRecibo =
         Boolean(evidenciaFile) ||
@@ -708,8 +697,8 @@ export function Crear({
                       <ModalLabel htmlFor="solicitud_combustible_id">Vale de combustible</ModalLabel>
                       {combustiblesSinMision.length > 0 ? (
                         <p className="text-xs text-muted-foreground">
-                          Seleccione un vale aprobado sin misión. Debe adjuntar el comprobante de
-                          carga al confirmar la bitácora (obligatorio).
+                          Opcional: seleccione un vale aprobado sin misión. Si elige uno, debe
+                          adjuntar el comprobante de carga al confirmar la bitácora.
                         </p>
                       ) : null}
                       <input type="hidden" {...register("vale_combustible")} />
@@ -741,9 +730,8 @@ export function Crear({
                           control={control}
                           rules={{
                             validate: (value) => {
-                              if (combustiblesSinMision.length === 0) return true;
                               const id = value?.trim();
-                              if (!id) return "Debe seleccionar un vale de combustible";
+                              if (!id) return true;
                               if (!combustiblesSinMision.some((opcion) => opcion.id === id)) {
                                 return "El vale seleccionado ya no está disponible";
                               }
