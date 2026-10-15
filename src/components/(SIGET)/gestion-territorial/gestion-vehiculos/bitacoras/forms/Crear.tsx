@@ -69,6 +69,7 @@ import {
 import {
   combustibleAprobadoParaBitacora,
   misionRequiereReciboCombustible,
+  valeYMontoCuponesParciales,
 } from "../lib/combustible-mision";
 import {
   GvDetalleEncabezadoVehiculo,
@@ -147,6 +148,7 @@ export function Crear({
       vale_combustible: "",
       monto_combustible: 0,
       solicitud_combustible_id: "",
+      cupones_combustible_cantidad: 0,
       comentarios: [],
       evidencia_url: [],
     },
@@ -217,6 +219,10 @@ export function Crear({
   const valeCombustible = watch("vale_combustible");
   const montoCombustible = watch("monto_combustible");
   const solicitudCombustibleId = watch("solicitud_combustible_id")?.trim() ?? "";
+  const cuponesCombustibleCantidad = watch("cupones_combustible_cantidad");
+  const opcionCombustibleSeleccionada = combustiblesSinMision.find(
+    (item) => item.id === solicitudCombustibleId,
+  );
   const kmInicial = watch("km_inicial");
   const kmFinal = watch("km_final");
   const kmInicialFlota =
@@ -295,6 +301,7 @@ export function Crear({
         vale_combustible: bitacoraPendiente.vale_combustible ?? "",
         monto_combustible: bitacoraPendiente.monto_combustible ?? 0,
         solicitud_combustible_id: "",
+        cupones_combustible_cantidad: 0,
         comentarios: bitacoraPendiente.comentarios.map((c) => ({ texto: c.texto })),
         evidencia_url: [],
       });
@@ -311,6 +318,7 @@ export function Crear({
       vale_combustible: "",
       monto_combustible: 0,
       solicitud_combustible_id: "",
+      cupones_combustible_cantidad: 0,
       comentarios: [],
       evidencia_url: [],
     });
@@ -318,20 +326,69 @@ export function Crear({
 
   const aplicarCombustibleSinMision = (opcion: CombustibleSinMisionOpcion) => {
     setValue("solicitud_combustible_id", opcion.id, { shouldValidate: true });
-    setValue("vale_combustible", opcion.vale, { shouldValidate: true });
-    setValue("monto_combustible", opcion.monto, { shouldValidate: true });
-    const requiereRecibo = opcion.vale.trim().length > 0;
-    setReciboCombustibleObligatorio(requiereRecibo);
-    if (!requiereRecibo) {
-      clearEvidencia();
-      clearErrors("evidencia_url");
-    }
-    setCombustibleMisionAviso(
-      opcion.monto > 0
-        ? `Vale ${opcion.vale}. Debe adjuntar el recibo de carga.`
-        : `Vale ${opcion.vale}. Adjunte el recibo; indique el monto si falta en la aprobación.`,
-    );
+    const inicial = Math.min(1, opcion.cuponesDisponibles);
+    setValue("cupones_combustible_cantidad", inicial, { shouldValidate: true });
+    clearErrors("cupones_combustible_cantidad");
   };
+
+  useEffect(() => {
+    if (!open || !esReservaIndividualPendiente) return;
+
+    if (!solicitudCombustibleId || !opcionCombustibleSeleccionada) {
+      setValue("vale_combustible", "", { shouldValidate: false });
+      setValue("monto_combustible", 0, { shouldValidate: false });
+      setReciboCombustibleObligatorio(false);
+      setCombustibleMisionAviso(null);
+      if (!solicitudCombustibleId) {
+        clearEvidencia();
+        clearErrors("evidencia_url");
+      }
+      return;
+    }
+
+    const maxDisp = opcionCombustibleSeleccionada.cuponesDisponibles;
+    const bruto = Number(cuponesCombustibleCantidad);
+    const cantidad =
+      Number.isFinite(bruto) && bruto >= 1 ? Math.min(Math.floor(bruto), maxDisp) : 0;
+
+    if (cantidad < 1) {
+      setValue("vale_combustible", "", { shouldValidate: false });
+      setValue("monto_combustible", 0, { shouldValidate: false });
+      setReciboCombustibleObligatorio(false);
+      setCombustibleMisionAviso(null);
+      return;
+    }
+
+    if (cantidad !== cuponesCombustibleCantidad) {
+      setValue("cupones_combustible_cantidad", cantidad, { shouldValidate: true });
+    }
+
+    const parcial = valeYMontoCuponesParciales(
+      opcionCombustibleSeleccionada.cuponDelSiguiente,
+      cantidad,
+      opcionCombustibleSeleccionada.denominacionCupon,
+    );
+    if (!parcial) {
+      setValue("vale_combustible", "", { shouldValidate: false });
+      setValue("monto_combustible", 0, { shouldValidate: false });
+      setReciboCombustibleObligatorio(false);
+      setCombustibleMisionAviso(null);
+      return;
+    }
+
+    setValue("vale_combustible", parcial.vale, { shouldValidate: true });
+    setValue("monto_combustible", parcial.monto, { shouldValidate: true });
+    setReciboCombustibleObligatorio(true);
+    setCombustibleMisionAviso(null);
+  }, [
+    open,
+    esReservaIndividualPendiente,
+    solicitudCombustibleId,
+    opcionCombustibleSeleccionada,
+    cuponesCombustibleCantidad,
+    setValue,
+    clearErrors,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -428,12 +485,14 @@ export function Crear({
     if (!solicitudCombustibleId) return;
     if (combustiblesSinMision.some((opcion) => opcion.id === solicitudCombustibleId)) return;
     setValue("solicitud_combustible_id", "", { shouldValidate: true });
+    setValue("cupones_combustible_cantidad", 0, { shouldValidate: true });
     setValue("vale_combustible", "", { shouldValidate: true });
     setValue("monto_combustible", 0, { shouldValidate: true });
     setReciboCombustibleObligatorio(false);
     setCombustibleMisionAviso(null);
     clearEvidencia();
     clearErrors("solicitud_combustible_id");
+    clearErrors("cupones_combustible_cantidad");
   }, [
     open,
     esReservaIndividualPendiente,
@@ -456,6 +515,32 @@ export function Crear({
   }, [open, vehiculoIdCombustible, vehiculos, selectedMisionId, setValue]);
 
   const onFormValidated = (data: BitacoraInput) => {
+    if (esReservaIndividualPendiente) {
+      const solicitudId = data.solicitud_combustible_id?.trim() ?? "";
+      if (solicitudId) {
+        const opcion = combustiblesSinMision.find((item) => item.id === solicitudId);
+        const cantidad = data.cupones_combustible_cantidad ?? 0;
+        if (!opcion) {
+          setError("solicitud_combustible_id", {
+            message: "La solicitud ya no tiene cupones disponibles.",
+          });
+          return;
+        }
+        if (cantidad < 1) {
+          setError("cupones_combustible_cantidad", {
+            message: "Indique cuántos cupones utiliza en esta bitácora.",
+          });
+          return;
+        }
+        if (cantidad > opcion.cuponesDisponibles) {
+          setError("cupones_combustible_cantidad", {
+            message: `Solo quedan ${opcion.cuponesDisponibles} cupón(es) disponibles.`,
+          });
+          return;
+        }
+      }
+    }
+
     if (reciboCombustibleObligatorio) {
       const tieneRecibo =
         Boolean(evidenciaFile) ||
@@ -693,14 +778,41 @@ export function Crear({
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {esReservaIndividualPendiente ? (
                   <>
-                    <ModalField className="lg:col-span-2">
-                      <ModalLabel htmlFor="solicitud_combustible_id">Vale de combustible</ModalLabel>
-                      {combustiblesSinMision.length > 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Opcional: seleccione un vale aprobado sin misión. Si elige uno, debe
-                          adjuntar el comprobante de carga al confirmar la bitácora.
-                        </p>
+                    <div
+                      className={cn(
+                        "min-w-0 lg:col-span-2",
+                        solicitudCombustibleId && opcionCombustibleSeleccionada
+                          ? "grid grid-cols-1 gap-x-4 gap-y-2.5 sm:grid-cols-[minmax(0,1fr)_7.5rem]"
+                          : "space-y-2.5",
+                      )}
+                    >
+                      <ModalLabel
+                        htmlFor="solicitud_combustible_id"
+                        className={cn(
+                          "block whitespace-nowrap",
+                          solicitudCombustibleId && opcionCombustibleSeleccionada
+                            ? "sm:col-start-1 sm:row-start-1"
+                            : undefined,
+                        )}
+                      >
+                        Vale de combustible
+                      </ModalLabel>
+                      {solicitudCombustibleId && opcionCombustibleSeleccionada ? (
+                        <ModalLabel
+                          htmlFor="cupones_combustible_cantidad"
+                          className="block whitespace-nowrap sm:col-start-2 sm:row-start-1"
+                        >
+                          Cupones a usar
+                        </ModalLabel>
                       ) : null}
+                      <div
+                        className={cn(
+                          "min-w-0 space-y-2.5",
+                          solicitudCombustibleId && opcionCombustibleSeleccionada
+                            ? "sm:col-start-1 sm:row-start-2"
+                            : undefined,
+                        )}
+                      >
                       <input type="hidden" {...register("vale_combustible")} />
                       <input type="hidden" {...register("monto_combustible")} />
                       {loadingCombustiblesSinMision ? (
@@ -755,7 +867,7 @@ export function Crear({
                                 id="solicitud_combustible_id"
                                 className={cn(
                                   GV_MODAL_SELECT_TRIGGER_CLASS,
-                                  "w-full [&_[data-slot=select-value]]:line-clamp-2",
+                                  "h-10 min-h-10 w-full data-[size=default]:!h-10 [&_[data-slot=select-value]]:line-clamp-2",
                                 )}
                                 aria-label="Seleccionar vale de combustible"
                               >
@@ -785,7 +897,36 @@ export function Crear({
                           {errors.solicitud_combustible_id.message}
                         </p>
                       ) : null}
-                    </ModalField>
+                      </div>
+                      {solicitudCombustibleId && opcionCombustibleSeleccionada ? (
+                        <div className="min-w-0 space-y-2.5 sm:col-start-2 sm:row-start-2">
+                          <ModalInput
+                            id="cupones_combustible_cantidad"
+                            type="number"
+                            min={1}
+                            max={opcionCombustibleSeleccionada.cuponesDisponibles}
+                            step={1}
+                            className="tabular-nums"
+                            {...register("cupones_combustible_cantidad", {
+                              valueAsNumber: true,
+                              min: {
+                                value: 1,
+                                message: "Debe usar al menos 1 cupón",
+                              },
+                              max: {
+                                value: opcionCombustibleSeleccionada.cuponesDisponibles,
+                                message: `Máximo ${opcionCombustibleSeleccionada.cuponesDisponibles} cupón(es)`,
+                              },
+                            })}
+                          />
+                          {errors.cupones_combustible_cantidad ? (
+                            <p className="text-xs text-red-500">
+                              {errors.cupones_combustible_cantidad.message}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -811,7 +952,7 @@ export function Crear({
                   </>
                 )}
               </div>
-              {combustibleMisionAviso ? (
+              {combustibleMisionAviso && !esReservaIndividualPendiente ? (
                 <p className="text-xs text-muted-foreground">{combustibleMisionAviso}</p>
               ) : null}
               </section>

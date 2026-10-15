@@ -71,6 +71,7 @@ export const bitacoraInputSchema = z
     vale_combustible: z.string().optional().nullable(),
     monto_combustible: z.coerce.number().min(0).default(0),
     solicitud_combustible_id: z.string().uuid().optional().nullable().or(z.literal("")),
+    cupones_combustible_cantidad: z.coerce.number().int().min(0).default(0),
     comentarios: z.array(bitacoraComentarioInputSchema).default([]),
     evidencia_url: z.array(z.string().min(1)).max(1).default([]),
   })

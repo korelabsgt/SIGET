@@ -24,8 +24,11 @@ import {
 } from "../../lib/permissions";
 import { GV_BASE_ROUTE } from "../../lib/routes";
 import {
+  cantidadCuponesRango,
   combustibleAprobadoParaBitacora,
+  cuponesUsadosEnSolicitudCombustible,
   misionRequiereReciboCombustible,
+  valeYMontoCuponesParciales,
   type CombustibleAprobadoMision,
 } from "./combustible-mision";
 
@@ -119,6 +122,14 @@ export async function confirmarBitacora(bitacoraId: string, input: BitacoraInput
     let montoCombustibleConfirmar = parsed.monto_combustible;
 
     if (!solicitudVinculada && solicitudCombustibleId) {
+      const cantidadCupones = parsed.cupones_combustible_cantidad ?? 0;
+      if (cantidadCupones < 1) {
+        return {
+          success: false,
+          error: "Indique cuántos cupones utiliza en esta bitácora.",
+        };
+      }
+
       const valesDisponibles = await listCombustiblesAprobadosSinMisionPorVehiculo(
         parsed.vehiculo_id,
         supabase,
@@ -127,11 +138,29 @@ export async function confirmarBitacora(bitacoraId: string, input: BitacoraInput
       if (!elegido) {
         return {
           success: false,
-          error: "El vale seleccionado no está disponible o ya fue utilizado en otra bitácora.",
+          error: "La solicitud de combustible no tiene cupones disponibles.",
         };
       }
-      valeCombustibleConfirmar = elegido.vale;
-      montoCombustibleConfirmar = elegido.monto;
+      if (cantidadCupones > elegido.cuponesDisponibles) {
+        return {
+          success: false,
+          error: `Solo quedan ${elegido.cuponesDisponibles} cupón(es) disponibles en esa solicitud.`,
+        };
+      }
+
+      const parcial = valeYMontoCuponesParciales(
+        elegido.cuponDelSiguiente,
+        cantidadCupones,
+        elegido.denominacionCupon,
+      );
+      if (!parcial) {
+        return {
+          success: false,
+          error: "No se pudo calcular el rango de cupones para esta bitácora.",
+        };
+      }
+      valeCombustibleConfirmar = parcial.vale;
+      montoCombustibleConfirmar = parcial.monto;
     }
 
     if (solicitudVinculada) {
@@ -504,36 +533,68 @@ export async function getCombustibleAprobadoSinMisionPorVehiculo(
 export type CombustibleSinMisionOpcion = {
   id: string;
   etiqueta: string;
-  vale: string;
-  monto: number;
+  valeTotal: string;
+  montoTotal: number;
+  cuponDelTotal: number;
+  cuponAlTotal: number;
+  denominacionCupon: number | null;
+  cuponesTotal: number;
+  cuponesUsados: number;
+  cuponesDisponibles: number;
+  cuponDelSiguiente: number;
 };
 
-function mapCombustibleSinMisionOpcion(row: {
-  id: string;
-  cupon_del: number | null;
-  cupon_al: number | null;
-  denominacion_cupon: number | null;
-}): CombustibleSinMisionOpcion | null {
+function mapCombustibleSinMisionOpcion(
+  row: {
+    id: string;
+    cupon_del: number | null;
+    cupon_al: number | null;
+    denominacion_cupon: number | null;
+  },
+  valesBitacora: string[],
+): CombustibleSinMisionOpcion | null {
   if (row.cupon_del == null || row.cupon_al == null) return null;
-  const datos = combustibleAprobadoParaBitacora({
-    cupon_del: Number(row.cupon_del),
-    cupon_al: Number(row.cupon_al),
-    denominacion_cupon:
-      row.denominacion_cupon != null ? Number(row.denominacion_cupon) : null,
+  const cuponDelTotal = Number(row.cupon_del);
+  const cuponAlTotal = Number(row.cupon_al);
+  const denominacionCupon =
+    row.denominacion_cupon != null ? Number(row.denominacion_cupon) : null;
+
+  const datosTotal = combustibleAprobadoParaBitacora({
+    cupon_del: cuponDelTotal,
+    cupon_al: cuponAlTotal,
+    denominacion_cupon: denominacionCupon,
   });
-  if (!datos) return null;
+  if (!datosTotal) return null;
+
+  const cuponesTotal = cantidadCuponesRango(cuponDelTotal, cuponAlTotal);
+  const cuponesUsados = cuponesUsadosEnSolicitudCombustible(
+    { cupon_del: cuponDelTotal, cupon_al: cuponAlTotal },
+    valesBitacora,
+  );
+  const cuponesDisponibles = cuponesTotal - cuponesUsados;
+  if (cuponesDisponibles <= 0) return null;
+
+  const cuponDelSiguiente = cuponDelTotal + cuponesUsados;
   const montoLabel =
-    datos.monto > 0
-      ? ` · Q${datos.monto.toLocaleString("es-GT", {
+    datosTotal.monto > 0
+      ? ` · Q${datosTotal.monto.toLocaleString("es-GT", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}`
       : "";
+
   return {
     id: row.id,
-    etiqueta: `Vale ${datos.vale}${montoLabel}`,
-    vale: datos.vale,
-    monto: datos.monto,
+    etiqueta: `Vale ${datosTotal.vale}${montoLabel} · ${cuponesDisponibles}/${cuponesTotal} disp.`,
+    valeTotal: datosTotal.vale,
+    montoTotal: datosTotal.monto,
+    cuponDelTotal,
+    cuponAlTotal,
+    denominacionCupon,
+    cuponesTotal,
+    cuponesUsados,
+    cuponesDisponibles,
+    cuponDelSiguiente,
   };
 }
 
@@ -566,10 +627,10 @@ async function fetchCombustibleAprobadoPorId(
   };
 }
 
-async function fetchValesCombustibleUsadosEnBitacorasConfirmadas(
+async function fetchValesCombustibleBitacorasConfirmadas(
   supabase: Awaited<ReturnType<typeof createClient>>,
   vehiculoId: string,
-): Promise<Set<string>> {
+): Promise<string[]> {
   const { data, error } = await supabase
     .from(TABLE)
     .select("vale_combustible")
@@ -577,17 +638,17 @@ async function fetchValesCombustibleUsadosEnBitacorasConfirmadas(
     .eq("estado", "CONFIRMADA");
 
   if (error) {
-    console.error("fetchValesCombustibleUsadosEnBitacorasConfirmadas:", error);
-    return new Set();
+    console.error("fetchValesCombustibleBitacorasConfirmadas:", error);
+    return [];
   }
 
-  const usados = new Set<string>();
+  const vales: string[] = [];
   for (const row of data ?? []) {
     const vale =
       typeof row.vale_combustible === "string" ? row.vale_combustible.trim() : "";
-    if (vale) usados.add(vale);
+    if (vale) vales.push(vale);
   }
-  return usados;
+  return vales;
 }
 
 export async function listCombustiblesAprobadosSinMisionPorVehiculo(
@@ -612,19 +673,21 @@ export async function listCombustiblesAprobadosSinMisionPorVehiculo(
       return [];
     }
 
-    const valesUsados = await fetchValesCombustibleUsadosEnBitacorasConfirmadas(supabase, id);
+    const valesBitacora = await fetchValesCombustibleBitacorasConfirmadas(supabase, id);
 
     return (data ?? [])
       .map((row) =>
-        mapCombustibleSinMisionOpcion({
-          id: String(row.id),
-          cupon_del: row.cupon_del as number | null,
-          cupon_al: row.cupon_al as number | null,
-          denominacion_cupon: row.denominacion_cupon as number | null,
-        }),
+        mapCombustibleSinMisionOpcion(
+          {
+            id: String(row.id),
+            cupon_del: row.cupon_del as number | null,
+            cupon_al: row.cupon_al as number | null,
+            denominacion_cupon: row.denominacion_cupon as number | null,
+          },
+          valesBitacora,
+        ),
       )
-      .filter((item): item is CombustibleSinMisionOpcion => item !== null)
-      .filter((item) => !valesUsados.has(item.vale));
+      .filter((item): item is CombustibleSinMisionOpcion => item !== null);
   } catch (error) {
     console.error("listCombustiblesAprobadosSinMisionPorVehiculo:", error);
     return [];
